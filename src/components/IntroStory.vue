@@ -340,7 +340,7 @@ function sceneOpen(c: Ctx, t: number) {
     <div v-if="stage === 'title'" class="title-card" @click.stop>
       <img :src="logoUrl" class="logo" alt="Dreamers Coffee" />
       <b class="tname">DREAMERS COFFEE</b>
-      <div class="tsub">Yến &amp; bé corgi Cáo · Đà Lạt</div>
+      <!-- <div class="tsub">Yến &amp; Cáo · Đà Lạt</div> -->
       <button class="go" @click="begin">Bắt đầu câu chuyện ▶</button>
     </div>
     <div v-show="stage === 'story'" class="stage">
