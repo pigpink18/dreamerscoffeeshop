@@ -1,0 +1,136 @@
+:root {
+  --bg: #f6efe6;
+  --card: #fffaf4;
+  --ink: #3b2a20;
+  --muted: #8a7566;
+  --line: #eadccd;
+  --brand: #6f4e37;
+  --brand-2: #a9744f;
+  --accent: #e8a33d;
+  --good: #2f9e6b;
+  --bad: #d9534f;
+  --radius: 18px;
+  --shadow: 0 2px 10px rgba(80, 50, 30, 0.08);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overscroll-behavior: none;
+  background: var(--bg);
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
+#app { height: 100%; }
+
+button {
+  font: inherit;
+  color: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* ================= GIAO DIỆN KIỂU GAME PIXEL =================
+   Khung pixel: viền 3px góc vát bậc thang (dùng box-shadow 4 phía, không bo tròn),
+   bóng đáy bên trong + bóng đổ cứng bên dưới. */
+:root {
+  --ink: #3b2a20;
+  --paper: #fffaf0;
+  --paper-shade: #ecdcc4;
+  --px-border: -3px 0 0 0 var(--ink), 3px 0 0 0 var(--ink), 0 -3px 0 0 var(--ink), 0 3px 0 0 var(--ink);
+  --px-border-2: -2px 0 0 0 var(--ink), 2px 0 0 0 var(--ink), 0 -2px 0 0 var(--ink), 0 2px 0 0 var(--ink);
+}
+body {
+  background:
+    repeating-linear-gradient(0deg, rgba(122, 78, 51, 0.05) 0 2px, transparent 2px 6px),
+    var(--bg);
+}
+
+.card {
+  background: var(--paper);
+  border-radius: 0;
+  padding: 12px;
+  margin-left: 3px; margin-right: 3px;
+  box-shadow: var(--px-border), inset 0 -4px 0 0 var(--paper-shade), 0 7px 0 0 rgba(59, 42, 32, 0.2);
+}
+
+/* Nút khối kiểu game: dày, có mặt sáng trên + cạnh tối dưới, bấm lún xuống */
+.btn {
+  --face: #6f4630; --edge: #4a2e1f; --hi: #93603f; --fg: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 0 14px 3px;
+  border-radius: 0;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  background: var(--face);
+  color: var(--fg);
+  box-shadow: var(--px-border-2), inset 0 -4px 0 0 var(--edge), inset 0 2px 0 0 var(--hi), 0 5px 0 0 rgba(59, 42, 32, 0.45);
+  transition: transform 0.06s, box-shadow 0.06s, opacity 0.2s;
+}
+.btn:active { transform: translateY(4px); box-shadow: var(--px-border-2), inset 0 -2px 0 0 var(--edge), 0 1px 0 0 rgba(59, 42, 32, 0.45); }
+.btn:disabled { opacity: 0.45; filter: grayscale(0.4); }
+.btn.ghost { --face: #f1e2cf; --edge: #d8bf9f; --hi: #fff6ea; --fg: var(--ink); }
+.btn.accent { --face: #f2c14e; --edge: #d99a2b; --hi: #fff1a8; --fg: var(--ink); }
+.btn.good { --face: #3fb57b; --edge: #2a8a5a; --hi: #7fdcaa; --fg: #fff; }
+.btn.big { width: calc(100% - 6px); margin: 0 3px; min-height: 58px; font-size: 18px; letter-spacing: 0.08em; box-shadow: var(--px-border), inset 0 -6px 0 0 var(--edge), inset 0 3px 0 0 var(--hi), 0 8px 0 0 #6f4630; }
+.btn.big:active { transform: translateY(6px); box-shadow: var(--px-border), inset 0 -3px 0 0 var(--edge), 0 2px 0 0 #6f4630; }
+.btn.sm { min-height: 34px; padding: 0 11px 3px; font-size: 14px; }
+
+/* Tiêu đề mục: nhãn gỗ nhỏ */
+.section-title {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ffe8b8;
+  background: #6f4630;
+  padding: 4px 10px 5px;
+  margin: 22px 6px 12px;
+  box-shadow: var(--px-border-2), inset 0 -2px 0 0 #4a2e1f;
+  text-shadow: 0 1px 0 #3b2a20;
+}
+
+/* Viên nhãn trạng thái vuông kiểu pixel */
+.pxtag {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 900; padding: 2px 7px; white-space: nowrap;
+  background: #f1e2cf; color: var(--ink); box-shadow: var(--px-border-2);
+}
+.pxtag.good { background: #c9f0d8; color: #1d6b47; }
+.pxtag.warn { background: #ffe7a8; color: #7a5200; }
+.pxtag.bad { background: #ffd4cf; color: #a3302a; }
+
+/* Thanh tiến độ pixel */
+.pxbar { height: 10px; background: #5a4334; box-shadow: var(--px-border-2); overflow: hidden; }
+.pxbar > i { display: block; height: 100%; background: #6ad08f; box-shadow: inset 0 -3px 0 #2f9e6b, inset 0 2px 0 #c8f5d8; transition: width 0.2s linear; }
+
+.pix { image-rendering: pixelated; image-rendering: crisp-edges; }
+
+.muted { color: var(--muted); }
+.good { color: var(--good); }
+.bad { color: var(--bad); }
+.row { display: flex; align-items: center; gap: 10px; }
+.grow { flex: 1; min-width: 0; }
+.emoji { font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; }
