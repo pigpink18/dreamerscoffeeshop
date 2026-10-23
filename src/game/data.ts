@@ -259,7 +259,7 @@ export const LINES = {
 
 export const REVIEWS = {
   5: ['Shipper rap hay tới mức hàng xóm ra xin follow 🎤', 'Ly tới nơi đá còn lạnh hơn thái độ người yêu cũ', 'Đặt 1 ly, nghiện cả đời, ai chịu trách nhiệm đây?', 'Ship nhanh như flow, nước ngon xỉu, 5 sao không bàn cãi!', 'Anh shipper rap hay quá trời, cà phê thì đỉnh nóc', 'Đá còn nguyên, vị chuẩn bài, sẽ quay lại 🫶', 'Quá là slay, order lần thứ n rồi', 'Uống một ngụm là deadline tự chạy 🏃'],
-  4: ['Ngon nha, mà shipper rap dài, em nghe hết 1 album mới nhận được ly 😆', 'Nước ngon, mỗi tội ống hút bị bẻ cong theo flow', 'Ngon nha, ship hơi lâu xíu thôi', 'Ổn áp, lần sau nhanh hơn chút là perfect', 'Vị ok, shipper dễ thương, rap hơi lạc beat 😆'],
+  4: ['Ngon nha, mà shipper rap dài, em nghe hết 1 album mới nhận được ly', 'Nước ngon, mỗi tội ống hút bị bẻ cong theo flow', 'Ngon nha, ship hơi lâu xíu thôi', 'Ổn áp, lần sau nhanh hơn chút là perfect', 'Vị ok, shipper dễ thương, rap hơi lạc beat 😆'],
   3: ['Tạm được, đá tan còn nhanh hơn deadline của em', 'Không tệ, nhưng chưa đủ để em bỏ trà sữa', 'Tạm ổn, đá tan hơi nhiều rồi', 'Bình thường thôi, chờ hơi lâu', 'Nước được mà giao chậm quá'],
   2: ['Ly tới nơi thì nước đã thành nước lọc pha màu 🥲', 'Giao trễ tới mức em tự pha ở nhà xong rồi', 'Chờ mòn mỏi, nước tới thì nhạt như tình cũ', 'Giao trễ dữ thần, hơi buồn'],
   1: ['Đơn đi lạc còn hơn em giữa Sài Gòn 🥲', 'Chờ tới mức em quên luôn mình đã đặt món gì', 'Đơn bị huỷ vì chờ quá lâu, buồn ghê 🥲', 'Đặt từ sáng tới chiều chưa thấy, out!', 'Hết cứu, không đặt nữa đâu'],

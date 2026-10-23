@@ -13,7 +13,7 @@ const W = 128, H = 92
 const SCENES: { title: string; lines: string[]; draw: (c: Ctx, t: number) => void }[] = [
   { title: 'Hà Nội · 2:00 sáng', lines: [
     'Hà Nội, 2 giờ sáng. {name}, 24 tuổi, đang sửa slide lần thứ 17 cho sếp.',
-    'Ly cà phê trứng thứ tư nguội ngắt. Cô chợt nghĩ: “Mình sống để chạy deadline hả trời?”',
+    'Cốc Americano thứ tư nguội ngắt. Cô chợt nghĩ: “Mình sống để chạy deadline hả trời?”',
   ], draw: sceneOffice },
   { title: 'Đèo Prenn · sương sớm', lines: [
     'Sáng hôm sau, {name} nộp đơn nghỉ việc, gom hết can đảm và… hai cái vali, bay một mạch từ Hà Nội vào Nam.',
@@ -25,11 +25,11 @@ const SCENES: { title: string; lines: string[]; draw: (c: Ctx, t: number) => voi
   ], draw: sceneOldShop },
   { title: 'Đồng sáng lập', lines: [
     'Bé không chịu đi đâu hết, cứ dụi cái mông tròn vào chân cô.',
-    'Cô đặt tên bé là Cáo, vì cái mặt lém lỉnh y chang con cáo. Vậy là quán có đồng sáng lập — lương trả bằng pate.',
+    'Cô đặt tên bé là Cáo, vì cái mặt lém lỉnh y chang con cáo. Vậy là quán có đồng sáng lập lương trả bằng pate.',
   ], draw: sceneMeet },
   { title: 'Ba tuần sửa quán', lines: [
     'Hai đứa dọn dẹp ba tuần liền: sơn tường, lau máy, còn Cáo thì phụ… làm đổ sơn.',
-    'Tấm biển mới được treo lên: DREAMERS COFFEE — quán của những người dám mơ.',
+    'Tấm biển mới được treo lên: DREAMERS COFFEE quán của những người dám mơ mộng.',
   ], draw: scenePaint },
   { title: 'Ngày khai trương', lines: [
     'Sáng nay, Dreamers Coffee mở cửa ngày đầu tiên.',
