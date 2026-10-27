@@ -460,10 +460,8 @@ function addShipper(i: number) {
 // ---------- BOSS ----------
 // Số boss mỗi ngày theo sao của quán: mới mở (2 ngày đầu) hoặc < 1.5★ → 1 boss; 2★ → 2 … 5★ → 5 boss/ngày
 export const shopStars = computed(() => save.reputation / 20)
-export const bossesToday = computed(() => {
-  if (save.day <= 2) return 1
-  return clamp(Math.round(shopStars.value), 1, 5)
-})
+// Mỗi ngày 1 boss; quán đã 4.5 sao trở lên và từ ngày 10 mới thêm boss thứ 2 (không dồn dập)
+export const bossesToday = computed(() => (save.day >= 10 && shopStars.value >= 4.5 ? 2 : 1))
 export const bossIndex = (n = 0) => (save.day - 1 + n) % BOSSES.length
 export const todayBoss = computed(() => BOSSES[bossIndex()])
 export const todayBosses = computed(() => Array.from({ length: bossesToday.value }, (_, n) => bossIndex(n)))

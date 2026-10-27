@@ -40,7 +40,7 @@ export const TRACK_LIST: { id: TrackChoice; name: string; icon: string; desc: st
   { id: 'chieuHien', name: 'Chiều hiên', icon: '', desc: 'Thong thả buổi chiều' },
   { id: 'lyDenDa', name: 'Ly đen đá', icon: '', desc: 'Giọng thứ, hơi hoài niệm' },
 ]
-export const audio = reactive({ music: true, sfx: true, volume: 0.7, unlocked: false, track: 'auto' as TrackChoice, playing: '' as TrackId | '', bossMusic: 'soft' as BossMusic })
+export const audio = reactive({ music: true, sfx: true, volume: 0.7, unlocked: false, track: 'auto' as TrackChoice, playing: '' as TrackId | '', bossMusic: 'off' as BossMusic }) // không đổi nhạc & không kêu báo khi boss tới
 try {
   const s = JSON.parse(localStorage.getItem(KEY) || 'null')
   if (s) { audio.music = !!s.music; audio.sfx = !!s.sfx; if (typeof s.volume === 'number') audio.volume = Math.min(1, Math.max(0, s.volume)); if (s.track === 'auto' || (s.track in MUSIC_FILES && !isBossTrack(s.track) && s.track !== 'report')) audio.track = s.track }
@@ -160,6 +160,7 @@ export function sfx(name: Sfx) {
   const t = ctx.currentTime + 0.01
   switch (name) {
     case 'boss':
+      if (audio.bossMusic === 'off') break // đã tắt âm báo boss
       // báo boss tới: 2 nốt chuông nhẹ (bản cũ có trống + sawtooth, quá to)
       if (audio.bossMusic === 'drama') {
         tone(220, t, 0.35, { vol: 0.12, type: 'sawtooth', filter: 1000 }); tone(208, t + 0.38, 0.5, { vol: 0.12, type: 'sawtooth', filter: 1000 })

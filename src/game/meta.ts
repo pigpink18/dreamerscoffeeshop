@@ -226,6 +226,7 @@ export function rentPremise(id: number) {
   if (save.money < p.deposit) { toast('Không đủ tiền cọc!', 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return }
   save.money -= p.deposit
   M().premise = id
+  giftStarterGoods()
   toast(`Chuyển về ${p.name}! Khách đông hơn, tiền thuê ${Math.round(p.rent / 1000)}k/ngày`, 'heart', 3200)
   sfx('bossWin'); vibrate([20, 40, 20])
   checkAch()
@@ -268,6 +269,15 @@ export function buyGoods(id: string, packs = 1) {
   sfx('buy'); vibrate(8)
 }
 
+/** Tặng sẵn 1 gói mỗi món khi vừa mở kệ (để thấy ngay khách mua kèm) */
+function giftStarterGoods() {
+  const P = M().premise
+  const given = M().goodsGift ?? 0
+  if (given >= P) return
+  for (const g of GOODS) if (goodUnlocked(g, P) && !(g.kind === 'souvenir' && given >= 1)) M().goods[g.id] = goodsStock(g.id) + g.pack
+  M().goodsGift = P
+}
+
 // ---------- Mỗi ngày mới: tin phố + nhiệm vụ ----------
 function ensureDay() {
   if (M().quests.day !== save.day) {
@@ -279,6 +289,7 @@ function ensureDay() {
 // ---------- Nối vào vòng chơi ----------
 export function initMeta() {
   ensureDay()
+  giftStarterGoods() // bản lưu cũ đã thuê mặt bằng nhưng chưa từng có hàng trên kệ
   watch(() => save.day, ensureDay)
 
   hooks.customerMul = () => streetMul.value
@@ -324,8 +335,12 @@ export function initMeta() {
   hooks.pickAddon = () => {
     const P = M().premise
     if (P < 1) return null
-    const pool = GOODS.filter((g) => goodUnlocked(g, P) && goodsStock(g.id) > 0)
-    if (!pool.length || Math.random() > (P >= 2 ? 0.45 : 0.3)) return null
+    const unlocked = GOODS.filter((g) => goodUnlocked(g, P))
+    const inStock = unlocked.filter((g) => goodsStock(g.id) > 0)
+    if (Math.random() > (P >= 2 ? 0.5 : 0.38)) return null
+    // thường hỏi món còn hàng; thỉnh thoảng hỏi món đã hết để nhắc bạn nhập thêm
+    const pool = inStock.length && Math.random() < 0.85 ? inStock : unlocked
+    if (!pool.length) return null
     // Flagship: khách thích gọi bánh hơn đồ lưu niệm
     const bakery = pool.filter((g) => g.kind === 'bakery')
     return (bakery.length && Math.random() < 0.7 ? pick(bakery) : pick(pool)).id

@@ -177,6 +177,7 @@ export interface MetaSave {
   premise: number
   beans: number
   goods: Record<string, number> // kho hàng bán kèm
+  goodsGift?: number // đã tặng hàng mở kệ tới mặt bằng số mấy
   album: Record<string, { n: number; look?: Look }>
   secrets: RecipeId[] // đã tìm ra
   hints: RecipeId[] // đã có gợi ý

@@ -57,7 +57,7 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
       <div class="grow">
         <div class="tiny bk"><PixelIcon name="crown" :size="2" /> HÔM NAY: {{ todayBosses.length }} BOSS</div>
         <b>{{ bossNames }}</b>
-        <div class="small bt">{{ todayBosses.length > 1 ? 'Ghé rải rác trong ngày' : todayBoss.title + ' · sẽ ghé vào giữa ngày' }}, thời gian phục vụ rất ngắn! <span class="muted">Quán càng nhiều sao, boss càng đông (tối đa 5).</span></div>
+        <div class="small bt">{{ todayBosses.length > 1 ? 'Ghé rải rác trong ngày' : todayBoss.title + ' · sẽ ghé vào giữa ngày' }}, thời gian phục vụ rất ngắn! <span class="muted">Quán từ 4.5 sao (từ ngày 10) sẽ có thêm boss thứ 2.</span></div>
       </div>
     </div>
 
