@@ -343,6 +343,8 @@ function draw(now: number) {
   }
 }
 
+const SCENE_PREF_W = 460 // độ rộng mong muốn của .scene-wrap (px)
+
 function resize() {
   const el = wrap.value, canvas = cv.value
   if (!el || !canvas) return
@@ -352,14 +354,16 @@ function resize() {
   const pw = box?.clientWidth || el.clientWidth
   const cs = box ? getComputedStyle(box) : null
   const ph = box ? box.clientHeight - parseFloat(cs!.paddingTop) - parseFloat(cs!.paddingBottom) - 8 : Infinity
-  const w = Math.min(pw, ph > 60 ? (ph * SCENE_W) / SCENE_H : pw)
+  // Rộng tối đa SCENE_PREF_W px; nếu khung thấp/hẹp hơn thì tự co lại cho vừa (không bị cắt)
+  const w = Math.min(SCENE_PREF_W, pw, ph > 60 ? (ph * SCENE_W) / SCENE_H : pw)
   // vẽ ở độ phân giải nguyên (sắc nét) rồi co vừa khít khung bằng CSS → không bị hụt chỗ trống
   scale = Math.max(1, Math.ceil((w * dpr) / SCENE_W))
-  canvas.width = SCENE_W * scale
-  canvas.height = SCENE_H * scale
-  canvas.style.width = `${Math.floor(w)}px`
-  canvas.style.height = `${Math.floor((w * SCENE_H) / SCENE_W)}px`
-  el.style.width = canvas.style.width
+  // chỉ gán lại khi kích thước đổi thật – gán canvas.width sẽ xoá & cấp phát lại canvas (rất nặng, gây lag nút bấm)
+  if (canvas.width !== SCENE_W * scale) { canvas.width = SCENE_W * scale; canvas.height = SCENE_H * scale; ctx = null }
+  const cw = `${Math.floor(w)}px`, ch = `${Math.floor((w * SCENE_H) / SCENE_W)}px`
+  if (canvas.style.width !== cw) canvas.style.width = cw
+  if (canvas.style.height !== ch) canvas.style.height = ch
+  if (el.style.width !== cw) el.style.width = cw
   ctx = canvas.getContext('2d')
 }
 
