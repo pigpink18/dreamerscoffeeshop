@@ -345,21 +345,32 @@ function draw(now: number) {
 
 const SCENE_PREF_W = 460 // độ rộng mong muốn của .scene-wrap (px)
 
-function resize() {
-  const el = wrap.value, canvas = cv.value
-  if (!el || !canvas) return
-  const dpr = window.devicePixelRatio || 1
-  // vừa cả chiều ngang lẫn chiều cao khung chứa (màn đang bán không cuộn)
+// Kích thước cảnh được KHOÁ sau khi đo: chỉ đo lại khi đổi chiều rộng màn hình / xoay máy / mở lại tab,
+// không co giãn theo nội dung bên dưới (boss, pha chế, kệ hàng, thanh địa chỉ Safari ẩn/hiện…).
+let locked: { vw: number; vh: number; w: number } | null = null
+
+function measure(): number {
+  const el = wrap.value!
   const box = el.parentElement
   const pw = box?.clientWidth || el.clientWidth
   const cs = box ? getComputedStyle(box) : null
   const ph = box ? box.clientHeight - parseFloat(cs!.paddingTop) - parseFloat(cs!.paddingBottom) - 8 : Infinity
-  // Rộng tối đa SCENE_PREF_W px; nếu khung thấp/hẹp hơn thì tự co lại cho vừa (không bị cắt)
-  const w = Math.min(SCENE_PREF_W, pw, ph > 60 ? (ph * SCENE_W) / SCENE_H : pw)
-  // vẽ ở độ phân giải nguyên (sắc nét) rồi co vừa khít khung bằng CSS → không bị hụt chỗ trống
+  // Rộng tối đa SCENE_PREF_W px; nếu khung thấp/hẹp hơn thì co lại cho vừa (không bị cắt)
+  return Math.min(SCENE_PREF_W, pw, ph > 60 ? (ph * SCENE_W) / SCENE_H : pw)
+}
+
+function resize(force: boolean | Event = false) {
+  const el = wrap.value, canvas = cv.value
+  if (!el || !canvas) return
+  const vw = window.innerWidth, vh = window.innerHeight
+  const big = !locked || vw !== locked.vw || Math.abs(vh - locked.vh) > 120
+  if (force === true || big) locked = { vw, vh, w: measure() }
+  const w = locked!.w
+  const dpr = window.devicePixelRatio || 1
+  // vẽ ở độ phân giải nguyên (sắc nét) rồi co vừa khít khung bằng CSS
   scale = Math.max(1, Math.ceil((w * dpr) / SCENE_W))
-  // chỉ gán lại khi kích thước đổi thật – gán canvas.width sẽ xoá & cấp phát lại canvas (rất nặng, gây lag nút bấm)
-  if (canvas.width !== SCENE_W * scale) { canvas.width = SCENE_W * scale; canvas.height = SCENE_H * scale; ctx = null }
+  // chỉ gán lại khi kích thước đổi thật – gán canvas.width sẽ xoá & cấp phát lại canvas (nặng, gây lag nút)
+  if (canvas.width !== SCENE_W * scale) { canvas.width = SCENE_W * scale; canvas.height = SCENE_H * scale }
   const cw = `${Math.floor(w)}px`, ch = `${Math.floor((w * SCENE_H) / SCENE_W)}px`
   if (canvas.style.width !== cw) canvas.style.width = cw
   if (canvas.style.height !== ch) canvas.style.height = ch
@@ -369,10 +380,10 @@ function resize() {
 
 let off: (() => void) | null = null
 onMounted(async () => {
-  resize()
-  requestAnimationFrame(() => { resize(); setTimeout(resize, 300) }) // đợi bố cục xong mới đo lại
+  resize(true)
+  requestAnimationFrame(() => { resize(true); setTimeout(() => resize(true), 300) }) // đợi bố cục xong mới đo & khoá
   window.addEventListener('resize', resize)
-  ro = new ResizeObserver(resize)
+  ro = new ResizeObserver(() => resize())
   if (wrap.value) ro.observe(wrap.value.parentElement ?? wrap.value)
   for (const s of Object.keys(STEPS)) {
     const u = iconUrl(s)
@@ -384,7 +395,7 @@ onMounted(async () => {
 })
 onDeactivated(() => cancelAnimationFrame(raf))
 onBeforeUnmount(() => window.removeEventListener('resize', resize))
-onActivated(() => { cancelAnimationFrame(raf); lastT = performance.now(); resize(); raf = requestAnimationFrame(frame) })
+onActivated(() => { cancelAnimationFrame(raf); lastT = performance.now(); resize(true); raf = requestAnimationFrame(frame) })
 onBeforeUnmount(() => {
   cancelAnimationFrame(raf)
   ro?.disconnect()

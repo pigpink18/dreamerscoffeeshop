@@ -203,9 +203,9 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 /* Đang bán */
 .open { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .open > * { flex: none; }
-.open > .scene-box { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; padding: 2px 0 8px; }
+.open > .scene-box { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; justify-content: center; align-items: flex-start; padding: 2px 0 8px; } /* ghim cảnh ở trên – không nhảy lên xuống */
 .open > .panel { flex: none; }
-.controls { display: flex; align-items: center; gap: 8px; }
+.controls { display: flex; align-items: center; gap: 8px; height: 34px; flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
 .progress { flex: 1; margin: 0 3px; }
 .progress .bar { background: #f2c14e; box-shadow: inset 0 -3px 0 #d99a2b, inset 0 2px 0 #fff1a8; }
 .ctrl { min-width: 40px; min-height: 34px; padding: 0 8px; font-variant-numeric: tabular-nums; }
