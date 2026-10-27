@@ -7,7 +7,7 @@ const t = (say: string, nice: [string, string, number?], sassy: [string, string,
   say,
   replies: [
     { text: nice[0], answer: nice[1], bond: nice[2] ?? 7 },
-    { text: '😏 ' + sassy[0], answer: sassy[1], bond: sassy[2] },
+    { text: sassy[0], answer: sassy[1], bond: sassy[2], sassy: true },
     { text: dry[0], answer: dry[1], bond: 1 },
   ],
 })

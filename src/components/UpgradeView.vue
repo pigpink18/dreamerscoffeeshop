@@ -3,6 +3,10 @@ import { ref } from 'vue'
 import { save, buyUpgrade, resetGame, UPGRADES } from '../game/store'
 import { money, moneyShort, START_MONEY } from '../game/data'
 import PixelIcon from './ui/PixelIcon.vue'
+import PremisePanel from './meta/PremisePanel.vue'
+import CaoShop from './meta/CaoShop.vue'
+
+const seg = ref<'up' | 'prem' | 'cao'>('up')
 
 const UICON: Record<string, string> = { staff: 'staff', machine: 'gear', shipper: 'scooter', decor: 'plant', sign: 'megaphone', freezer: 'snow', green: 'plant', farmer: 'bean' }
 
@@ -20,6 +24,14 @@ function onReset() {
 
 <template>
   <div>
+    <div class="segs">
+      <button :class="{ on: seg === 'up' }" @click="seg = 'up'">Nâng cấp</button>
+      <button :class="{ on: seg === 'prem' }" @click="seg = 'prem'">Mặt bằng</button>
+      <button :class="{ on: seg === 'cao' }" @click="seg = 'cao'">Tiệm của Cáo</button>
+    </div>
+    <PremisePanel v-if="seg === 'prem'" />
+    <CaoShop v-else-if="seg === 'cao'" />
+    <template v-else>
     <div class="section-title" style="margin-top: 4px">Nâng cấp quán</div>
     <p class="muted hint">Mua xong sẽ thấy ngay trong cảnh quán: nhân viên đứng quầy, máy espresso mới, cây xanh, dây đèn, biển neon, mèo nằm quầy…</p>
     <div class="list">
@@ -31,8 +43,8 @@ function onReset() {
           <div class="pips">
             <span v-for="n in u.costs.length" :key="n" class="pip" :class="{ on: n <= save.upgrades[u.id] }" />
           </div>
-          <div class="eff now">✅ Hiện tại: {{ u.effect(save.upgrades[u.id]) }}</div>
-          <div v-if="save.upgrades[u.id] < u.costs.length" class="eff next">⬆️ Cấp {{ save.upgrades[u.id] + 1 }}: {{ u.effect(save.upgrades[u.id] + 1) }}</div>
+          <div class="eff now"><PixelIcon name="check" :size="2" /> Hiện tại: {{ u.effect(save.upgrades[u.id]) }}</div>
+          <div v-if="save.upgrades[u.id] < u.costs.length" class="eff next"><PixelIcon name="up" :size="2" /> Cấp {{ save.upgrades[u.id] + 1 }}: {{ u.effect(save.upgrades[u.id] + 1) }}</div>
         </div>
         <button
           v-if="save.upgrades[u.id] < u.costs.length"
@@ -58,6 +70,7 @@ function onReset() {
       </button>
       <div class="muted tiny">Tiền khởi nghiệp: {{ money(START_MONEY) }}</div>
     </div>
+    </template>
   </div>
 </template>
 

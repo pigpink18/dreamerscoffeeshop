@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { save, ui, clock } from '../game/store'
 import { money } from '../game/data'
 import { ref } from 'vue'
-import { audio, unlockAudio, TRACK_LIST, type TrackChoice } from '../game/audio'
+import { audio, unlockAudio, TRACK_LIST, BOSS_MUSIC_LIST, type TrackChoice } from '../game/audio'
 import PixelIcon from './ui/PixelIcon.vue'
 import PixelNum from './ui/PixelNum.vue'
 import logoUrl from '../assets/logo.png'
@@ -11,7 +11,7 @@ import logoUrl from '../assets/logo.png'
 function toggle(k: 'music' | 'sfx') { unlockAudio(); audio[k] = !audio[k] }
 const menu = ref(false)
 function choose(id: TrackChoice) { unlockAudio(); audio.track = id; audio.music = true; menu.value = false }
-const playingName = () => TRACK_LIST.find((t) => t.id === audio.playing)?.name ?? ''
+const playingName = () => (audio.playing === 'boss' ? 'Kịch tính (boss)' : audio.playing === 'bossSoft' ? 'Hồi hộp nhẹ (boss)' : audio.playing === 'report' ? 'Mappy (tổng kết ngày)' : TRACK_LIST.find((t) => t.id === audio.playing)?.name ?? '')
 
 const moneyText = computed(() => money(save.money).replace(/\s/g, ''))
 const wxIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloudy', rainy: 'rainy' } as Record<string, string>)[save.weather] || 'sunny')
@@ -19,7 +19,7 @@ const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, 
 </script>
 
 <template>
-  <header class="topbar">
+  <header class="topbar" :class="{ compact: ui.phase === 'open' }">
     <div class="brandrow">
       <button class="brand" title="Xem lại truyện mở đầu" @click="ui.phase !== 'open' && (ui.showIntro = true)"><img :src="logoUrl" class="blogo" alt="" /> DREAMERS COFFEE <small class="owner">· {{ save.player }} & Cáo</small></button>
       <div class="snd">
@@ -43,13 +43,17 @@ const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, 
           <span class="tt"><b>{{ t.name }}</b><small>{{ t.desc }}</small></span>
           <span v-if="audio.track === t.id" class="chk"><PixelIcon name="play" :size="2" /></span>
         </button>
+        <div class="mm-sub">NHẠC KHI BOSS TỚI</div>
+        <div class="bossm">
+          <button v-for="b in BOSS_MUSIC_LIST" :key="b.id" :class="{ on: audio.bossMusic === b.id }" :title="b.desc" @click="unlockAudio(); audio.bossMusic = b.id">{{ b.name }}</button>
+        </div>
         <div v-if="audio.music && audio.playing" class="now">Đang phát: {{ playingName() }}</div>
-        <div class="note">Nhạc quán: bossa nova sáng tác riêng cho Dreamers Coffee · Nhạc boss: Abstraction / Tallbeard (CC0)</div>
+        <div class="note">Nhạc quán: bossa nova sáng tác riêng cho Dreamers Coffee · Nhạc boss: “Hồi hộp nhẹ” sáng tác riêng · “Kịch tính”: Abstraction / Tallbeard (CC0)</div>
       </div>
     </Transition>
     <div class="money">
-      <span class="label">TIỀN QUÁN</span>
-      <PixelNum :text="moneyText" :size="4" :color="save.money < 0 ? '#ff9a8c' : '#ffd77a'" shadow="#2a1a10" :light="save.money < 0 ? '#ffc4bb' : '#fff1a8'" />
+      <span v-if="ui.phase !== 'open'" class="label">TIỀN QUÁN</span>
+      <PixelNum :text="moneyText" :size="ui.phase === 'open' ? 3 : 4" :color="save.money < 0 ? '#ff9a8c' : '#ffd77a'" shadow="#2a1a10" :light="save.money < 0 ? '#ffc4bb' : '#fff1a8'" />
     </div>
     <div class="chips">
       <div class="chip">
@@ -57,6 +61,7 @@ const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, 
         <span v-if="ui.phase === 'open'" class="mono">{{ clock }}</span>
         <span v-else>NGÀY {{ save.day }}</span>
       </div>
+      <div class="chip beans" title="Hạt vàng"><PixelIcon name="bean" :size="2" />{{ save.meta.beans }}</div>
       <div class="chip rep" :title="`Danh tiếng ${Math.round(save.reputation)}/100`">
         <PixelIcon name="star" :size="2" />{{ stars.toFixed(1) }}
       </div>
@@ -90,9 +95,12 @@ const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, 
 }
 .snd button:active { transform: translateY(2px); box-shadow: var(--px-border-2); }
 .snd button.off { background: #b9a48f; box-shadow: var(--px-border-2), inset 0 -3px 0 #9c8670; opacity: 0.8; }
+.topbar.compact { padding-bottom: 8px; }
+.topbar.compact .brandrow { margin-bottom: 4px; }
+.topbar.compact .chip { padding: 3px 8px 4px; font-size: 12px; }
 .money { display: flex; flex-direction: column; gap: 4px; }
 .label { font-size: 10px; font-weight: 900; letter-spacing: 0.16em; color: #e6c79c; }
-.chips { display: flex; gap: 8px; }
+.chips { display: flex; gap: 6px; }
 .chip {
   display: flex; align-items: center; gap: 6px;
   background: #4a2e1f; color: #ffe8b8;
@@ -116,6 +124,10 @@ const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, 
 .vol input { flex: 1; -webkit-appearance: none; appearance: none; height: 8px; background: #5a4334; box-shadow: 0 0 0 2px #3b2a20; outline: none; }
 .vol input::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 20px; background: #f2c14e; box-shadow: 0 0 0 2px #3b2a20, inset 0 -3px 0 #d99a2b; cursor: pointer; }
 .vol input::-moz-range-thumb { width: 14px; height: 20px; border: none; border-radius: 0; background: #f2c14e; box-shadow: 0 0 0 2px #3b2a20; cursor: pointer; }
+.mm-sub { font-size: 10px; font-weight: 900; letter-spacing: 0.12em; color: #a9744f; margin: 10px 2px 6px; }
+.bossm { display: flex; gap: 6px; }
+.bossm button { flex: 1; font-size: 11px; font-weight: 900; padding: 5px 2px 7px; background: #f1e2cf; color: #8a7566; box-shadow: var(--px-border-2), inset 0 -3px 0 #d8bf9f; }
+.bossm button.on { background: #6f4630; color: #ffe8b8; box-shadow: var(--px-border-2), inset 0 -3px 0 #4a2e1f; }
 .trk { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 7px 8px; margin-top: 4px; }
 .trk.sel { background: #fff0cc; box-shadow: var(--px-border-2); }
 .tt { flex: 1; display: flex; flex-direction: column; }

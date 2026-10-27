@@ -102,3 +102,53 @@ Chỉnh độ khó / thêm thoại: sửa `src/game/data.ts` (giá, công thức
 - Dữ liệu đang test trên máy dev (localhost) cũng tách riêng với bản trên GitHub Pages vì khác địa chỉ web.
 - Mỗi bản lưu có tên chủ quán (`player`, nhập ở màn mở đầu) và mã ngẫu nhiên `playerId`.
 - Lưu ý: xoá dữ liệu trình duyệt / chế độ ẩn danh sẽ mất tiến trình. Muốn đồng bộ giữa nhiều máy cần thêm backend (ví dụ Firebase/Supabase) sau này.
+
+## Chơi dài hạn (bản cập nhật lớn)
+
+- **Đua top phố:** tab *Đua top* – Dreamers Coffee cạnh tranh với 5 quán đối thủ trên Phố Dốc Mộng Mơ. Mỗi ngày tính *điểm phố* (ly bán, ly pha chuẩn, boss thắng, doanh thu, sao). Ngày 7, 14, 21… là **Ngày hội Barista** (điểm x2) và chốt bảng tuần, thưởng hạt vàng + tiền. Hạng càng cao càng đông khách; đối thủ mạnh dần mỗi tuần. Mỗi sáng có "tin phố" (đối thủ khuyến mãi, dính phốt…) ảnh hưởng lượng khách.
+- **Nhiệm vụ ngày & thành tựu:** tab *Sổ tay* – 3 nhiệm vụ đổi mỗi ngày, gần 30 thành tựu dài hạn. Thưởng **hạt vàng**.
+- **Album khách:** sưu tầm khách quen, boss, khách vãng lai và **8 khách hiếm** (chỉ ghé theo thời tiết/giờ, ví dụ Bóng Ma Sương Mù chỉ hiện tối trời mưa).
+- **Công thức bí mật:** Menu › *Phòng thử món* – tự xếp thứ tự nguyên liệu để tìm 6 món ẩn (cà phê trứng, cà phê cốt dừa, Sương Mù Đà Lạt…). Gợi ý nhận từ khách hiếm, nhiệm vụ, thành tựu. Có thêm nguyên liệu cốt dừa, kem trứng, cacao.
+- **Thuê mặt bằng:** Nâng cấp › *Mặt bằng* – Quầy nhỏ → Quán gác gỗ đồi thông → Dreamers Flagship (bảng menu lớn, đèn thả, tường gạch men, tủ bánh, ghế bar). Khách đông hơn, tiền thuê cao hơn.
+- **Tiệm của Cáo:** dùng hạt vàng mua mũ, kính, khăn, áo cho Cáo và đồ trang trí quán (thấy ngay trong cảnh, +% khách).
+
+## Bảng xếp hạng online (tuỳ chọn)
+
+Mặc định tắt, game vẫn chơi offline. Muốn mọi người chơi trên nhiều máy so điểm với nhau:
+
+1. Tạo tài khoản miễn phí ở https://supabase.com → **New project**.
+2. Vào **SQL Editor**, dán và chạy:
+
+```sql
+create table public.leaderboard (
+  player_id text primary key,
+  name text not null,
+  score integer not null default 0,
+  day integer not null default 0,
+  stars real not null default 0,
+  premise integer not null default 0,
+  updated_at timestamptz not null default now()
+);
+create table public.lb_secret (player_id text primary key, token text not null);
+alter table public.leaderboard enable row level security;
+alter table public.lb_secret enable row level security;
+create policy "ai cung xem duoc" on public.leaderboard for select using (true);
+
+create or replace function public.submit_score(p_id text, p_token text, p_name text, p_score int, p_day int, p_stars real, p_premise int)
+returns void language plpgsql security definer set search_path = public as $$
+declare t text;
+begin
+  if length(p_name) > 24 or p_score < 0 or p_score > 10000000 then raise exception 'bad input'; end if;
+  select token into t from lb_secret where player_id = p_id;
+  if t is null then insert into lb_secret(player_id, token) values (p_id, p_token);
+  elsif t <> p_token then raise exception 'forbidden'; end if;
+  insert into leaderboard(player_id, name, score, day, stars, premise, updated_at)
+  values (p_id, p_name, p_score, p_day, p_stars, p_premise, now())
+  on conflict (player_id) do update set name = excluded.name, score = excluded.score, day = excluded.day,
+    stars = excluded.stars, premise = excluded.premise, updated_at = now();
+end $$;
+grant execute on function public.submit_score to anon;
+```
+
+3. Vào **Project Settings › API**, chép *Project URL* và *anon public key* vào `src/game/onlineConfig.ts`.
+4. `git add . && git commit -m "bat bang xep hang" && git push` – xong. Mỗi máy tự gửi điểm sau mỗi ngày bán.

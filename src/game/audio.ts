@@ -3,42 +3,56 @@ import { reactive, watch } from 'vue'
 
 const KEY = 'dreamers-audio'
 // Nhạc nền trong quán: 5 vòng bossa nova nhẹ nhàng sáng tác riêng cho game (tools/bossa.py), phát luân phiên.
-// Nhạc khi boss tới: "Out of Time" — Abstraction / Tallbeard Studios (CC0), file trong public/assets/music
-export type TrackId = 'somMai' | 'muaPhun' | 'hemNho' | 'chieuHien' | 'lyDenDa' | 'boss'
-export type TrackChoice = Exclude<TrackId, 'boss'> | 'auto'
+// Nhạc khi boss tới: mặc định "Hồi hộp nhẹ" (tools/bossa.py, giọng thứ + tích tắc) hoặc "Out of Time" — Abstraction / Tallbeard (CC0, kịch tính)
+export type TrackId = 'lastXmas' | 'feliz' | 'somMai' | 'muaPhun' | 'hemNho' | 'chieuHien' | 'lyDenDa' | 'boss' | 'bossSoft' | 'report'
+export type TrackChoice = Exclude<TrackId, 'boss' | 'bossSoft' | 'report'> | 'auto'
+export type BossMusic = 'soft' | 'drama' | 'off'
+export const BOSS_MUSIC_LIST: { id: BossMusic; name: string; desc: string }[] = [
+  { id: 'soft', name: 'Hồi hộp nhẹ', desc: 'Bossa giọng thứ, nhanh hơn chút, có tiếng tích tắc' },
+  { id: 'drama', name: 'Kịch tính', desc: 'Out of Time – chiptune dồn dập' },
+  { id: 'off', name: 'Giữ nhạc quán', desc: 'Không đổi nhạc khi boss tới' },
+]
+const BOSS_GAIN: Partial<Record<TrackId, number>> = { bossSoft: 0.85, boss: 0.6, report: 1.4, lastXmas: 2.2, feliz: 1.8 } // cân bằng với nhạc quán
+const isBossTrack = (id: TrackId) => id === 'boss' || id === 'bossSoft'
 export const MUSIC_FILES: Record<TrackId, string> = {
+  lastXmas: 'BOSSANOVAPOPLastChristmas', // file do chủ game thêm
+  feliz: 'BOSSANOVAFelizNavidad', // file do chủ game thêm
   somMai: 'bossa-som-mai',
   muaPhun: 'bossa-mua-phun',
   hemNho: 'bossa-hem-nho',
   chieuHien: 'bossa-chieu-hien',
   lyDenDa: 'bossa-ly-den-da',
-  boss: 'boss-out-of-time', // nhạc hồi hộp khi boss tới (giữ nguyên)
+  boss: 'boss-out-of-time', // nhạc kịch tính (tuỳ chọn)
+  bossSoft: 'boss-hoi-hop', // nhạc boss mặc định: hồi hộp vừa phải
+  report: 'mappy', // nhạc màn tổng kết cuối ngày (file do chủ game thêm)
 }
 /** Thứ tự phát luân phiên */
-const PLAYLIST: TrackId[] = ['somMai', 'muaPhun', 'hemNho', 'chieuHien', 'lyDenDa']
+const PLAYLIST: TrackId[] = ['lastXmas', 'feliz', 'somMai', 'muaPhun', 'hemNho', 'chieuHien', 'lyDenDa']
 /** Mỗi bài lặp mấy vòng (~1 phút/vòng) rồi chuyển bài kế tiếp */
 const LOOPS_PER_TRACK = 2
 export const TRACK_LIST: { id: TrackChoice; name: string; icon: string; desc: string }[] = [
-  { id: 'auto', name: 'Phát luân phiên', icon: '', desc: '5 bài bossa nova lần lượt, đổi bài mỗi ~2 phút' },
+  { id: 'auto', name: 'Phát luân phiên', icon: '', desc: '7 bài bossa nova lần lượt, mở đầu bằng 2 bài Giáng sinh' },
+  { id: 'lastXmas', name: 'Last Christmas (bossa)', icon: '', desc: 'Bossa pop Giáng sinh' },
+  { id: 'feliz', name: 'Feliz Navidad (bossa)', icon: '', desc: 'Bossa Giáng sinh vui tươi' },
   { id: 'somMai', name: 'Sớm mai', icon: '', desc: 'Bossa sáng sớm, sáo nhẹ' },
   { id: 'muaPhun', name: 'Mưa phùn', icon: '', desc: 'Chậm, vibraphone êm' },
   { id: 'hemNho', name: 'Hẻm nhỏ', icon: '', desc: 'Rhodes ấm, hơi jazz' },
   { id: 'chieuHien', name: 'Chiều hiên', icon: '', desc: 'Thong thả buổi chiều' },
   { id: 'lyDenDa', name: 'Ly đen đá', icon: '', desc: 'Giọng thứ, hơi hoài niệm' },
 ]
-export const audio = reactive({ music: true, sfx: true, volume: 0.7, unlocked: false, track: 'auto' as TrackChoice, playing: '' as TrackId | '' })
+export const audio = reactive({ music: true, sfx: true, volume: 0.7, unlocked: false, track: 'auto' as TrackChoice, playing: '' as TrackId | '', bossMusic: 'soft' as BossMusic })
 try {
   const s = JSON.parse(localStorage.getItem(KEY) || 'null')
-  if (s) { audio.music = !!s.music; audio.sfx = !!s.sfx; if (typeof s.volume === 'number') audio.volume = Math.min(1, Math.max(0, s.volume)); if (s.track === 'auto' || (s.track in MUSIC_FILES && s.track !== 'boss')) audio.track = s.track }
+  if (s) { audio.music = !!s.music; audio.sfx = !!s.sfx; if (typeof s.volume === 'number') audio.volume = Math.min(1, Math.max(0, s.volume)); if (s.track === 'auto' || (s.track in MUSIC_FILES && !isBossTrack(s.track) && s.track !== 'report')) audio.track = s.track; if (['soft', 'drama', 'off'].includes(s.bossMusic)) audio.bossMusic = s.bossMusic }
 } catch { /* bỏ qua */ }
 /** Âm lượng tổng: thanh trượt 0..1 -> mức thật (mặc định 0.7 ≈ nhỏ vừa phải) */
 function masterLevel() { return 0.6 * audio.volume * audio.volume + 0.05 * audio.volume }
 watch(() => audio.volume, () => {
-  try { localStorage.setItem(KEY, JSON.stringify({ music: audio.music, sfx: audio.sfx, track: audio.track, volume: audio.volume })) } catch { /* bỏ qua */ }
+  try { localStorage.setItem(KEY, JSON.stringify({ music: audio.music, sfx: audio.sfx, track: audio.track, volume: audio.volume, bossMusic: audio.bossMusic })) } catch { /* bỏ qua */ }
   if (ctx) master.gain.setTargetAtTime(masterLevel(), ctx.currentTime, 0.05)
 })
-watch(() => [audio.music, audio.sfx, audio.track], () => {
-  try { localStorage.setItem(KEY, JSON.stringify({ music: audio.music, sfx: audio.sfx, track: audio.track, volume: audio.volume })) } catch { /* bỏ qua */ }
+watch(() => [audio.music, audio.sfx, audio.track, audio.bossMusic], () => {
+  try { localStorage.setItem(KEY, JSON.stringify({ music: audio.music, sfx: audio.sfx, track: audio.track, volume: audio.volume, bossMusic: audio.bossMusic })) } catch { /* bỏ qua */ }
   if (audio.music) startMusic(); else stopMusic()
 })
 
@@ -146,10 +160,13 @@ export function sfx(name: Sfx) {
   const t = ctx.currentTime + 0.01
   switch (name) {
     case 'boss':
-      // cảnh báo kịch tính: 2 nốt trầm + tiếng trống
-      tone(220, t, 0.35, { vol: 0.2, type: 'sawtooth', filter: 1200 }); tone(208, t + 0.38, 0.5, { vol: 0.2, type: 'sawtooth', filter: 1200 })
-      tone(110, t, 0.9, { vol: 0.18, type: 'square', filter: 500 })
-      noise(t, 0.4, { type: 'lowpass', freq: 300, vol: 0.5 }); noise(t + 0.38, 0.5, { type: 'lowpass', freq: 250, vol: 0.5 })
+      // báo boss tới: 2 nốt chuông nhẹ (bản cũ có trống + sawtooth, quá to)
+      if (audio.bossMusic === 'drama') {
+        tone(220, t, 0.35, { vol: 0.12, type: 'sawtooth', filter: 1000 }); tone(208, t + 0.38, 0.5, { vol: 0.12, type: 'sawtooth', filter: 1000 })
+        noise(t, 0.3, { type: 'lowpass', freq: 300, vol: 0.25 })
+      } else {
+        tone(660, t, 0.25, { vol: 0.1, type: 'triangle' }); tone(523, t + 0.22, 0.4, { vol: 0.1, type: 'triangle' })
+      }
       break
     case 'bossWin': [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, t + i * 0.09, 0.4, { vol: 0.14, type: 'square', filter: 3000 })); break
     case 'bossLose': [392, 330, 262, 196].forEach((f, i) => tone(f, t + i * 0.16, 0.35, { vol: 0.15, type: 'triangle' })); break
@@ -217,7 +234,7 @@ function loadTrack(id: TrackId): Promise<AudioBuffer | null> {
 
 // Thời gian trong ngày (0..1) — giữ lại cho các phần khác gọi tới
 export function setDayFrac(_f: number) { /* nhạc giờ phát luân phiên, không đổi theo giờ trong ngày */ }
-let nextIdx = Math.floor(Math.random() * PLAYLIST.length) // bắt đầu ở 1 bài ngẫu nhiên rồi đi lần lượt
+let nextIdx = 0 // luôn bắt đầu từ bài đầu danh sách (2 bài Giáng sinh) rồi đi lần lượt
 
 let current: { id: TrackId; src: AudioBufferSourceNode; gain: GainNode; started: number; dur: number } | null = null
 let switching = false
@@ -227,12 +244,24 @@ let timer = 0
 let bossMode = false
 export function setBossMode(on: boolean) {
   bossMode = on
-  if (on && ctx) void loadTrack('boss')
+  if (on && ctx && bossTrack()) void loadTrack(bossTrack()!)
   if (timer) tickMusic()
 }
 
+// Màn tổng kết cuối ngày: phát nhạc riêng (lặp) tới khi sang ngày mới
+let reportMode = false
+export function setReportMode(on: boolean) {
+  if (reportMode === on) return
+  reportMode = on
+  // đổi nhạc NGAY khi màn tổng kết hiện (không chờ chu kỳ kiểm tra 1.5 giây)
+  if (timer) tickMusic()
+}
+/** Tải sẵn nhạc tổng kết từ đầu ngày để lúc hết ngày phát được ngay, khớp với màn tổng kết */
+export function preloadReport() { if (ctx) void loadTrack('report') }
+function bossTrack(): TrackId | null { return audio.bossMusic === 'drama' ? 'boss' : audio.bossMusic === 'soft' ? 'bossSoft' : null }
 function pickWanted(): TrackId {
-  if (bossMode) return 'boss'
+  if (reportMode) return 'report'
+  if (bossMode && bossTrack()) return bossTrack()!
   if (audio.track !== 'auto') return audio.track
   // luân phiên: giữ bài đang phát đủ LOOPS_PER_TRACK vòng rồi sang bài kế tiếp trong danh sách
   if (current && PLAYLIST.includes(current.id)) {
@@ -244,11 +273,14 @@ function pickWanted(): TrackId {
   return PLAYLIST[nextIdx % PLAYLIST.length]
 }
 
+let queued = false
 async function playTrack(id: TrackId) {
-  if (!ctx || switching) return
+  if (!ctx) return
+  if (switching) { queued = true; return } // đang tải bài khác: xong sẽ kiểm tra lại ngay
   switching = true
   const buf = await loadTrack(id)
   switching = false
+  if (queued) { queued = false; const w = pickWanted(); if (w !== id) { void playTrack(w); return } }
   if (!buf || !audio.music || !timer) return
   const now = ctx.currentTime
   // giảm dần bài cũ
@@ -256,24 +288,24 @@ async function playTrack(id: TrackId) {
     const old = current
     old.gain.gain.cancelScheduledValues(now)
     old.gain.gain.setValueAtTime(old.gain.gain.value, now)
-    old.gain.gain.linearRampToValueAtTime(0, now + (id === 'boss' ? 0.6 : 1.8))
+    old.gain.gain.linearRampToValueAtTime(0, now + (id === 'report' ? 0.12 : old.id === 'report' ? 0.4 : isBossTrack(id) ? 0.8 : 1.8))
     try { old.src.stop(now + 2) } catch { /* bỏ qua */ }
   }
-  const fade = id === 'boss' ? 0.6 : 1.8
+  const fade = id === 'report' ? 0.04 : isBossTrack(id) ? 0.8 : 1.8
   const src = ctx.createBufferSource()
   src.buffer = buf
   src.loop = true
   const g = ctx.createGain()
   g.gain.setValueAtTime(0, now)
-  g.gain.linearRampToValueAtTime(id === 'boss' ? 1.25 : 1, now + fade)
+  g.gain.linearRampToValueAtTime(BOSS_GAIN[id] ?? 1, now + fade)
   src.connect(g); g.connect(musicBus)
-  src.start(now + 0.05)
+  src.start(now + (id === 'report' ? 0.01 : 0.05))
   current = { id, src, gain: g, started: now, dur: buf.duration }
   if (PLAYLIST.includes(id)) nextIdx = PLAYLIST.indexOf(id) + 1
   audio.playing = id
   // tải trước bài kế tiếp để đổi bài mượt
   if (PLAYLIST.includes(id)) void loadTrack(PLAYLIST[(PLAYLIST.indexOf(id) + 1) % PLAYLIST.length])
-  void loadTrack('boss')
+  if (bossTrack()) void loadTrack(bossTrack()!)
 }
 
 function tickMusic() {

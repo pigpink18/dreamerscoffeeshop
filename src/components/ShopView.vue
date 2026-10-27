@@ -4,7 +4,9 @@ import {
   save, ui, weather, forecast, wages, expectedCustomers, expectedOrders, portionsLeft, canMake,
   openShop, togglePause, cycleSpeed, todayBoss, DAY_LENGTH, clock,
 } from '../game/store'
-import { recipeById, money, moneyShort, RENT } from '../game/data'
+import { recipeById, money, moneyShort } from '../game/data'
+import { rentToday, premise } from '../game/store'
+import { myRank, isContestDay } from '../game/meta'
 import InstallHint from './InstallHint.vue'
 import CounterScene from './CounterScene.vue'
 import WorkPanel from './WorkPanel.vue'
@@ -56,6 +58,22 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
       </div>
     </div>
 
+    <div v-if="isContestDay" class="card contest"><PixelIcon name="trophy" :size="4" /><div class="grow"><b>NGÀY HỘI BARISTA PHỐ NÚI</b><div class="small">Điểm phố hôm nay x2 · cuối ngày chốt bảng xếp hạng tuần và trao thưởng!</div></div></div>
+    <div v-if="save.meta.news && save.meta.news.day === save.day" class="card news"><PixelIcon name="megaphone" :size="3" /><span class="small">{{ save.meta.news.text }}</span></div>
+
+    <div class="duo">
+      <button class="card mini" @click="ui.tab = 'compete'">
+        <div class="tiny">ĐUA TOP PHỐ</div>
+        <b>Hạng #{{ myRank + 1 }}</b>
+        <small class="muted">Điểm tuần {{ save.meta.week.my }}</small>
+      </button>
+      <button class="card mini" @click="ui.tab = 'app'">
+        <div class="tiny">NHIỆM VỤ HÔM NAY</div>
+        <b>{{ save.meta.quests.list.filter((q) => q.done).length }}/3 xong</b>
+        <small class="muted"><PixelIcon name="bean" :size="2" /> {{ save.meta.beans }} hạt vàng</small>
+      </button>
+    </div>
+
     <div class="section-title">Món sẵn sàng bán</div>
     <div class="card list">
       <div v-for="id in save.unlocked" :key="id" class="row item">
@@ -72,7 +90,7 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 
     <div class="section-title">Cuối ngày</div>
     <div class="card list small-list">
-      <div class="row"><PixelIcon name="house" /><span class="grow">Tiền mặt bằng</span><b>{{ money(RENT) }}</b></div>
+      <div class="row"><PixelIcon name="house" /><span class="grow">Tiền thuê {{ premise.name }}</span><b>{{ money(rentToday) }}</b></div>
       <div class="row" v-if="wages"><PixelIcon name="staff" /><span class="grow">Lương nhân viên & shipper</span><b>{{ money(wages) }}</b></div>
       <div class="row" v-if="!save.upgrades.freezer"><PixelIcon name="ice" /><span class="grow muted">Đá còn dư sẽ tan hết</span></div>
     </div>
@@ -118,6 +136,15 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 </template>
 
 <style scoped>
+.contest { display: flex; align-items: center; gap: 10px; margin-top: 12px; background: #fff3cf; }
+.contest b { font-size: 13px; letter-spacing: 0.04em; }
+.news { display: flex; align-items: center; gap: 10px; margin-top: 12px; background: #fff6dc; font-weight: 700; }
+.duo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.mini { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 10px 12px 12px; }
+.mini .tiny { font-size: 9px; font-weight: 900; letter-spacing: 0.12em; color: #a9744f; }
+.mini b { font-size: 16px; }
+.mini small { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; }
+
 .small { font-size: 13px; }
 .tiny { font-size: 11px; }
 .center { text-align: center; margin-top: 8px; }
@@ -152,7 +179,9 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 .cta { margin-top: 24px; }
 
 /* Đang bán */
-.open { position: relative; }
+.open { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.open > * { flex: none; }
+.open > .scene-box { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; padding: 4px 0 8px; }
 .controls { display: flex; align-items: center; gap: 8px; }
 .progress { flex: 1; margin: 0 3px; }
 .progress .bar { background: #f2c14e; box-shadow: inset 0 -3px 0 #d99a2b, inset 0 2px 0 #fff1a8; }
@@ -160,7 +189,7 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 .mini-stat { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 900; white-space: nowrap; }
 .mini-stat.bad { color: var(--bad); }
 
-.scene-box { margin: 12px 3px 0; }
+.scene-box { margin: 8px 3px 0; }
 .crew { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .crew .chip { font-size: 11px; font-weight: 700; background: var(--card); border-radius: 99px; padding: 4px 9px; box-shadow: var(--shadow); }
 .scene {

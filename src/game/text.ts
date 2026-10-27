@@ -1,6 +1,4 @@
-// Bỏ emoji khỏi chuỗi hiển thị (giao diện chỉ dùng icon pixel art)
-const EMOJI = /(?:\p{Extended_Pictographic}|\p{Regional_Indicator}|[\u{1F3FB}-\u{1F3FF}️‍⃣])/gu
-export const noEmoji = (s: string) => String(s ?? '').replace(EMOJI, '').replace(/\s{2,}/g, ' ').replace(/\s+([,.!?…”])/g, '$1').trim()
+export { noEmoji } from './emoji'
 
 import type { RecipeId } from './data'
 import { recipeById, STEPS } from './data'

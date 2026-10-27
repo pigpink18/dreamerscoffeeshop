@@ -1,12 +1,14 @@
 import { noEmoji } from './text'
 import { reactive, computed, watch } from 'vue'
 import {
-  INGREDIENTS, RECIPES, WEATHERS, CUSTOMER_FACES, UPGRADES, STEPS, LINES, REVIEWS, SHIPPERS, RAPS, ORDER_NAMES, NEEDY, REGULARS, GENERIC_ORDERS, GENERIC_CHATS, BOND_LEVELS, bondLevel, COUNTER_REVIEWS, FAMILY_REVIEWS, randomLook, stepIngredient, BOSSES, BOSS_LINES, STARTER_RECIPES, UNLOCK_ORDER, funnyName,
-  DAY_LENGTH, OPEN_HOUR, CLOSE_HOUR, STAFF_WAGE, SHIPPER_WAGE, RENT, START_MONEY,
+  INGREDIENTS, RECIPES, WEATHERS, CUSTOMER_FACES, UPGRADES, STEPS, LINES, REVIEWS, SHIPPERS, ORDER_NAMES, NEEDY, REGULARS, GENERIC_ORDERS, GENERIC_CHATS, BOND_LEVELS, bondLevel, COUNTER_REVIEWS, FAMILY_REVIEWS, randomLook, stepIngredient, BOSSES, BOSS_LINES, STARTER_RECIPES, UNLOCK_ORDER, funnyName,
+  DAY_LENGTH, OPEN_HOUR, CLOSE_HOUR, STAFF_WAGE, SHIPPER_WAGE, START_MONEY,
   ingredientById, recipeById, weatherById, moneyShort, recipeNeeds, pick,
   type IngredientId, type RecipeId, type UpgradeId, type WeatherId, type StepId, type ChatTopic, type Look,
 } from './data'
-import { sfx, setDayFrac, setBossMode } from './audio'
+import { sfx, setDayFrac, setBossMode, setReportMode, preloadReport, audio } from './audio'
+import { hooks, type MetaDayResult } from './hooks'
+import { PREMISES, rareById, newMeta, RIVALS, type MetaSave } from './metaData'
 
 const SAVE_KEY = 'coffee-tycoon-save-v1'
 
@@ -42,6 +44,7 @@ export interface SaveData {
   playerId: string // mã ngẫu nhiên của bản lưu trên máy này
   introSeen: boolean // đã xem truyện mở đầu
   createdAt: number
+  meta: MetaSave // mặt bằng, đối thủ, nhiệm vụ, album, đồ cho Cáo…
 }
 
 export interface Customer {
@@ -54,6 +57,7 @@ export interface Customer {
   needy?: number // index trong NEEDY – người nhận cà phê treo
   boss?: number // index trong BOSSES – khách boss khó tính
   regular?: string // id khách quen
+  rare?: string // id khách hiếm (album)
   greeting: string // câu gọi món
   name?: string // tên vui của khách vãng lai
   look: Look // ngoại hình pixel
@@ -102,7 +106,8 @@ export interface Brew {
   chunks: boolean
   busy: boolean
   shake: number
-  action: StepId | null // thao tác đang chạy (để cảnh vẽ hoạt ảnh)
+  action: StepId | null
+  actionAt?: number // thao tác đang chạy (để cảnh vẽ hoạt ảnh)
 }
 
 // ---------- Kênh sự kiện cho cảnh pixel ----------
@@ -137,6 +142,8 @@ export interface DayStats {
   boss: 'win' | 'lose' | null // kết quả boss gần nhất
   bossLog: { idx: number; win: boolean }[] // tất cả boss trong ngày
   newRecipe: RecipeId | null // món mới mở khoá khi xong ngày
+  goodsRev: number // tiền bán kèm bánh / lưu niệm
+  goodsSold: number
 }
 
 export interface DayReport extends DayStats {
@@ -146,10 +153,11 @@ export interface DayReport extends DayStats {
   profit: number
   repEnd: number
   bankrupt: boolean
+  meta?: MetaDayResult | null
 }
 
 export type Phase = 'prep' | 'open' | 'report'
-export type Tab = 'shop' | 'stock' | 'menu' | 'app' | 'upgrade'
+export type Tab = 'shop' | 'stock' | 'menu' | 'compete' | 'app' | 'upgrade'
 
 // ---------- Khởi tạo ----------
 function randomWeather(): WeatherId {
@@ -166,7 +174,7 @@ function newSave(): SaveData {
     day: 1,
     money: START_MONEY,
     reputation: 30,
-    stock: { cafe: 15, suaDac: 10, suaTuoi: 10, da: 30, ly: 30, tra: 10, dao: 10, kem: 0, matcha: 0, syrup: 10, kemTuoi: 0 },
+    stock: { cafe: 15, suaDac: 10, suaTuoi: 10, da: 30, ly: 30, tra: 10, dao: 10, kem: 0, matcha: 0, syrup: 10, kemTuoi: 0, dua: 0, trung: 0, cacao: 0 },
     prices: Object.fromEntries(RECIPES.map((r) => [r.id, r.fairPrice])) as Record<RecipeId, number>,
     unlocked: [...STARTER_RECIPES],
     upgrades: { staff: 0, machine: 0, decor: 0, sign: 0, freezer: 0, shipper: 0, green: 0, farmer: 0 },
@@ -182,6 +190,7 @@ function newSave(): SaveData {
     playerId: newPlayerId(),
     introSeen: false,
     createdAt: Date.now(),
+    meta: newMeta(),
   }
 }
 
@@ -208,6 +217,7 @@ function loadSave(): SaveData {
           bonds: data.bonds ?? {},
           player: !data.player || data.player === 'Mây' ? base.player : data.player,
           playerId: data.playerId || base.playerId,
+          meta: mergeMeta(base.meta, data.meta),
         }
       }
     }
@@ -215,8 +225,22 @@ function loadSave(): SaveData {
   return newSave()
 }
 
+function mergeMeta(base: MetaSave, m?: Partial<MetaSave>): MetaSave {
+  if (!m) return base
+  const rivals = RIVALS.map((r) => m.rivals?.find((x) => x.id === r.id) ?? base.rivals.find((x) => x.id === r.id)!)
+  return {
+    ...base, ...m,
+    stats: { ...base.stats, ...m.stats },
+    week: { ...base.week, ...m.week },
+    quests: m.quests ?? base.quests,
+    online: { ...base.online, ...m.online },
+    wear: { ...m.wear },
+    rivals,
+  }
+}
+
 function emptyStats(rep: number): DayStats {
-  return { revenue: 0, spent: 0, served: 0, angry: 0, tooExpensive: 0, full: 0, repStart: rep, tips: 0, delivered: 0, cancelled: 0, starsSum: 0, given: 0, donated: 0, boss: null, bossLog: [], newRecipe: null }
+  return { revenue: 0, spent: 0, served: 0, angry: 0, tooExpensive: 0, full: 0, repStart: rep, tips: 0, delivered: 0, cancelled: 0, starsSum: 0, given: 0, donated: 0, boss: null, bossLog: [], newRecipe: null, goodsRev: 0, goodsSold: 0 }
 }
 
 // ---------- State ----------
@@ -288,8 +312,8 @@ export function vibrate(ms: number | number[] = 10) {
 export function toast(text: string, kind: 'info' | 'bad' | 'good' | 'say' | 'rap' | 'heart' = 'info', ms = 2200) {
   text = noEmoji(text)
   const id = nextId()
-  ui.toasts.push({ id, text, kind })
-  if (ui.toasts.length > 3) ui.toasts.shift()
+  // chỉ hiện 1 thông báo một lúc (cái mới thay cái cũ) cho đỡ rối màn hình
+  ui.toasts.splice(0, ui.toasts.length, { id, text, kind })
   setTimeout(() => {
     const i = ui.toasts.findIndex((t) => t.id === id)
     if (i >= 0) ui.toasts.splice(i, 1)
@@ -310,10 +334,12 @@ const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v))
 // ---------- Tính toán ----------
 export const weather = computed(() => weatherById[save.weather])
 export const forecast = computed(() => weatherById[save.forecast])
-export const queueCapacity = computed(() => 4 + save.upgrades.decor)
+export const premise = computed(() => PREMISES[save.meta.premise] ?? PREMISES[0])
+export const rentToday = computed(() => premise.value.rent)
+export const queueCapacity = computed(() => 4 + save.upgrades.decor + premise.value.slots)
 export const staffServeTime = computed(() => 5 / (1 + 0.4 * save.upgrades.machine))
 export const wages = computed(() => save.upgrades.staff * STAFF_WAGE + save.upgrades.shipper * SHIPPER_WAGE)
-export const dailyCosts = computed(() => wages.value + RENT)
+export const dailyCosts = computed(() => wages.value + rentToday.value)
 export const appRating = computed(() => {
   const r = save.reviews.slice(0, 30)
   return r.length ? r.reduce((a, x) => a + x.stars, 0) / r.length : 4
@@ -329,12 +355,13 @@ export const clock = computed(() => {
 /** Giá khách thấy hợp lý (cà phê sạch → khách chịu trả thêm) */
 export function fairPrice(id: RecipeId) {
   const r = recipeById[id]
-  return r.fairPrice * (save.upgrades.farmer && r.coffee ? 1.15 : 1)
+  return r.fairPrice * (save.upgrades.farmer && r.coffee ? 1.15 : 1) * premise.value.priceMul
 }
 
 export function expectedCustomers() {
   return 13 * weather.value.customerMul * (0.4 + (save.reputation / 100) * 1.2)
     * (1 + 0.12 * save.upgrades.decor) * (1 + 0.2 * save.upgrades.sign) * (1 + 0.1 * save.upgrades.green) * (1 + 0.15 * save.upgrades.staff)
+    * premise.value.customerMul * (hooks.customerMul?.() ?? 1)
 }
 
 export function expectedOrders() {
@@ -488,6 +515,7 @@ function unlockNextRecipe(): RecipeId | null {
 function endBoss(win: boolean, idx: number) {
   ui.stats.boss = win ? 'win' : 'lose'
   ui.stats.bossLog.push({ idx, win })
+  hooks.bossEnd?.(win)
   if (ui.bossNext < ui.bossPlan.length) {
     ui.bossState = 'pending'
     ui.bossAt = Math.max(ui.bossPlan[ui.bossNext], ui.time + 8) // nghỉ thở ít nhất 1 chút
@@ -521,6 +549,8 @@ export function openShop() {
   ui.staffJob = []
   ui.stats = { ...emptyStats(save.reputation), spent: ui.stats.spent }
   planBoss()
+  hooks.dayStart?.()
+  preloadReport()
   last = performance.now()
   raf = requestAnimationFrame(loop)
   sfx('bell')
@@ -545,7 +575,7 @@ function restoreSession() {
   if (!Array.isArray(ui.bossPlan)) { ui.bossPlan = [ui.bossAt]; ui.bossNext = ui.bossState === 'pending' ? 0 : 1 }
   if (!Array.isArray(ui.stats.bossLog)) ui.stats.bossLog = []
   uid = Math.max(uid, s.uid || 1)
-  if (ui.phase === 'report') { if (!ui.report) ui.phase = 'prep'; return }
+  if (ui.phase === 'report') { if (!ui.report) ui.phase = 'prep'; else setReportMode(true); return }
   // đang bán: tạm dừng, chờ người chơi chạm để chơi tiếp
   ui.paused = true
   ui.resumed = true
@@ -653,8 +683,8 @@ function tick(dt: number) {
     ui.staffProgress[s] += dt
     if (ui.staffProgress[s] >= staffServeTime.value) {
       ui.staffProgress[s] = 0
-      if (cust) { consume(cust.recipe); completeWalkIn(cust, false, true); toast(`🧑‍🍳 Nhân viên pha xong ${recipeById[cust.recipe].name} cho ${cust.name ?? 'khách'}`, 'good', 1600) }
-      else if (order) { consume(order.recipe); orderReady(order, save.upgrades.machine > 0 || Math.random() < 0.7, true); toast(`🧑‍🍳 Nhân viên đóng gói xong đơn app của ${order.name}`, 'good', 1600) }
+      if (cust) { consume(cust.recipe); completeWalkIn(cust, false, true) }
+      else if (order) { consume(order.recipe); orderReady(order, save.upgrades.machine > 0 || Math.random() < 0.7, true) }
     }
   }
 
@@ -667,8 +697,7 @@ function tick(dt: number) {
       sh.orderId = o.id
       sh.t = 0
       sh.total = 9 + Math.random() * 6
-      toast(`${sh.face} ${sh.name}: ${pick(RAPS)}`, 'rap', 3200)
-      sfx('horn')
+      sfx('horn') // (bỏ thông báo rap của shipper cho đỡ rối màn hình)
     } else {
       sh.t += dt
       if (sh.t >= sh.total) {
@@ -703,6 +732,17 @@ function spawnCustomer() {
     ui.stats.full++
     changeRep(-0.2)
     float(pick(LINES.full), 'bad')
+    return
+  }
+  // Khách hiếm (album) – chỉ ghé khi đủ điều kiện thời tiết / giờ
+  const rareId = ui.queue.some((c) => c.rare) ? null : hooks.rareSpawn?.(ui.time / DAY_LENGTH)
+  if (rareId) {
+    const R = rareById[rareId]
+    const recipe = chooseRecipe().id
+    const maxP = 75 * (1 + 0.1 * save.upgrades.decor)
+    ui.queue.push({ id: nextId(), face: '✨', recipe, patience: maxP, maxPatience: maxP, rare: R.id, name: R.name, look: R.look,
+      greeting: R.greet.replace('{drink}', recipeById[recipe].name) })
+    sfx('bell')
     return
   }
   // Khách quen ghé
@@ -789,6 +829,7 @@ function completeWalkIn(c: Customer, perfect: boolean, byStaff: boolean, mistake
     changeRep(4)
     float(`👑 +${moneyShort(price + tip)}`, 'good')
     sfx('coin')
+    hooks.served?.({ kind: 'boss', recipe: c.recipe, perfect: true, byStaff, price, tip, stars: 5, albumKey: `boss:${c.boss}` })
     bus.emit({ type: 'served', id: c.id, stars: 5, text, price, tip, needy: false })
     endBoss(true, c.boss)
     return
@@ -803,6 +844,8 @@ function completeWalkIn(c: Customer, perfect: boolean, byStaff: boolean, mistake
     addBond(c.regular, byStaff ? 2 : perfect ? 6 : 3)
   }
   if ((c.chatBonus ?? 0) >= 5) tip += 2_000
+  const R = c.rare ? rareById[c.rare] : null
+  if (R) tip += R.tip
   save.money += price + tip
   ui.stats.revenue += price + tip
   ui.stats.tips += tip
@@ -811,6 +854,20 @@ function completeWalkIn(c: Customer, perfect: boolean, byStaff: boolean, mistake
   changeRep((fast ? 0.5 : 0.2) + (cheap ? 0.2 : 0) + (tip ? 0.3 : 0))
   float(`${byStaff ? '🧑‍🍳 ' : ''}+${moneyShort(price)}${tip ? ` 💝${moneyShort(tip)}` : ''}`, 'good')
   sfx('coin')
+  // khách mua kèm bánh / đồ lưu niệm (theo mặt bằng)
+  const extra = hooks.extraSale?.()
+  if (extra) {
+    save.money += extra.price
+    ui.stats.revenue += extra.price
+    ui.stats.goodsRev = (ui.stats.goodsRev ?? 0) + extra.price
+    ui.stats.goodsSold = (ui.stats.goodsSold ?? 0) + 1
+    setTimeout(() => float(`+${moneyShort(extra.price)} ${extra.name}`, 'good'), 450)
+  }
+  const albumKey = c.regular ? `reg:${c.regular}` : c.rare ? `rare:${c.rare}` : c.name ? `name:${c.name}` : undefined
+  const ratio0 = c.patience / c.maxPatience
+  hooks.served?.({ kind: 'walkin', recipe: c.recipe, perfect: perfect && !byStaff, byStaff, price, tip, albumKey, look: c.look,
+    stars: byStaff ? 4 : mistakes === 0 ? (ratio0 > 0.4 ? 5 : 4) : mistakes === 1 ? 3 : 2 })
+  if (byStaff && R) toast(`${R.name}: “${R.thanks}”`, 'heart', 3200)
   if (!byStaff) {
     // Khách cầm ly lên uống và review tại quầy
     const ratio = c.patience / c.maxPatience
@@ -821,6 +878,7 @@ function completeWalkIn(c: Customer, perfect: boolean, byStaff: boolean, mistake
     if (stars === 5 && Math.random() < 0.4) text = pick(fam.good)
     if (stars === 4 && Math.random() < 0.5) text = pick(fam.meh)
     text = text.replace('{drink}', r.name.toLowerCase())
+    if (R && stars >= 4) text = R.thanks
     const name = c.regular ? REGULARS.find((x) => x.id === c.regular)!.name : c.name ?? pick(ORDER_NAMES)
     save.reviews.unshift({ id: nextId(), name, stars, text, recipe: c.recipe, day: save.day, src: 'quan' })
     if (save.reviews.length > 40) save.reviews.length = 40
@@ -852,6 +910,7 @@ function deliver(o: Order, idx: number) {
   trackImpact(o.recipe)
   changeRep((stars - 3) * 0.4)
   const review = addReview(o, stars)
+  hooks.served?.({ kind: 'app', recipe: o.recipe, perfect: o.perfect, byStaff: false, price, tip: 0, stars })
   float(`+${moneyShort(price)} 🛵`, 'good')
   toast(`${'⭐'.repeat(stars)} ${o.name}: “${review.text}”`, stars >= 4 ? 'good' : 'bad', 2600)
   sfx('coin')
@@ -896,6 +955,7 @@ export function talkReply(i: number) {
   const r = t.topic.replies[i]
   t.answer = r.answer
   t.mode = 'answer'
+  hooks.chat?.(r.bond)
   if (c.regular) addBond(c.regular, r.bond)
   else c.chatBonus = r.bond
   if (r.bond >= 5) { changeRep(0.3); sfx('heart'); c.patience = Math.min(c.maxPatience, c.patience + 4) }
@@ -961,28 +1021,26 @@ export function brewStep(step: StepId) {
   const info = STEPS[step]
   sfx(info.sound)
   vibrate(6)
-  b.busy = true
+  // Ghi nhận bước NGAY lập tức (không bắt chờ hoạt ảnh) → bấm liên tục vẫn nhạy
   b.action = step
+  b.actionAt = performance.now()
   bus.emit({ type: 'step', step })
-  // Áp hiệu ứng lên ly sau khi hoạt ảnh chạy xong
-  const apply = () => {
-    if (step === 'ly') b.cup = true
-    else if (step === 'da') b.ice = true
-    else if (step === 'khuay' || step === 'lac') b.mixed = true
-    else if (step === 'xay') { b.blended = true; b.ice = false }
-    else if (step === 'kem') b.foam = true
-    else if (step === 'kemTuoi') b.whip = true
-    else if (info.color) {
-      b.layers.push(info.color)
-      b.mixed = false
-      if (step === 'dao') b.chunks = true
-    }
-    b.done.push(step)
-    b.action = null
-    b.busy = false
-    if (b.done.length === steps.length) { b.busy = true; setTimeout(finishBrew, 350) }
+  if (step === 'ly') b.cup = true
+  else if (step === 'da') b.ice = true
+  else if (step === 'khuay' || step === 'lac') b.mixed = true
+  else if (step === 'xay') { b.blended = true; b.ice = false }
+  else if (step === 'kem') b.foam = true
+  else if (step === 'kemTuoi') b.whip = true
+  else if (info.color) {
+    b.layers.push(info.color)
+    b.mixed = false
+    if (step === 'dao') b.chunks = true
   }
-  setTimeout(() => { if (ui.brew === b) apply() }, info.kind === 'act' ? stepMs(step) : Math.min(info.ms, 260))
+  b.done.push(step)
+  const anim = info.kind === 'act' ? stepMs(step) : Math.min(info.ms, 260)
+  const at = b.actionAt
+  setTimeout(() => { if (ui.brew === b && b.actionAt === at) b.action = null }, anim)
+  if (b.done.length === steps.length) { b.busy = true; setTimeout(() => { if (ui.brew === b) finishBrew() }, Math.max(250, anim * 0.6)) }
 }
 
 function finishBrew() {
@@ -991,8 +1049,11 @@ function finishBrew() {
   const name = b.target === 'cust' ? recipeById[b.recipe].name : `Đơn app · ${ui.orders.find((o) => o.id === b.id)?.name ?? ''}`
   ui.present = { recipe: b.recipe, cup: b, target: b.target, name }
   sfx('done')
-  setTimeout(() => {
+  presentDone = () => {
+    presentDone = null
+    clearTimeout(presentTimer)
     ui.present = null
+    if (ui.phase !== 'open') { ui.brew = null; return }
     ui.brew = null
     const perfect = b.mistakes === 0
     if (b.target === 'cust') {
@@ -1005,8 +1066,13 @@ function finishBrew() {
       orderReady(o, perfect, false)
       bus.emit({ type: 'orderPacked', name: o.name })
     }
-  }, 1500)
+  }
+  presentTimer = window.setTimeout(() => presentDone?.(), 1000)
 }
+let presentDone: (() => void) | null = null
+let presentTimer = 0
+/** Chạm vào ly thành phẩm để đưa khách ngay */
+export function skipPresent() { presentDone?.() }
 
 /** Đổ bỏ ly đang pha (nguyên liệu đã dùng sẽ mất) */
 export function cancelBrew() {
@@ -1021,6 +1087,10 @@ export function cycleSpeed() { ui.speed = ui.speed >= 3 ? 1 : ui.speed + 1; sfx(
 
 function endDay() {
   cancelAnimationFrame(raf)
+  presentDone = null
+  clearTimeout(presentTimer)
+  ui.present = null
+  ui.toasts = []
   ui.queue = []
   ui.orders = []
   ui.brew = null
@@ -1035,20 +1105,22 @@ function endDay() {
   const nr = unlockNextRecipe()
   if (nr) ui.stats.newRecipe = nr
   const w = wages.value
-  const rent = RENT
+  const rent = rentToday.value
   save.money -= w + rent
   let meltedIce = 0
   if (!save.upgrades.freezer) { meltedIce = save.stock.da; save.stock.da = 0 }
   const s = ui.stats
   const profit = s.revenue - s.spent - w - rent
-  ui.report = { ...s, wages: w, rent, meltedIce, profit, repEnd: save.reputation, bankrupt: save.money < 0 }
+  const meta = hooks.dayEnd?.(s) ?? null
+  ui.report = { ...s, wages: w, rent, meltedIce, profit, repEnd: save.reputation, bankrupt: save.money < 0, meta }
   save.totals.revenue += s.revenue
   save.totals.served += s.served + s.delivered
   save.totals.bestProfit = Math.max(save.totals.bestProfit, profit)
   save.history = [...save.history, profit].slice(-7)
   ui.phase = 'report'
   persist()
-  sfx('dayEnd')
+  setReportMode(true)
+  if (!audio.music) sfx('dayEnd') // có nhạc thì nhạc tổng kết thay cho tiếng chuông, tránh chồng tiếng
   vibrate([20, 60, 20])
 }
 
@@ -1058,6 +1130,7 @@ export function nextDay() {
   save.weather = save.forecast
   save.forecast = randomWeather()
   ui.report = null
+  setReportMode(false)
   ui.toasts = []
   ui.stats = emptyStats(save.reputation)
   ui.time = 0
@@ -1069,6 +1142,7 @@ export function nextDay() {
 
 export function resetGame() {
   cancelAnimationFrame(raf)
+  setReportMode(false)
   Object.assign(save, newSave())
   ui.phase = 'prep'
   ui.report = null

@@ -134,3 +134,15 @@ body {
 .row { display: flex; align-items: center; gap: 10px; }
 .grow { flex: 1; min-width: 0; }
 .emoji { font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; }
+
+/* Thanh chọn mục (segmented) dùng chung */
+.segs { display: flex; gap: 6px; margin: 2px 2px 12px; padding: 3px 3px 5px; overflow-x: auto; scrollbar-width: none; }
+.segs button { flex: 1; white-space: nowrap; font-size: 12px; font-weight: 900; padding: 6px 8px 8px; background: #f1e2cf; color: #8a7566; box-shadow: var(--px-border-2), inset 0 -3px 0 #d8bf9f; }
+.segs button.on { background: #6f4630; color: #ffe8b8; box-shadow: var(--px-border-2), inset 0 -3px 0 #4a2e1f; }
+.segs button .dotn { display: inline-block; min-width: 14px; margin-left: 4px; padding: 0 3px; background: #e0524a; color: #fff; font-size: 10px; }
+.pbar { display: block; height: 6px; background: #e6d6c2; box-shadow: 0 0 0 2px #3b2a20; overflow: hidden; }
+.pbar b { display: block; height: 100%; background: #3fb57b; }
+
+/* Ẩn thanh cuộn ở mọi vùng cuộn (vẫn vuốt cuộn được) – cho cảm giác app game */
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; width: 0; height: 0; }

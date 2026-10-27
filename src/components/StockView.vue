@@ -3,13 +3,22 @@ import { computed } from 'vue'
 import { save, buyPack, INGREDIENTS } from '../game/store'
 import { recipeById, recipeNeeds, moneyShort, type IngredientId } from '../game/data'
 import { iconUrl } from '../game/pixel'
+import { knownIngredients, GOODS, goodUnlocked, goodsStock, buyGoods } from '../game/meta'
+import PixelIcon from './ui/PixelIcon.vue'
+
+const groups = computed(() => [
+  { kind: 'souvenir', title: 'Đồ gốm & lưu niệm', lock: 'Thuê Quán gác gỗ đồi thông (Nâng cấp › Mặt bằng) để mở kệ lưu niệm', note: 'Khách mua kèm khi gọi nước. Không hư, để lâu được.' },
+  { kind: 'bakery', title: 'Tủ bánh', lock: 'Thuê Dreamers Flagship để mở tủ bánh', note: 'Bánh tươi chỉ bán trong ngày – cuối ngày còn dư sẽ phải bỏ.' },
+].map((g) => ({ ...g, open: GOODS.some((x) => x.kind === g.kind && goodUnlocked(x, save.meta.premise)), items: GOODS.filter((x) => x.kind === g.kind) })))
+
+const SECRET_ING = new Set<IngredientId>(['dua', 'trung', 'cacao'])
 
 const used = computed(() => {
   const set = new Set<IngredientId>()
   for (const id of save.unlocked) for (const k of Object.keys(recipeNeeds(recipeById[id]))) set.add(k as IngredientId)
   return set
 })
-const sorted = computed(() => [...INGREDIENTS].sort((a, b) => Number(used.value.has(b.id)) - Number(used.value.has(a.id))))
+const sorted = computed(() => INGREDIENTS.filter((i) => !SECRET_ING.has(i.id) || knownIngredients.value.has(i.id) || save.stock[i.id] > 0).sort((a, b) => Number(used.value.has(b.id)) - Number(used.value.has(a.id))))
 </script>
 
 <template>
@@ -33,6 +42,27 @@ const sorted = computed(() => [...INGREDIENTS].sort((a, b) => Number(used.value.
       </div>
     </div>
     <p class="muted note">Mẹo: đá tan hết vào cuối ngày nếu chưa có tủ đông, nên chỉ nhập vừa đủ.</p>
+
+    <template v-for="g in groups" :key="g.kind">
+      <div class="section-title">{{ g.title }}</div>
+      <div v-if="!g.open" class="card locked"><PixelIcon name="lock" :size="3" /><span class="muted small">{{ g.lock }}</span></div>
+      <template v-else>
+        <div class="list">
+          <div v-for="i in g.items" :key="i.id" class="card ing">
+            <span class="slot"><img :src="iconUrl(i.id)" class="pix ic" alt="" /></span>
+            <div class="grow">
+              <div class="name">{{ i.name }}</div>
+              <div class="muted small">Gói {{ i.pack }} · {{ moneyShort(i.cost * i.pack) }} · bán <b class="sell">{{ moneyShort(i.price) }}</b>/món</div>
+            </div>
+            <div class="qty"><small>KỆ</small>{{ goodsStock(i.id) }}</div>
+            <div class="btns">
+              <button class="btn sm accent" :disabled="save.money < i.cost * i.pack" @click="buyGoods(i.id)">+1</button>
+            </div>
+          </div>
+        </div>
+        <p class="muted note">{{ g.note }}</p>
+      </template>
+    </template>
   </div>
 </template>
 
@@ -53,4 +83,6 @@ const sorted = computed(() => [...INGREDIENTS].sort((a, b) => Number(used.value.
 .btns { display: flex; gap: 8px; }
 .btns .btn { min-width: 44px; padding: 0 10px; }
 .note { font-size: 13px; margin: 14px 4px; }
+.locked { display: flex; align-items: center; gap: 10px; }
+.sell { color: var(--good); }
 </style>

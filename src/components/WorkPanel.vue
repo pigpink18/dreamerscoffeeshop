@@ -19,7 +19,16 @@ const ITEMS: { id: StepId }[] = [
   { id: 'syrup' },
   { id: 'kem' },
   { id: 'kemTuoi' },
+  { id: 'dua' },
+  { id: 'trung' },
+  { id: 'cacao' },
 ]
+// chỉ hiện nguyên liệu mà menu hiện tại dùng tới (đỡ rối, khay luôn gọn 1–3 hàng)
+const items = computed(() => {
+  const used = new Set<StepId>()
+  for (const id of save.unlocked) for (const st of recipeById[id].steps) used.add(st)
+  return ITEMS.filter((i) => used.has(i.id))
+})
 const ACTIONS: { id: StepId | 'trash'; img: string; label: string }[] = [
   { id: 'chiet', img: IMG_URL.espresso, label: 'Chiết xuất' },
   { id: 'lac', img: IMG_URL.shaker, label: 'Lắc' },
@@ -52,7 +61,7 @@ function pickOrder(id: number) {
         <div class="rhead">
           <span class="rname">{{ recipe.name }}</span>
           <span v-if="curStep" class="cur">Bước {{ ui.brew.done.length + 1 }}/{{ recipe.steps.length }}: <b>{{ STEPS[curStep].label }}</b></span>
-          <span v-else class="cur ok">Xong! Đưa khách 👉</span>
+          <span v-else class="cur ok">Xong! Đưa khách</span>
         </div>
         <div class="steps">
           <span
@@ -82,7 +91,7 @@ function pickOrder(id: number) {
     </div>
 
     <div class="tray">
-      <button v-for="it in ITEMS" :key="it.id" class="item" :class="{ out: (stockOf(it.id) ?? 1) < 1 }" @click="brewStep(it.id)">
+      <button v-for="it in items" :key="it.id" class="item" :class="{ out: (stockOf(it.id) ?? 1) < 1 }" @pointerdown.prevent="brewStep(it.id)">
         <img :src="iconUrl(it.id)" class="pix ic" alt="" />
         <span class="lbl">{{ STEPS[it.id].label }}</span>
         <span class="qty">{{ stockOf(it.id) }}</span>
@@ -90,7 +99,7 @@ function pickOrder(id: number) {
     </div>
 
     <div class="actions">
-      <button v-for="a in ACTIONS" :key="a.id" class="action" :class="{ trash: a.id === 'trash' }" @click="act(a.id)">
+      <button v-for="a in ACTIONS" :key="a.id" class="action" :class="{ trash: a.id === 'trash' }" @pointerdown.prevent="act(a.id)">
         <img :src="a.img" class="pix aic" alt="" />
         <span>{{ a.label }}</span>
         <small v-if="a.id === 'chiet'">còn {{ save.stock.cafe }}</small>
@@ -100,7 +109,7 @@ function pickOrder(id: number) {
 </template>
 
 <style scoped>
-.panel { margin-top: 8px; }
+.panel { margin-top: 4px; position: relative; }
 .pix { image-rendering: pixelated; image-rendering: crisp-edges; }
 .recipe { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-height: 30px; }
 
@@ -114,7 +123,7 @@ function pickOrder(id: number) {
   width: 26px; height: 24px; background: #efe3d5; box-shadow: 0 0 0 2px #cdb79c; margin: 2px;
 }
 .st i { position: absolute; top: -5px; left: -5px; font-style: normal; font-size: 8px; font-weight: 900; background: #fff; color: #8a7566; padding: 0 2px; box-shadow: 0 0 0 1px #cdb79c; line-height: 10px; }
-.st img { width: 18px; height: 18px; object-fit: contain; }
+.st img { width: 16px; height: 16px; object-fit: contain; }
 .st.done { background: #c9f0d8; box-shadow: 0 0 0 2px #2f9e6b; opacity: 0.6; }
 .st.now { background: #f2c14e; box-shadow: 0 0 0 2px #3b2a20, inset 0 -2px 0 #d99a2b; animation: pulse 1s ease-in-out infinite; }
 @keyframes pulse { 50% { transform: scale(1.1); } }
@@ -123,7 +132,7 @@ function pickOrder(id: number) {
 .app-btn small { display: inline-flex; align-items: center; gap: 3px; }
 .tag { display: inline-flex; align-items: center; gap: 4px; }
 .app-btn.hot { background: #ffe1dc; animation: pulse 1s infinite; }
-.orders { background: #fff; box-shadow: var(--px-border-2); padding: 8px; margin: 8px 2px 4px; margin-top: 6px; display: flex; flex-direction: column; gap: 6px; }
+.orders { position: absolute; left: 2px; right: 2px; top: 38px; z-index: 20; max-height: 210px; overflow-y: auto; background: #fff; box-shadow: var(--px-border-2), 0 6px 0 rgba(59, 42, 32, 0.3); padding: 8px; display: flex; flex-direction: column; gap: 6px; }
 .ord { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .obar { display: block; height: 4px; background: #f0e4d6; border-radius: 3px; margin-top: 3px; overflow: hidden; }
 .obar i { display: block; height: 100%; background: #2f9e6b; }
@@ -139,12 +148,12 @@ function pickOrder(id: number) {
 }
 .item {
   position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: #fffaf2; height: 44px;
+  background: #fffaf2; height: 46px;
   box-shadow: var(--px-border-2), inset 0 -3px 0 #e6d6c2, 0 4px 0 rgba(59, 42, 32, 0.5); transition: transform 0.06s;
 }
 .item:active { transform: translateY(3px); box-shadow: var(--px-border-2); }
 .item.out { opacity: 0.45; }
-.ic { width: 22px; height: 22px; }
+.ic { width: 32px; height: 32px; }
 .lbl { font-size: 10px; font-weight: 800; margin-top: 1px; }
 .qty { position: absolute; top: 2px; right: 4px; font-size: 9px; font-weight: 900; color: #8a7566; }
 
@@ -156,6 +165,20 @@ function pickOrder(id: number) {
 }
 .action:active { transform: translateY(3px); box-shadow: var(--px-border-2); }
 .action.trash { background: #f1e2cf; box-shadow: var(--px-border-2), inset 0 -4px 0 #d8bf9f, 0 4px 0 rgba(59, 42, 32, 0.5); }
-.aic { height: 20px; width: 20px; object-fit: contain; }
+.aic { height: 28px; width: 28px; object-fit: contain; }
 .action small { font-size: 9px; font-weight: 800; color: #6f4e37; }
+/* màn hình thấp (iPhone nhỏ / đang mở trong trình duyệt): khay gọn hơn để cảnh quán to hơn */
+@media (max-height: 720px) {
+  .item { height: 40px; }
+  .ic { width: 24px; height: 24px; }
+  .lbl { font-size: 9px; }
+  .action { padding: 2px 0 4px; }
+  .aic { width: 22px; height: 22px; }
+  .tray { margin-top: 6px; }
+  .actions { margin-top: 8px; }
+}
+@media (max-height: 600px) {
+  .lbl, .action small { display: none; }
+  .item { height: 34px; }
+}
 </style>

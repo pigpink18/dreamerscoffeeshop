@@ -334,6 +334,15 @@ def compose(track, seed):
             for kb in (0, 2.5, 3):
                 dry.add(kick(0.6 if kb == 0 else 0.4), (bar * 4 + kb) * beat, gain=0.22)
 
+    # --- tích tắc kim đồng hồ (chỉ cho nhạc boss nhẹ): hồi hộp nhưng không ồn ---
+    if track.get('tick'):
+        for bt in range(total_beats * 2):
+            n2 = int(0.03 * SR)
+            tt = np.arange(n2) / SR
+            f = 2600 if bt % 2 == 0 else 2100
+            s = np.sin(2 * np.pi * f * tt) * np.exp(-tt / 0.006)
+            dry.add(s, bt * beat / 2, pan=0.5 if bt % 2 else -0.5, gain=0.045)
+
     # --- trộn + reverb + lặp liền mạch ---
     revL = fftconvolve(wet.L, IR_L)[:n]
     revR = fftconvolve(wet.R, IR_R)[:n]
@@ -374,6 +383,10 @@ TRACKS = [
     dict(id='bossa-ly-den-da', name='Ly đen đá', bpm=128, lead='vibes', range=(62, 79),
          prog=[('D:m9', 4), ('D:m9', 4), ('E:m7b5', 4), ('A:7b9', 4), ('D:m9', 4), ('D:m9', 4), ('G:m9', 4), ('C:13', 4),
                ('F:maj7', 4), ('Bb:maj7', 4), ('E:m7b5', 4), ('A:7b9', 4), ('D:m9', 4), ('Bb:maj7', 4), ('E:m7b5', 2), ('A:7b9', 2), ('D:m9', 2), ('A:7b9', 2)]),
+    # nhạc khi boss tới: giọng thứ, nhanh hơn, bass dồn + tiếng tích tắc – hồi hộp vừa phải
+    dict(id='boss-hoi-hop', name='Hồi hộp nhẹ', bpm=138, lead='rhodes', range=(62, 76), tick=True, intro=False,
+         prog=[('A:m9', 4), ('A:m9', 4), ('F:maj7', 4), ('E:7b9', 4), ('A:m9', 4), ('D:m9', 4), ('B:m7b5', 4), ('E:7b9', 4),
+               ('D:m9', 4), ('G:13', 4), ('C:maj7', 4), ('F:maj7', 4), ('B:m7b5', 4), ('E:7b9', 4), ('A:m9', 2), ('F:maj7', 2), ('B:m7b5', 2), ('E:7b9', 2)]),
 ]
 
 

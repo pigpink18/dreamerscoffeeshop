@@ -1,10 +1,11 @@
 // Dữ liệu tĩnh của game: nguyên liệu, công thức, nâng cấp, thời tiết, câu thoại
 
-export type IngredientId = 'cafe' | 'suaDac' | 'suaTuoi' | 'da' | 'ly' | 'tra' | 'dao' | 'kem' | 'matcha' | 'syrup' | 'kemTuoi'
+export type IngredientId = 'cafe' | 'suaDac' | 'suaTuoi' | 'da' | 'ly' | 'tra' | 'dao' | 'kem' | 'matcha' | 'syrup' | 'kemTuoi' | 'dua' | 'trung' | 'cacao'
 /** Bước pha: bỏ nguyên liệu (trừ hạt cà phê – dùng qua máy) hoặc thao tác */
 export type ActionId = 'chiet' | 'lac' | 'xay' | 'khuay'
 export type StepId = Exclude<IngredientId, 'cafe'> | ActionId
 export type RecipeId = 'denDa' | 'suaDa' | 'bacXiu' | 'latte' | 'americano' | 'traDao' | 'matchaLatte' | 'cafeMuoi' | 'traDaoKem' | 'matchaKemMuoi' | 'matchaXay'
+  | 'cafeDua' | 'cafeTrung' | 'cacaoDa' | 'matchaDua' | 'cacaoKemMuoi' | 'suongMu'
 export type UpgradeId = 'staff' | 'machine' | 'decor' | 'sign' | 'freezer' | 'shipper' | 'green' | 'farmer'
 export type WeatherId = 'sunny' | 'hot' | 'cloudy' | 'rainy'
 
@@ -32,6 +33,7 @@ export interface Recipe {
   hotBonus: number // khách thích hơn khi trời nóng
   coffee: boolean // có dùng cà phê (ảnh hưởng nâng cấp nông dân)
   family: 'coffee' | 'matcha' | 'tea'
+  secret?: boolean // công thức bí mật: tự mò ra ở Phòng thử món
 }
 
 export interface Upgrade {
@@ -65,6 +67,10 @@ export const INGREDIENTS: Ingredient[] = [
   { id: 'matcha', name: 'Bột matcha', icon: '🍵', packSize: 15, packPrice: 90_000 },
   { id: 'syrup', name: 'Syrup đường', icon: '🍯', packSize: 30, packPrice: 40_000 },
   { id: 'kemTuoi', name: 'Kem tươi', icon: '🍦', packSize: 15, packPrice: 60_000 },
+  // nguyên liệu bí mật: hiện trong Kho khi có gợi ý công thức cần tới
+  { id: 'dua', name: 'Cốt dừa', icon: '🥥', packSize: 10, packPrice: 70_000 },
+  { id: 'trung', name: 'Kem trứng', icon: '🥚', packSize: 10, packPrice: 60_000 },
+  { id: 'cacao', name: 'Bột cacao', icon: '🍫', packSize: 15, packPrice: 80_000 },
 ]
 
 export type SoundName = 'cup' | 'ice' | 'pour' | 'drip' | 'squeeze' | 'stir' | 'plop' | 'shake' | 'blend'
@@ -81,6 +87,9 @@ export const STEPS: Record<StepId, { label: string; icon: string; kind: 'ing' | 
   matcha: { label: 'Matcha', icon: '🍵', kind: 'ing', color: '#7fb34d', sound: 'pour', ms: 350 },
   syrup: { label: 'Syrup', icon: '🍯', kind: 'ing', color: '#e0a03a', sound: 'squeeze', ms: 300 },
   kemTuoi: { label: 'Kem tươi', icon: '🍦', kind: 'ing', color: '#ffffff', sound: 'squeeze', ms: 350 },
+  dua: { label: 'Cốt dừa', icon: '🥥', kind: 'ing', color: '#f6f0e2', sound: 'pour', ms: 350 },
+  trung: { label: 'Kem trứng', icon: '🥚', kind: 'ing', color: '#f3d27a', sound: 'squeeze', ms: 350 },
+  cacao: { label: 'Cacao', icon: '🍫', kind: 'ing', color: '#6b3f2a', sound: 'pour', ms: 350 },
   chiet: { label: 'Chiết xuất', icon: '☕', kind: 'act', color: '#4b2e1e', sound: 'drip', ms: 1100 },
   lac: { label: 'Lắc', icon: '🍸', kind: 'act', sound: 'shake', ms: 1000 },
   xay: { label: 'Xay', icon: '🌀', kind: 'act', sound: 'blend', ms: 1100 },
@@ -101,6 +110,13 @@ export const RECIPES: Recipe[] = [
   { id: 'traDaoKem', name: 'Trà đào kem tươi', icon: '🍑', steps: ['ly', 'da', 'tra', 'dao', 'lac', 'kemTuoi'], fairPrice: 42_000, unlockCost: 400_000, popularity: 1, hotBonus: 1, coffee: false, family: 'tea' },
   { id: 'matchaKemMuoi', name: 'Matcha kem muối', icon: '🍵', steps: ['ly', 'da', 'matcha', 'suaTuoi', 'lac', 'kem'], fairPrice: 45_000, unlockCost: 500_000, popularity: 1.2, hotBonus: 0.6, coffee: false, family: 'matcha' },
   { id: 'matchaXay', name: 'Matcha đá xay', icon: '🍧', steps: ['ly', 'matcha', 'suaTuoi', 'da', 'xay', 'kemTuoi'], fairPrice: 49_000, unlockCost: 650_000, popularity: 1.2, hotBonus: 1, coffee: false, family: 'matcha' },
+  // công thức bí mật: phải tự thử đúng thứ tự ở Phòng thử món (gợi ý nhận từ khách hiếm, nhiệm vụ, thành tựu)
+  { id: 'cafeDua', name: 'Cà phê cốt dừa', icon: '🥥', steps: ['ly', 'dua', 'chiet', 'da', 'xay'], fairPrice: 45_000, unlockCost: 0, popularity: 1.5, hotBonus: 1, coffee: true, family: 'coffee', secret: true },
+  { id: 'cafeTrung', name: 'Cà phê trứng', icon: '🥚', steps: ['ly', 'chiet', 'trung', 'khuay'], fairPrice: 45_000, unlockCost: 0, popularity: 1.4, hotBonus: 0, coffee: true, family: 'coffee', secret: true },
+  { id: 'cacaoDa', name: 'Ca cao sữa đá', icon: '🍫', steps: ['ly', 'cacao', 'suaDac', 'khuay', 'da'], fairPrice: 35_000, unlockCost: 0, popularity: 1.3, hotBonus: 0.6, coffee: false, family: 'tea', secret: true },
+  { id: 'matchaDua', name: 'Matcha cốt dừa', icon: '🍵', steps: ['ly', 'da', 'matcha', 'dua', 'lac'], fairPrice: 49_000, unlockCost: 0, popularity: 1.4, hotBonus: 0.8, coffee: false, family: 'matcha', secret: true },
+  { id: 'cacaoKemMuoi', name: 'Cacao kem muối', icon: '🍫', steps: ['ly', 'da', 'cacao', 'suaTuoi', 'lac', 'kem'], fairPrice: 49_000, unlockCost: 0, popularity: 1.3, hotBonus: 0.5, coffee: false, family: 'tea', secret: true },
+  { id: 'suongMu', name: 'Sương Mù Đà Lạt', icon: '🌫️', steps: ['ly', 'chiet', 'trung', 'cacao', 'kemTuoi'], fairPrice: 65_000, unlockCost: 0, popularity: 1.8, hotBonus: 0, coffee: true, family: 'coffee', secret: true },
 ]
 /** Món có sẵn từ đầu & thứ tự món mới được tặng khi thắng boss */
 export const STARTER_RECIPES: RecipeId[] = ['denDa', 'suaDa', 'bacXiu', 'latte', 'traDao']
@@ -321,7 +337,7 @@ export const moneyShort = (n: number) => {
 // ---------- Hội thoại & khách quen (kiểu nói chuyện quán cà phê Việt) ----------
 export interface ChatTopic {
   say: string // khách mở lời
-  replies: { text: string; answer: string; bond: number }[] // lựa chọn của chủ quán → khách đáp
+  replies: { text: string; answer: string; bond: number; sassy?: boolean }[] // lựa chọn của chủ quán → khách đáp (sassy = câu cà khịa)
 }
 
 export interface Regular {
@@ -598,3 +614,7 @@ for (const [k, arr] of Object.entries(MORE_APP_REVIEWS)) {
   const key = +k as keyof typeof REVIEWS
   if (REVIEWS[key]) REVIEWS[key].push(...arr)
 }
+
+// ===== Không dùng emoji trong game: làm sạch toàn bộ thoại, review, tên… (chỉ giữ icon pixel art) =====
+import { scrubDeep } from './emoji'
+scrubDeep([LINES, REVIEWS, COUNTER_REVIEWS, FAMILY_REVIEWS, GENERIC_CHATS, REGULARS, GENERIC_ORDERS, BOSS_LINES, BOSSES, RAPS, SHIPPERS, NEEDY, BOND_LEVELS, UPGRADES, RECIPES, INGREDIENTS, STEPS, WEATHERS])

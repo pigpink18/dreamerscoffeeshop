@@ -84,10 +84,12 @@ const weatherIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloud
       <div class="panel ledger">
         <div class="ttl">SỔ THU CHI</div>
         <div class="row"><PixelIcon name="coin" /><span class="lb">Doanh thu</span><b class="good">+{{ money(r.revenue) }}</b></div>
+        <div v-if="r.goodsRev" class="row sub"><PixelIcon name="gift" :size="2" /><span class="lb">gồm bán kèm {{ r.goodsSold }} món bánh / lưu niệm</span><span>{{ money(r.goodsRev) }}</span></div>
         <div v-if="r.tips" class="row sub"><PixelIcon name="heart" :size="2" /><span class="lb">gồm tiền tip</span><span>{{ money(r.tips) }}</span></div>
         <div class="row"><PixelIcon name="crate" /><span class="lb">Nhập hàng</span><b>{{ r.spent ? "-" + money(r.spent) : money(0) }}</b></div>
         <div class="row"><PixelIcon name="house" /><span class="lb">Mặt bằng</span><b>-{{ money(r.rent) }}</b></div>
         <div v-if="r.wages" class="row"><PixelIcon name="staff" /><span class="lb">Lương nhân viên &amp; shipper</span><b>-{{ money(r.wages) }}</b></div>
+        <div v-if="r.meta && r.meta.spoiled" class="row sub"><PixelIcon name="cross" :size="2" /><span class="lb">Bánh tồn phải bỏ</span><span>{{ r.meta.spoiled }} cái</span></div>
         <div v-if="r.meltedIce" class="row sub"><PixelIcon name="ice" :size="2" /><span class="lb">Đá bị tan</span><span>{{ r.meltedIce }} phần</span></div>
         <div class="total"><span>CÒN LẠI</span><b :class="r.profit >= 0 ? 'good' : 'bad'">{{ fmt(r.profit) }}</b></div>
       </div>
@@ -115,6 +117,41 @@ const weatherIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloud
           <div class="note">{{ boss.win ? 'Nhận 5 sao — dù vẫn mặt nặng mày nhẹ' : 'Bị chấm 1 sao xéo sắc, mất danh tiếng' }}</div>
         </div>
         <PixelIcon v-if="boss.win" class="trophy" name="trophy" :size="4" />
+      </div>
+
+      <!-- đua top phố -->
+      <div v-if="r.meta" class="panel street" :class="{ contest: r.meta.contest }">
+        <div class="tag-ribbon"><PixelIcon name="trophy" :size="2" /> ĐUA TOP PHỐ<span v-if="r.meta.contest" class="x2">NGÀY HỘI X2</span></div>
+        <div class="srow">
+          <div class="rank" :class="'r' + Math.min(r.meta.rank, 3)">
+            <small>HẠNG</small><b>{{ r.meta.rank + 1 }}</b>
+          </div>
+          <div class="grow">
+            <div class="ttl">ĐIỂM PHỐ HÔM NAY</div>
+            <PixelNum :text="String(r.meta.dayScore)" :size="4" color="#f2c14e" shadow="#7a4e1f" light="#fff1a8" />
+            <div v-if="r.meta.rank < r.meta.prevRank" class="move up"><PixelIcon name="up" :size="2" /> LÊN {{ r.meta.prevRank - r.meta.rank }} HẠNG</div>
+            <div v-else-if="r.meta.rank > r.meta.prevRank" class="move down"><PixelIcon name="down" :size="2" /> TỤT {{ r.meta.rank - r.meta.prevRank }} HẠNG</div>
+            <div v-else class="move">GIỮ HẠNG</div>
+          </div>
+        </div>
+        <div v-if="r.meta.week" class="week">
+          <PixelIcon name="crown" :size="3" />
+          <div class="grow"><small>CHỐT BẢNG TUẦN</small><b>Hạng {{ r.meta.week.rank + 1 }} · {{ r.meta.week.title }}</b></div>
+          <span class="rw"><PixelIcon name="bean" :size="2" />+{{ r.meta.week.beans }}</span>
+          <span v-if="r.meta.week.money" class="rw money">+{{ moneyShort(r.meta.week.money) }}</span>
+        </div>
+      </div>
+
+      <!-- phần thưởng: nhiệm vụ, thành tựu, hạt vàng -->
+      <div v-if="r.meta && (r.meta.quests.length || r.meta.achievements.length || r.meta.beans)" class="panel loot">
+        <div class="tag-ribbon gold"><PixelIcon name="gift" :size="2" /> PHẦN THƯỞNG HÔM NAY</div>
+        <div v-for="q in r.meta.quests" :key="'q' + q" class="lrow">
+          <span class="ic q"><PixelIcon name="check" :size="2" /></span><span class="grow">{{ q }}</span><span class="kind">NHIỆM VỤ</span>
+        </div>
+        <div v-for="a in r.meta.achievements" :key="'a' + a" class="lrow">
+          <span class="ic a"><PixelIcon name="trophy" :size="2" /></span><span class="grow">{{ a }}</span><span class="kind ach">THÀNH TỰU</span>
+        </div>
+        <div v-if="r.meta.beans" class="beans"><PixelIcon name="bean" :size="3" /><b>+{{ r.meta.beans }}</b><span>HẠT VÀNG</span></div>
       </div>
 
       <!-- phần thưởng: món mới -->
@@ -259,6 +296,40 @@ const weatherIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloud
 .kind { display: flex; align-items: center; gap: 10px; font-size: 13px; background: #fff7dc; --shade: #f3e2a8; }
 
 /* món mới */
+/* ---- đua top phố ---- */
+.tag-ribbon { display: inline-flex; align-items: center; gap: 6px; margin: -9px 0 8px -12px; padding: 4px 10px 5px 8px; background: #6f4630; color: #ffe8b8; font-size: 11px; font-weight: 900; letter-spacing: 0.12em; box-shadow: inset 0 -3px 0 #4a2e1f, 3px 3px 0 rgba(59, 42, 32, 0.25); }
+.tag-ribbon.gold { background: #d99a2b; color: #3b2a20; box-shadow: inset 0 -3px 0 #a86e14, 3px 3px 0 rgba(59, 42, 32, 0.25); }
+.tag-ribbon .x2 { margin-left: 6px; padding: 1px 5px; background: #e0524a; color: #fff; font-size: 9px; letter-spacing: 0.06em; animation: blinkX 0.6s steps(2) infinite; }
+@keyframes blinkX { 50% { opacity: 0.55; } }
+.street { background: #3b2a20; --shade: #2a1d16; color: #ffe8b8; }
+.street.contest { background: #4a2328; --shade: #33171b; }
+.street .ttl { color: #e6c79c; margin-bottom: 4px; }
+.srow { display: flex; align-items: center; gap: 12px; }
+.rank { width: 58px; height: 62px; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #efe3d5; color: #3b2a20; box-shadow: 0 0 0 3px #1f140d, inset 0 -5px 0 rgba(0, 0, 0, 0.18), inset 0 3px 0 rgba(255, 255, 255, 0.5); }
+.rank small { font-size: 9px; font-weight: 900; letter-spacing: 0.1em; }
+.rank b { font-size: 30px; line-height: 1; font-weight: 900; }
+.rank.r0 { background: #f2c14e; }
+.rank.r1 { background: #d6dde3; }
+.rank.r2 { background: #e0975a; }
+.move { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; padding: 2px 7px 3px; font-size: 11px; font-weight: 900; letter-spacing: 0.06em; background: #5a4334; color: #e6c79c; }
+.move.up { background: #2f9e6b; color: #fff; }
+.move.down { background: #b3261e; color: #fff; }
+.week { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 8px 10px; background: #f2c14e; color: #3b2a20; box-shadow: 0 0 0 3px #1f140d, inset 0 -4px 0 #d99a2b; }
+.week small { display: block; font-size: 9px; font-weight: 900; letter-spacing: 0.12em; color: #7a4e1f; }
+.week b { font-size: 14px; }
+.week .rw { display: inline-flex; align-items: center; gap: 3px; font-weight: 900; font-size: 13px; padding: 2px 6px; background: #fffaf0; box-shadow: 0 0 0 2px #3b2a20; }
+.week .rw.money { color: #1d6b47; }
+/* ---- phần thưởng ---- */
+.loot { background: #fff8e6; }
+.lrow { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 2px dotted #e6d3b8; font-size: 13px; font-weight: 800; }
+.lrow .ic { width: 24px; height: 24px; flex: none; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #3b2a20; }
+.lrow .ic.q { background: #c9f0d8; }
+.lrow .ic.a { background: #f2c14e; }
+.lrow .kind { font-size: 9px; font-weight: 900; letter-spacing: 0.08em; padding: 2px 5px; background: #2f9e6b; color: #fff; }
+.lrow .kind.ach { background: #d99a2b; color: #3b2a20; }
+.beans { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; padding: 8px; background: #3b2a20; color: #ffe8b8; box-shadow: inset 0 -4px 0 #1f140d; }
+.beans b { font-size: 22px; color: #f2c14e; }
+.beans span { font-size: 11px; font-weight: 900; letter-spacing: 0.14em; }
 .new-recipe { padding: 10px 12px; background: #fff3dc; font-size: 13px; text-align: center; }
 .new-recipe b:first-child { display: block; font-size: 11px; letter-spacing: 0.06em; color: #b7791f; margin-bottom: 2px; }
 

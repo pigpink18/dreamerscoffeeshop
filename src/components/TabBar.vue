@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { ui, save, canMake, vibrate, type Tab } from '../game/store'
+import { isContestDay } from '../game/meta'
 import PixelIcon from './ui/PixelIcon.vue'
 
 const lowStock = computed(() => !save.unlocked.some((r) => canMake(r)) || save.unlocked.some((r) => !canMake(r)))
 
+const questsLeft = computed(() => save.meta.quests.list.some((q) => !q.done) && ui.phase !== 'open')
 const tabs: { id: Tab; icon: string; label: string }[] = [
   { id: 'shop', icon: 'shop', label: 'Quán' },
   { id: 'stock', icon: 'crate', label: 'Kho' },
   { id: 'menu', icon: 'menu', label: 'Menu' },
-  { id: 'app', icon: 'heart', label: 'Khách' },
+  { id: 'compete', icon: 'trophy', label: 'Đua top' },
+  { id: 'app', icon: 'mail', label: 'Sổ tay' },
   { id: 'upgrade', icon: 'up', label: 'Nâng cấp' },
 ]
 
@@ -24,19 +27,19 @@ function go(t: Tab) {
     <button v-for="t in tabs" :key="t.id" class="tab" :class="{ active: ui.tab === t.id }" @click="go(t.id)">
       <span class="icon"><PixelIcon :name="t.icon" :size="3" /></span>
       <span class="lbl">{{ t.label }}</span>
-      <span v-if="t.id === 'stock' && lowStock" class="dot" />
+      <span v-if="(t.id === 'stock' && lowStock) || (t.id === 'compete' && isContestDay) || (t.id === 'app' && questsLeft)" class="dot" />
     </button>
   </nav>
 </template>
 
 <style scoped>
 .tabbar {
-  display: flex; gap: 6px;
+  display: flex; gap: 4px;
   background:
     repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.06) 0 2px, transparent 2px 9px),
     #6f4630;
   box-shadow: 0 -3px 0 #3b2a20, inset 0 3px 0 #8a5a3c;
-  padding: 8px 8px calc(var(--safe-bottom) + 8px);
+  padding: 8px 6px calc(var(--safe-bottom) + 8px);
   z-index: 2;
 }
 .tab {
@@ -49,7 +52,7 @@ function go(t: Tab) {
   transition: transform 0.1s;
 }
 .tab .icon { height: 27px; display: flex; align-items: center; filter: saturate(0.35) brightness(0.85); transition: transform 0.15s, filter 0.15s; }
-.tab .lbl { font-size: 10px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; }
+.tab .lbl { font-size: 9px; font-weight: 900; letter-spacing: 0.02em; text-transform: uppercase; white-space: nowrap; }
 .tab.active {
   color: var(--ink); background: #f2c14e; transform: translateY(-4px);
   box-shadow: var(--px-border-2), inset 0 -4px 0 #d99a2b, inset 0 2px 0 #fff1a8, 0 4px 0 #3b2a20;

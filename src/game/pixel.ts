@@ -1,6 +1,7 @@
 // Đồ hoạ pixel art: nhân vật, ly nước, icon nguyên liệu, cảnh quán.
 // Máy espresso / shaker / máy xay / ly shot dùng bộ CC0 của KARSIORI STUDIO (public/assets/karsiori).
 import type { Look, StepId } from './data'
+import { DRAW16 } from './icons16'
 
 export type Ctx = CanvasRenderingContext2D
 export const OUT = '#3b2a20'
@@ -116,6 +117,18 @@ const ICONS: Record<string, string[]> = {
     '....kkkk....', '.kkkkkkkkkk.', '.kxxxxxxxxk.', '..kxXxXxXk..', '..kxXxXxXk..',
     '..kxXxXxXk..', '..kxXxXxXk..', '..kxxxxxxk..', '...kkkkkk...',
   ],
+  dua: [
+    '...kkkkkk...', '..kbbdbbdk..', '.kbdbbbbdbk.', '.kkkkkkkkkk.', '.kwwwwwwwwk.',
+    '.kwiwwwwwwk.', '.kwwwwwwwwk.', '..kwwwwwwk..', '..kbbbbbbk..', '...kkkkkk...',
+  ],
+  trung: [
+    '....kkkk....', '...kwwwwk...', '..kwwwwwwk..', '..kwwyywwk..', '.kwwyyyywwk.',
+    '.kwwyyyywwk.', '.kwwwyywwwk.', '..kwwwwwwk..', '...kkkkkk...',
+  ],
+  cacao: [
+    '..kkkkkkkk..', '.kddddddddk.', '.kkkkkkkkkk.', '.kbbbbbbbbk.', '.kbwwwwwwbk.',
+    '.kbwddddwbk.', '.kbwdkkdwbk.', '.kbwwwwwwbk.', '.kbbbbbbbbk.', '.kddddddddk.', '..kkkkkkkk..',
+  ],
   cafe: [
     '..kkkkkk....', '.kbbbbbbk...', '.kddddddk...', 'kbbbbbbbbk..', 'kbccccccbk..',
     'kbcdkkdcbk..', 'kbcdkkdcbk..', 'kbccccccbk..', 'kbbbbbbbbk..', '.kkkkkkkk...',
@@ -126,6 +139,13 @@ const iconCache: Record<string, string> = {}
 /** Trả về dataURL của icon pixel (hiển thị bằng CSS image-rendering: pixelated) */
 export function iconUrl(name: string): string {
   if (iconCache[name]) return iconCache[name]
+  if (DRAW16[name]) { // bộ icon 16x16 mới (đẹp hơn)
+    const cv = document.createElement('canvas')
+    cv.width = 16; cv.height = 16
+    DRAW16[name](cv.getContext('2d')!)
+    iconCache[name] = cv.toDataURL()
+    return iconCache[name]
+  }
   const rows = ICONS[name]
   if (!rows) return ''
   const w = Math.max(...rows.map((r) => r.length))
@@ -407,7 +427,7 @@ export const SCENE_H = 92
 export const COUNTER_Y = 62
 
 /** Màu bầu trời theo giờ trong ngày (0..1) */
-function sky(f: number, rainy: boolean) {
+export function sky(f: number, rainy: boolean) {
   const stops: [number, string, string][] = [
     [0, '#ffd9a8', '#bfe3f2'],
     [0.25, '#9fd8f5', '#e2f4fb'],
@@ -423,7 +443,7 @@ function sky(f: number, rainy: boolean) {
   if (rainy) { top = mixWeighted(top, '#7d8a99', 0.55); bot = mixWeighted(bot, '#a9b4c0', 0.55) }
   return [top, bot]
 }
-function mixWeighted(c1: string, c2: string, t: number) {
+export function mixWeighted(c1: string, c2: string, t: number) {
   const p = (c: string) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16))
   const A = p(c1), B = p(c2)
   return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join('')
@@ -650,7 +670,7 @@ export function drawBarista(c: Ctx, x: number, y: number, busy: boolean, t: numb
 
 /** Cáo – corgi mập lông muối tiêu (blue merle), nhìn sang phải. (x,y) = góc trên trái, ~25x16.
  *  pose: 'sit' ngồi · 'lie' nằm ngủ · 'stand' đứng vẫy đuôi */
-export function drawCorgi(c: Ctx, x: number, y: number, t: number, pose: 'sit' | 'lie' | 'stand' = 'stand', happy = true) {
+export function drawCorgi(c: Ctx, x: number, y: number, t: number, pose: 'sit' | 'lie' | 'stand' = 'stand', happy = true, wear: Partial<Record<'head' | 'eyes' | 'neck' | 'body', string>> = {}) {
   const G = '#a9b0b8', D = '#575e69', L = '#d3d8de', W = '#fbf8f2', T = '#d89a5c', O = '#3b3f47'
   const wag = pose === 'lie' ? 0 : Math.floor(t * (happy ? 10 : 3)) % 2
   const breath = Math.floor(t * 1.6) % 2
@@ -685,4 +705,23 @@ export function drawCorgi(c: Ctx, x: number, y: number, t: number, pose: 'sit' |
   px(c, hx + 3, hy + 5, 1, 1, '#ff9aa8') // má hồng
   if (happy && pose !== 'lie') px(c, hx + 8, hy + 7, 2, 2, '#ff7a8a') // lè lưỡi
   if (pose === 'lie' && breath) { px(c, hx + 9, hy - 4, 2, 1, '#ffffff'); px(c, hx + 11, hy - 6, 2, 1, '#ffffff') }
+  // ---- trang phục ----
+  const by = yy
+  if (wear.body === 'sweater') { px(c, x + 4, by + 7, 13, 5, '#e8873a'); px(c, x + 4, by + 9, 13, 1, '#fff3e0'); px(c, x + 4, by + 11, 13, 1, '#c96a25') }
+  if (wear.body === 'apron') { px(c, x + 9, by + 7, 8, 7, '#6f4e37'); px(c, x + 10, by + 8, 6, 1, '#8a6a4f'); px(c, x + 12, by + 10, 2, 2, '#f2c14e') }
+  if (wear.neck === 'scarf') { px(c, hx - 1, hy + 7, 7, 2, '#d9534f'); px(c, hx, hy + 9, 2, 3, '#d9534f'); px(c, hx, hy + 11, 2, 1, '#a3302a') }
+  if (wear.neck === 'bow') { px(c, hx, hy + 7, 2, 2, '#ff7ab0'); px(c, hx + 3, hy + 7, 2, 2, '#ff7ab0'); px(c, hx + 2, hy + 7, 1, 2, '#d94f8a') }
+  if (wear.neck === 'bell') { px(c, hx - 1, hy + 7, 7, 1, '#d9534f'); px(c, hx + 2, hy + 8, 2, 2, '#f2c14e'); px(c, hx + 2, hy + 9, 1, 1, '#b7791f') }
+  if (wear.eyes === 'shades') { px(c, hx + 4, hy + 2, 1, 1, '#222'); px(c, hx + 5, hy + 1, 4, 2, '#222'); px(c, hx + 6, hy + 1, 1, 1, '#666') }
+  if (wear.eyes === 'heartGlasses') { px(c, hx + 6, hy + 1, 3, 2, '#ff4f7a'); px(c, hx + 7, hy + 3, 1, 1, '#ff4f7a'); px(c, hx + 4, hy + 2, 2, 1, '#ff4f7a') }
+  if (wear.head === 'nonla') {
+    px(c, hx - 2, hy - 1, 14, 1, '#b8942e'); px(c, hx - 1, hy - 2, 12, 1, '#e8d08a'); px(c, hx + 1, hy - 3, 8, 1, '#e8d08a')
+    px(c, hx + 3, hy - 4, 4, 1, '#e8d08a'); px(c, hx + 4, hy - 5, 2, 1, '#d4b860')
+  }
+  if (wear.head === 'beret') { px(c, hx + 1, hy - 3, 9, 3, '#c0392b'); px(c, hx, hy - 1, 2, 1, '#c0392b'); px(c, hx + 8, hy - 4, 2, 1, '#8e2a20') }
+  if (wear.head === 'len') { px(c, hx, hy - 3, 10, 4, '#5b8bd9'); px(c, hx, hy - 1, 10, 1, '#ffffff'); px(c, hx + 4, hy - 5, 2, 2, '#ffffff') }
+  if (wear.head === 'crown') {
+    px(c, hx + 2, hy - 3, 7, 2, '#f2c14e'); px(c, hx + 2, hy - 5, 1, 2, '#f2c14e'); px(c, hx + 5, hy - 5, 1, 2, '#f2c14e'); px(c, hx + 8, hy - 5, 1, 2, '#f2c14e')
+    px(c, hx + 5, hy - 2, 1, 1, '#d9534f'); if (Math.floor(t * 3) % 3 === 0) px(c, hx + 9, hy - 6, 1, 1, '#ffffff')
+  }
 }

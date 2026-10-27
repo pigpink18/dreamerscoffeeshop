@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { noEmoji } from '../game/emoji'
 import { computed } from 'vue'
 import { save, appRating, ui } from '../game/store'
 import { REGULARS, BOND_LEVELS, bondLevel, SHIPPERS } from '../game/data'
@@ -63,7 +64,7 @@ const regulars = computed(() => REGULARS.map((r) => ({ ...r, bond: save.bonds[r.
             </div>
             <span class="muted tiny rday">Ngày {{ r.day }} <DrinkIcon :id="r.recipe" :scale="1" /></span>
           </div>
-          <p>{{ r.text }}</p>
+          <p>{{ noEmoji(r.text) }}</p>
         </div>
       </div>
     </template>

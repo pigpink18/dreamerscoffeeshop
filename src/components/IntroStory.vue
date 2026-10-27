@@ -7,6 +7,7 @@ import { unlockAudio, sfx } from '../game/audio'
 import { px, box, shade, drawPerson, drawCorgi, OUT, type Ctx } from '../game/pixel'
 import type { Look } from '../game/data'
 import TypeText from './TypeText.vue'
+import PixelIcon from './ui/PixelIcon.vue'
 import logoUrl from '../assets/logo.png'
 
 const W = 128, H = 92
@@ -335,7 +336,7 @@ function sceneOpen(c: Ctx, t: number) {
    <div class="wrap">
     <div class="top">
       <span class="ttl">{{ stage === 'story' ? scene.title : 'DREAMERS COFFEE' }}</span>
-      <button class="skip" @click.stop="finish">Bỏ qua ⏭</button>
+      <button class="skip" @click.stop="finish">Bỏ qua <PixelIcon name="play" :size="2" /></button>
     </div>
     <div v-if="stage === 'title'" class="title-card" @click.stop>
       <img :src="logoUrl" class="logo" alt="Dreamers Coffee" />
@@ -354,7 +355,7 @@ function sceneOpen(c: Ctx, t: number) {
       <TypeText ref="typer" :key="si + '-' + li" :text="line" :speed="26" :pitch="620" />
       <div class="nav">
         <span class="hint">chạm để tiếp</span>
-        <button v-if="isLast" class="go" @click.stop="finish">Mở quán thôi! ☕</button>
+        <button v-if="isLast" class="go" @click.stop="finish"><PixelIcon name="cup" :size="2" /> Mở quán thôi!</button>
         <button v-else class="nxt" @click.stop="next">Tiếp ▶</button>
       </div>
     </div>
@@ -377,6 +378,7 @@ function sceneOpen(c: Ctx, t: number) {
 .tsub { font-size: 13px; color: #c9a888; margin-bottom: 8px; }
 .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .ttl { font-size: 11px; font-weight: 900; letter-spacing: 0.16em; color: #e6c79c; text-transform: uppercase; }
+.skip, .go { display: inline-flex; align-items: center; gap: 6px; }
 .skip { font-size: 12px; font-weight: 900; padding: 4px 10px 6px; background: #4a2e1f; color: #e6c79c; box-shadow: var(--px-border-2), inset 0 -3px 0 #3b2318; }
 .stage { position: relative; box-shadow: 0 0 0 3px #3b2a20, 0 0 0 6px #a06c46, 0 8px 0 6px rgba(0, 0, 0, 0.3); margin: 6px; }
 .cv { display: block; width: 100%; aspect-ratio: 128 / 92; image-rendering: pixelated; image-rendering: crisp-edges; }
