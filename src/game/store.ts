@@ -58,6 +58,8 @@ export interface Customer {
   boss?: number // index trong BOSSES – khách boss khó tính
   regular?: string // id khách quen
   rare?: string // id khách hiếm (album)
+  addon?: string // món mua kèm khách muốn (bánh / lưu niệm)
+  addonDone?: boolean // đã trao món kèm
   greeting: string // câu gọi món
   name?: string // tên vui của khách vãng lai
   look: Look // ngoại hình pixel
@@ -728,6 +730,8 @@ function chooseRecipe() {
 }
 
 function spawnCustomer() {
+  // khách có thể muốn mua kèm bánh / đồ lưu niệm (bạn bấm ở kệ hàng để trao)
+  const push = (c: Customer) => { const a = hooks.pickAddon?.(); if (a) c.addon = a; ui.queue.push(c) }
   if (ui.queue.length >= queueCapacity.value) {
     ui.stats.full++
     changeRep(-0.2)
@@ -740,7 +744,7 @@ function spawnCustomer() {
     const R = rareById[rareId]
     const recipe = chooseRecipe().id
     const maxP = 75 * (1 + 0.1 * save.upgrades.decor)
-    ui.queue.push({ id: nextId(), face: '✨', recipe, patience: maxP, maxPatience: maxP, rare: R.id, name: R.name, look: R.look,
+    push({ id: nextId(), face: '✨', recipe, patience: maxP, maxPatience: maxP, rare: R.id, name: R.name, look: R.look,
       greeting: R.greet.replace('{drink}', recipeById[recipe].name) })
     sfx('bell')
     return
@@ -754,7 +758,7 @@ function spawnCustomer() {
     if (save.prices[recipe] / fairPrice(recipe) < 1.5) {
       const lvl = bondLevel(save.bonds[r.id] ?? 0)
       const maxP = 68 * (1 + 0.1 * save.upgrades.decor) * (1 + lvl * 0.15)
-      ui.queue.push({ id: nextId(), face: r.face, recipe, patience: maxP, maxPatience: maxP, regular: r.id, look: r.look,
+      push({ id: nextId(), face: r.face, recipe, patience: maxP, maxPatience: maxP, regular: r.id, look: r.look,
         greeting: r.greet[lvl].replace('{drink}', recipeById[recipe].name) })
       sfx('bell')
       return
@@ -771,7 +775,7 @@ function spawnCustomer() {
   }
   const maxPatience = 58 * (1 + 0.1 * save.upgrades.decor)
   const look = randomLook()
-  ui.queue.push({ id: nextId(), face: pick(CUSTOMER_FACES), recipe: choice.id, patience: maxPatience, maxPatience, look, name: funnyName(look),
+  push({ id: nextId(), face: pick(CUSTOMER_FACES), recipe: choice.id, patience: maxPatience, maxPatience, look, name: funnyName(look),
     greeting: pick(GENERIC_ORDERS).replace('{drink}', recipeById[choice.id].name) })
   sfx('bell')
 }
@@ -854,15 +858,8 @@ function completeWalkIn(c: Customer, perfect: boolean, byStaff: boolean, mistake
   changeRep((fast ? 0.5 : 0.2) + (cheap ? 0.2 : 0) + (tip ? 0.3 : 0))
   float(`${byStaff ? '🧑‍🍳 ' : ''}+${moneyShort(price)}${tip ? ` 💝${moneyShort(tip)}` : ''}`, 'good')
   sfx('coin')
-  // khách mua kèm bánh / đồ lưu niệm (theo mặt bằng)
-  const extra = hooks.extraSale?.()
-  if (extra) {
-    save.money += extra.price
-    ui.stats.revenue += extra.price
-    ui.stats.goodsRev = (ui.stats.goodsRev ?? 0) + extra.price
-    ui.stats.goodsSold = (ui.stats.goodsSold ?? 0) + 1
-    setTimeout(() => float(`+${moneyShort(extra.price)} ${extra.name}`, 'good'), 450)
-  }
+  // món mua kèm: nhân viên tự lấy giúp; bạn tự phục vụ thì phải bấm ở kệ hàng (quên là mất đơn kèm)
+  if (byStaff && c.addon && !c.addonDone) sellAddonTo(c)
   const albumKey = c.regular ? `reg:${c.regular}` : c.rare ? `rare:${c.rare}` : c.name ? `name:${c.name}` : undefined
   const ratio0 = c.patience / c.maxPatience
   hooks.served?.({ kind: 'walkin', recipe: c.recipe, perfect: perfect && !byStaff, byStaff, price, tip, albumKey, look: c.look,
@@ -885,6 +882,29 @@ function completeWalkIn(c: Customer, perfect: boolean, byStaff: boolean, mistake
     changeRep((stars - 3) * 0.3)
     bus.emit({ type: 'served', id: c.id, stars, text, price, tip, needy: false })
   }
+}
+
+function sellAddonTo(c: Customer) {
+  const r = hooks.sellAddon?.(c.addon!)
+  if (!r) return false
+  c.addonDone = true
+  save.money += r.price
+  ui.stats.revenue += r.price
+  ui.stats.goodsRev = (ui.stats.goodsRev ?? 0) + r.price
+  ui.stats.goodsSold = (ui.stats.goodsSold ?? 0) + 1
+  float(`+${moneyShort(r.price)} ${r.name}`, 'good')
+  return true
+}
+/** Bấm món ở kệ hàng: trao cho khách đang đứng quầy nếu khách đặt đúng món đó */
+export function giveAddon(id: string) {
+  const c = ui.queue[0]
+  if (!c || c.addon !== id || c.addonDone) {
+    sfx('wrong'); vibrate([20, 30, 20]); bus.emit({ type: 'wrong' })
+    toast(c?.addon && !c.addonDone ? 'Khách không gọi món này' : 'Khách đang đứng quầy không mua kèm món này', 'bad', 1400)
+    return
+  }
+  if (!sellAddonTo(c)) { toast('Hết hàng trên kệ – vào Kho nhập thêm', 'bad'); sfx('wrong'); return }
+  sfx('coin'); vibrate(10)
 }
 
 function orderReady(o: Order, perfect: boolean, byStaff: boolean) {

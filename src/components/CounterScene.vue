@@ -18,7 +18,8 @@ import {
   type CupLook, type Mood,
 } from '../game/pixel'
 import { drawRoomMid, drawRoomBig, drawCounterMid, drawCounterBig, drawStools, drawDecorItems, drawSouvenirShelf } from '../game/rooms'
-import { rareById } from '../game/metaData'
+import { rareById, GOODS } from '../game/metaData'
+const goodName = (id: string) => GOODS.find((g) => g.id === id)?.name ?? id
 
 const wrap = ref<HTMLDivElement>()
 const cv = ref<HTMLCanvasElement>()
@@ -103,6 +104,7 @@ const patSecs = computed(() => (cur.value ? Math.max(0, Math.ceil(cur.value.pati
 const patLevel = computed(() => (patRatio.value > 0.6 ? 'ok' : patRatio.value > 0.3 ? 'warn' : 'low'))
 // tiếng tích tắc mỗi giây khi khách sắp bỏ đi
 watch(patSecs, (n, o) => { if (patLevel.value === 'low' && n < o && n > 0 && !ui.paused && actorView.value?.state === 'idle' && !review.value) tick(n <= 5) })
+const ticker = computed(() => (ui.toasts.length ? ui.toasts[ui.toasts.length - 1] : null))
 const waiting = computed(() => Math.max(0, ui.queue.length - (actorView.value && cur.value ? 1 : 0)))
 
 function onEvent(e: GameEvent) {
@@ -404,6 +406,9 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
       <span v-if="patLevel === 'low'" class="pbang">!</span>
     </div>
 
+    <!-- Dòng thông báo nhỏ ở đáy cảnh (thay hộp thông báo xanh to che nút) -->
+    <Transition name="tick"><div v-if="ticker && bossBanner === null && bossResult === null" :key="ticker.id" class="ticker" :class="ticker.kind">{{ ticker.text }}</div></Transition>
+
     <!-- HUD gọn: số khách chờ + tiến độ từng nhân viên (chỉ icon, không chữ) -->
     <div v-if="ui.phase === 'open' && (waiting > 0 || ui.staffProgress.length)" class="hud">
       <span v-if="waiting > 0" class="hchip"><PixelIcon name="crowd" :size="2" />{{ waiting }}</span>
@@ -443,6 +448,7 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
       <div v-else-if="cur && actorView?.state === 'idle'" :key="'c' + cur.id + (talkHere?.mode ?? '') + (brewingHere ? 'b' : '')" class="bubble" :class="{ boss: isBoss }" @click="typer?.skip()">
         <div class="who" :class="whoKind">{{ who }}</div>
         <div class="txt" :class="{ hurry: cur.line && cur.patience / cur.maxPatience < 0.5 && !talkHere }"><TypeText ref="typer" :text="bubbleText" :pitch="voice" :instant="lineInstant" @done="onTyped" /></div>
+        <div v-if="cur.addon" class="addon" :class="{ done: cur.addonDone }"><img :src="iconUrl(cur.addon)" alt="" /><span>{{ cur.addonDone ? 'Đã trao' : 'Kèm' }}: <b>{{ goodName(cur.addon) }}</b></span></div>
         <div v-if="brewingHere" class="order"><PixelIcon name="menu" :size="2" /> {{ recipeById[cur.recipe].name }}</div>
         <div v-else-if="talkHere?.mode === 'chat'" class="choices">
           <button v-for="(r, i) in talkHere.topic!.replies" :key="i" :class="{ sassy: r.sassy }" @click="talkReply(i)"><PixelIcon :name="r.sassy ? 'megaphone' : 'chat'" :size="2" /> <span v-if="r.sassy" class="sass">XÉO SẮC</span> {{ noEmoji(r.text) }}</button>
@@ -518,7 +524,18 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
 @keyframes segBlink { 50% { opacity: 0.45; } }
 @keyframes facePulse { 50% { transform: scale(1.2); } }
 @keyframes bang { 50% { transform: translateY(-3px); } }
-.hud { position: absolute; right: 6px; bottom: 6px; display: flex; gap: 4px; pointer-events: none; z-index: 3; }
+.ticker { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; pointer-events: none; padding: 2px 8px 3px; font-size: 11px; font-weight: 800; color: #ffe8b8; background: rgba(43, 30, 22, 0.86); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ticker.good { color: #9ff0be; }
+.ticker.bad { color: #ffb0a6; }
+.ticker.heart, .ticker.say { color: #ffe08a; }
+.tick-enter-active, .tick-leave-active { transition: opacity 0.2s; }
+.tick-enter-from, .tick-leave-to { opacity: 0; }
+.addon { display: flex; align-items: center; gap: 4px; margin-top: 6px; padding: 3px 6px; font-size: 12px; background: #fff3cf; box-shadow: 0 0 0 2px #d99a2b; animation: addonPulse 1s ease-in-out infinite; }
+.addon img { width: 16px; height: 16px; image-rendering: pixelated; }
+.addon span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.addon.done { background: #e1f3ea; box-shadow: 0 0 0 2px #2f9e6b; animation: none; }
+@keyframes addonPulse { 50% { box-shadow: 0 0 0 2px #e0524a; } }
+.hud { position: absolute; right: 6px; bottom: 22px; display: flex; gap: 4px; pointer-events: none; z-index: 3; }
 .hchip, .hstaff { display: flex; align-items: center; gap: 3px; background: rgba(59, 42, 32, 0.9); color: #ffe8b8; font-size: 11px; font-weight: 900; padding: 2px 5px 3px; box-shadow: 0 0 0 2px #3b2a20; }
 .hstaff i { display: block; width: 16px; height: 4px; background: #5a4334; }
 .hstaff i b { display: block; height: 100%; background: #3fd18b; transition: width 0.2s linear; }

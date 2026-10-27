@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { save, ui, clock } from '../game/store'
 import { money } from '../game/data'
 import { ref } from 'vue'
-import { audio, unlockAudio, TRACK_LIST, BOSS_MUSIC_LIST, type TrackChoice } from '../game/audio'
+import { audio, unlockAudio, TRACK_LIST, type TrackChoice } from '../game/audio'
 import PixelIcon from './ui/PixelIcon.vue'
 import PixelNum from './ui/PixelNum.vue'
 import logoUrl from '../assets/logo.png'
@@ -43,10 +43,6 @@ const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, 
           <span class="tt"><b>{{ t.name }}</b><small>{{ t.desc }}</small></span>
           <span v-if="audio.track === t.id" class="chk"><PixelIcon name="play" :size="2" /></span>
         </button>
-        <div class="mm-sub">NHẠC KHI BOSS TỚI</div>
-        <div class="bossm">
-          <button v-for="b in BOSS_MUSIC_LIST" :key="b.id" :class="{ on: audio.bossMusic === b.id }" :title="b.desc" @click="unlockAudio(); audio.bossMusic = b.id">{{ b.name }}</button>
-        </div>
         <div v-if="audio.music && audio.playing" class="now">Đang phát: {{ playingName() }}</div>
         <div class="note">Nhạc quán: bossa nova sáng tác riêng cho Dreamers Coffee · Nhạc boss: “Hồi hộp nhẹ” sáng tác riêng · “Kịch tính”: Abstraction / Tallbeard (CC0)</div>
       </div>

@@ -7,6 +7,9 @@ import {
 import { recipeById, money, moneyShort } from '../game/data'
 import { rentToday, premise } from '../game/store'
 import { myRank, isContestDay } from '../game/meta'
+import { GOODS, goodUnlocked } from '../game/metaData'
+import { iconUrl } from '../game/pixel'
+const shelf = computed(() => GOODS.filter((g) => goodUnlocked(g, save.meta.premise)))
 import InstallHint from './InstallHint.vue'
 import CounterScene from './CounterScene.vue'
 import WorkPanel from './WorkPanel.vue'
@@ -88,6 +91,23 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
       </div>
     </div>
 
+    <template v-if="shelf.length">
+      <div class="section-title">Kệ hàng bán kèm</div>
+      <div class="card list">
+        <div v-for="g in shelf" :key="g.id" class="row item">
+          <img :src="iconUrl(g.id)" class="gimg" alt="" />
+          <div class="grow">
+            <div class="name">{{ g.name }}</div>
+            <div class="muted small">{{ moneyShort(g.price) }} / món · {{ g.kind === 'bakery' ? 'bánh tươi, chỉ bán trong ngày' : 'không hư' }}</div>
+          </div>
+          <span class="pxtag" :class="(save.meta.goods[g.id] ?? 0) === 0 ? 'bad' : (save.meta.goods[g.id] ?? 0) < 5 ? 'warn' : 'good'">
+            {{ (save.meta.goods[g.id] ?? 0) === 0 ? 'HẾT' : `còn ${save.meta.goods[g.id]}` }}
+          </span>
+        </div>
+        <div class="muted small hintg">Khách gọi kèm món nào sẽ hiện trong khung thoại – bấm món đó ở <b>kệ hàng</b> dưới khay để trao. Nhập hàng ở tab Kho.</div>
+      </div>
+    </template>
+
     <div class="section-title">Cuối ngày</div>
     <div class="card list small-list">
       <div class="row"><PixelIcon name="house" /><span class="grow">Tiền thuê {{ premise.name }}</span><b>{{ money(rentToday) }}</b></div>
@@ -136,6 +156,8 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 </template>
 
 <style scoped>
+.gimg { width: 32px; height: 32px; image-rendering: pixelated; }
+.hintg { padding-top: 8px; line-height: 1.4; }
 .contest { display: flex; align-items: center; gap: 10px; margin-top: 12px; background: #fff3cf; }
 .contest b { font-size: 13px; letter-spacing: 0.04em; }
 .news { display: flex; align-items: center; gap: 10px; margin-top: 12px; background: #fff6dc; font-weight: 700; }
@@ -181,7 +203,8 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 /* Đang bán */
 .open { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .open > * { flex: none; }
-.open > .scene-box { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; padding: 4px 0 8px; }
+.open > .scene-box { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; padding: 2px 0 8px; }
+.open > .panel { flex: none; }
 .controls { display: flex; align-items: center; gap: 8px; }
 .progress { flex: 1; margin: 0 3px; }
 .progress .bar { background: #f2c14e; box-shadow: inset 0 -3px 0 #d99a2b, inset 0 2px 0 #fff1a8; }

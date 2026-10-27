@@ -34,5 +34,6 @@ export const hooks: {
   dayEnd?: (s: DayStats) => MetaDayResult | null
   customerMul?: () => number
   rareSpawn?: (dayFrac: number) => string | null // id khách hiếm
-  extraSale?: () => { name: string; price: number } | null // khách mua kèm bánh / lưu niệm
+  pickAddon?: () => string | null // khách muốn mua kèm món gì (bánh / lưu niệm) – null nếu không
+  sellAddon?: (id: string) => { name: string; price: number } | null // trao món kèm: trừ kho, trả về giá
 } = {}

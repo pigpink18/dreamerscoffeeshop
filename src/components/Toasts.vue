@@ -5,7 +5,7 @@ const ICON: Record<string, string> = { info: 'chat', bad: 'warn', good: 'coin', 
 </script>
 
 <template>
-  <div v-if="!ui.report" class="toasts">
+  <div v-if="!ui.report && !(ui.phase === 'open' && ui.tab === 'shop')" class="toasts">
     <TransitionGroup name="toast">
       <div v-for="t in ui.toasts" :key="t.id" class="toast" :class="t.kind"><PixelIcon :name="ICON[t.kind] || 'chat'" :size="2" /><span>{{ t.text }}</span></div>
     </TransitionGroup>

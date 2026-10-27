@@ -43,7 +43,7 @@ export const TRACK_LIST: { id: TrackChoice; name: string; icon: string; desc: st
 export const audio = reactive({ music: true, sfx: true, volume: 0.7, unlocked: false, track: 'auto' as TrackChoice, playing: '' as TrackId | '', bossMusic: 'soft' as BossMusic })
 try {
   const s = JSON.parse(localStorage.getItem(KEY) || 'null')
-  if (s) { audio.music = !!s.music; audio.sfx = !!s.sfx; if (typeof s.volume === 'number') audio.volume = Math.min(1, Math.max(0, s.volume)); if (s.track === 'auto' || (s.track in MUSIC_FILES && !isBossTrack(s.track) && s.track !== 'report')) audio.track = s.track; if (['soft', 'drama', 'off'].includes(s.bossMusic)) audio.bossMusic = s.bossMusic }
+  if (s) { audio.music = !!s.music; audio.sfx = !!s.sfx; if (typeof s.volume === 'number') audio.volume = Math.min(1, Math.max(0, s.volume)); if (s.track === 'auto' || (s.track in MUSIC_FILES && !isBossTrack(s.track) && s.track !== 'report')) audio.track = s.track }
 } catch { /* bỏ qua */ }
 /** Âm lượng tổng: thanh trượt 0..1 -> mức thật (mặc định 0.7 ≈ nhỏ vừa phải) */
 function masterLevel() { return 0.6 * audio.volume * audio.volume + 0.05 * audio.volume }

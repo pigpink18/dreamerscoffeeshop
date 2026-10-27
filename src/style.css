@@ -36,7 +36,7 @@ body {
   touch-action: manipulation;
 }
 
-#app { height: 100%; }
+#app { position: fixed; inset: 0; } /* phủ kín màn hình (iPhone chế độ app có lúc 100% bị hụt đúng bằng thanh trạng thái) */
 
 button {
   font: inherit;

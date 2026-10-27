@@ -1,12 +1,16 @@
 <script setup lang="ts">
 // Khay nguyên liệu + nút thao tác (chiết xuất, lắc, xay, khuấy, đổ bỏ)
 import { ref, computed } from 'vue'
-import { ui, save, brewStep, cancelBrew, startBrew, canMake } from '../game/store'
+import { ui, save, brewStep, cancelBrew, startBrew, canMake, giveAddon } from '../game/store'
+import { GOODS, goodUnlocked } from '../game/metaData'
 import { recipeById, STEPS, type StepId, type IngredientId } from '../game/data'
 import { iconUrl, IMG_URL } from '../game/pixel'
 import PixelIcon from './ui/PixelIcon.vue'
 
 const showOrders = ref(false)
+// kệ hàng bán kèm (bánh / lưu niệm) – hiện khi đã thuê mặt bằng có bán
+const shelf = computed(() => GOODS.filter((g) => goodUnlocked(g, save.meta.premise)))
+const wanted = computed(() => { const c = ui.queue[0]; return c && c.addon && !c.addonDone ? c.addon : null })
 
 const ITEMS: { id: StepId }[] = [
   { id: 'ly' },
@@ -98,6 +102,13 @@ function pickOrder(id: number) {
       </button>
     </div>
 
+    <div v-if="shelf.length" class="shelf">
+      <span class="sh-lbl">KỆ</span>
+      <button v-for="g in shelf" :key="g.id" class="good" :class="{ want: wanted === g.id, out: (save.meta.goods[g.id] ?? 0) < 1 }" @pointerdown.prevent="giveAddon(g.id)">
+        <img :src="iconUrl(g.id)" class="pix" alt="" /><span class="gq">{{ save.meta.goods[g.id] ?? 0 }}</span>
+      </button>
+    </div>
+
     <div class="actions">
       <button v-for="a in ACTIONS" :key="a.id" class="action" :class="{ trash: a.id === 'trash' }" @pointerdown.prevent="act(a.id)">
         <img :src="a.img" class="pix aic" alt="" />
@@ -109,7 +120,17 @@ function pickOrder(id: number) {
 </template>
 
 <style scoped>
-.panel { margin-top: 4px; position: relative; }
+.panel { margin-top: 4px; position: relative; display: flex; flex-direction: column; min-height: 0; }
+.recipe, .shelf, .actions, .orders { flex: none; }
+.shelf { display: flex; align-items: center; gap: 5px; margin: 8px 3px 0; padding: 4px 6px; background: #6f4630; box-shadow: var(--px-border), inset 0 -3px 0 #4a2e1f; overflow-x: auto; }
+.sh-lbl { font-size: 9px; font-weight: 900; letter-spacing: 0.1em; color: #ffe8b8; writing-mode: vertical-rl; transform: rotate(180deg); }
+.good { position: relative; flex: none; width: 40px; height: 36px; display: flex; align-items: center; justify-content: center; background: #fffaf2; box-shadow: var(--px-border-2), inset 0 -3px 0 #e6d6c2; }
+.good img { width: 32px; height: 32px; }
+.good .gq { position: absolute; right: 1px; bottom: 0; font-size: 9px; font-weight: 900; color: #8a7566; }
+.good.out { opacity: 0.4; }
+.good.want { background: #fff1a8; box-shadow: 0 0 0 3px #e0524a, inset 0 -3px 0 #f2c14e; animation: wantPulse 0.7s ease-in-out infinite; }
+@keyframes wantPulse { 50% { transform: translateY(-3px); } }
+.good:active { transform: translateY(2px); }
 .pix { image-rendering: pixelated; image-rendering: crisp-edges; }
 .recipe { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-height: 30px; }
 
@@ -148,7 +169,7 @@ function pickOrder(id: number) {
 }
 .item {
   position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: #fffaf2; height: 46px;
+  background: #fffaf2; min-height: 46px;
   box-shadow: var(--px-border-2), inset 0 -3px 0 #e6d6c2, 0 4px 0 rgba(59, 42, 32, 0.5); transition: transform 0.06s;
 }
 .item:active { transform: translateY(3px); box-shadow: var(--px-border-2); }
@@ -169,7 +190,7 @@ function pickOrder(id: number) {
 .action small { font-size: 9px; font-weight: 800; color: #6f4e37; }
 /* màn hình thấp (iPhone nhỏ / đang mở trong trình duyệt): khay gọn hơn để cảnh quán to hơn */
 @media (max-height: 720px) {
-  .item { height: 40px; }
+  .item { min-height: 40px; }
   .ic { width: 24px; height: 24px; }
   .lbl { font-size: 9px; }
   .action { padding: 2px 0 4px; }
@@ -179,6 +200,6 @@ function pickOrder(id: number) {
 }
 @media (max-height: 600px) {
   .lbl, .action small { display: none; }
-  .item { height: 34px; }
+  .item { min-height: 34px; }
 }
 </style>

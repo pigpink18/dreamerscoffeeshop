@@ -321,15 +321,19 @@ export function initMeta() {
     checkAch()
   }
 
-  hooks.extraSale = () => {
+  hooks.pickAddon = () => {
     const P = M().premise
     if (P < 1) return null
     const pool = GOODS.filter((g) => goodUnlocked(g, P) && goodsStock(g.id) > 0)
-    if (!pool.length || Math.random() > (P >= 2 ? 0.42 : 0.28)) return null
+    if (!pool.length || Math.random() > (P >= 2 ? 0.45 : 0.3)) return null
     // Flagship: khách thích gọi bánh hơn đồ lưu niệm
     const bakery = pool.filter((g) => g.kind === 'bakery')
-    const g = bakery.length && Math.random() < 0.7 ? pick(bakery) : pick(pool)
-    M().goods[g.id] = goodsStock(g.id) - 1
+    return (bakery.length && Math.random() < 0.7 ? pick(bakery) : pick(pool)).id
+  }
+  hooks.sellAddon = (id) => {
+    const g = GOODS.find((x) => x.id === id)
+    if (!g || goodsStock(id) <= 0) return null
+    M().goods[id] = goodsStock(id) - 1
     M().stats.goodsSold++
     bumpQuest('goods')
     return { name: g.name, price: g.price }
