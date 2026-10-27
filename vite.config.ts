@@ -21,7 +21,7 @@ export default defineConfig({
         scope: './',
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#f6efe6',
+        background_color: '#6f4630', // màu nâu trùng thanh tab: phần đáy iPhone chừa lại sẽ không bị vệt sáng
         theme_color: '#6f4e37',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
