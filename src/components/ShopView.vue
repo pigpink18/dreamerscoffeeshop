@@ -12,6 +12,9 @@ import { iconUrl } from '../game/pixel'
 const shelf = computed(() => GOODS.filter((g) => goodUnlocked(g, save.meta.premise)))
 import InstallHint from './InstallHint.vue'
 import CounterScene from './CounterScene.vue'
+import SeatingScene from './SeatingScene.vue'
+import { ref } from 'vue'
+import { dirtySeats } from '../game/store'
 import WorkPanel from './WorkPanel.vue'
 import PixelIcon from './ui/PixelIcon.vue'
 import DrinkIcon from './ui/DrinkIcon.vue'
@@ -25,6 +28,34 @@ const WX: Record<string, string> = { sunny: 'sunny', hot: 'hot', cloudy: 'cloudy
 const expected = computed(() => Math.round(expectedCustomers()))
 const expectedApp = computed(() => Math.round(expectedOrders()))
 const dayPct = computed(() => Math.min(100, (ui.time / DAY_LENGTH) * 100))
+// ---- vuốt chuyển trang ----
+const drag = ref(0)
+let sx = 0, sy = 0, tracking = false, horiz: boolean | null = null
+function swDown(e: PointerEvent) {
+  if (e.pointerType === 'mouse' && e.button !== 0) return
+  sx = e.clientX; sy = e.clientY; tracking = true; horiz = null
+}
+function swMove(e: PointerEvent) {
+  if (!tracking) return
+  const dx = e.clientX - sx, dy = e.clientY - sy
+  if (horiz === null && Math.abs(dx) + Math.abs(dy) > 10) horiz = Math.abs(dx) > Math.abs(dy) * 1.2
+  if (!horiz) return
+  // kéo theo ngón tay (có lực cản ở 2 đầu)
+  const edge = (ui.page === 0 && dx > 0) || (ui.page === 1 && dx < 0)
+  drag.value = edge ? dx * 0.25 : dx
+}
+function swUp(e: PointerEvent) {
+  if (!tracking) return
+  tracking = false
+  const dx = e.clientX - sx
+  if (horiz && Math.abs(dx) > 50) {
+    if (dx < 0 && ui.page === 0) ui.page = 1
+    else if (dx > 0 && ui.page === 1) ui.page = 0
+  }
+  drag.value = 0
+}
+function swCancel() { tracking = false; drag.value = 0 }
+
 const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensive + ui.stats.cancelled)
 </script>
 
@@ -111,7 +142,7 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
     <div class="section-title">Cuối ngày</div>
     <div class="card list small-list">
       <div class="row"><PixelIcon name="house" /><span class="grow">Tiền thuê {{ premise.name }}</span><b>{{ money(rentToday) }}</b></div>
-      <div class="row" v-if="wages"><PixelIcon name="staff" /><span class="grow">Lương nhân viên & shipper</span><b>{{ money(wages) }}</b></div>
+      <div class="row" v-if="wages"><PixelIcon name="staff" /><span class="grow">Lương pha chế, phục vụ & shipper</span><b>{{ money(wages) }}</b></div>
       <div class="row" v-if="!save.upgrades.freezer"><PixelIcon name="ice" /><span class="grow muted">Đá còn dư sẽ tan hết</span></div>
     </div>
 
@@ -131,9 +162,22 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
       <button class="btn sm ghost ctrl" @click="cycleSpeed">x{{ ui.speed }}</button>
     </div>
 
-    <div class="scene-box"><CounterScene /></div>
-
-    <WorkPanel />
+    <!-- Vuốt ngang: trang 1 = quầy pha chế · trang 2 = khu khách ngồi -->
+    <div class="pager" @pointerdown="swDown" @pointermove="swMove" @pointerup="swUp" @pointercancel="swCancel">
+      <div class="track" :class="{ dragging: drag !== 0 }" :style="{ transform: `translateX(calc(${-ui.page * 50}% + ${drag}px))` }">
+        <div class="page">
+          <div class="scene-box"><CounterScene /></div>
+          <WorkPanel />
+        </div>
+        <div class="page seat-page">
+          <SeatingScene />
+        </div>
+      </div>
+    </div>
+    <div class="dots">
+      <i :class="{ on: ui.page === 0 }" />
+      <i :class="{ on: ui.page === 1, warn: dirtySeats > 0 && ui.page === 0 }" />
+    </div>
 
     <Transition name="fade">
       <div v-if="ui.paused" class="pause" @click="togglePause">
@@ -203,8 +247,19 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 /* Đang bán */
 .open { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .open > * { flex: none; }
-.open > .scene-box { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; justify-content: center; align-items: flex-start; padding: 2px 0 8px; } /* ghim cảnh ở trên – không nhảy lên xuống */
-.open > .panel { flex: none; }
+.open > .pager { flex: 1 1 0; min-height: 0; overflow: hidden; position: relative; touch-action: pan-y; }
+.track { display: flex; width: 200%; height: 100%; transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); will-change: transform; }
+.track.dragging { transition: none; }
+.page { width: 50%; height: 100%; min-height: 0; display: flex; flex-direction: column; }
+.page > * { flex: none; }
+.page > .scene-box { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; padding: 2px 0 8px; } /* cảnh khoá kích thước, nằm giữa; khay pha chế luôn ở dưới cho dễ bấm */
+.seat-page { padding: 10px 3px 12px; }
+.seat-page > * { flex: 1 1 0; min-height: 0; } /* khu ngồi phủ hết chiều cao trang, chừa đều 2 bên */
+.dots { display: flex; justify-content: center; gap: 6px; padding: 5px 0 1px; }
+.dots i { width: 7px; height: 7px; background: #cdb69a; box-shadow: 0 0 0 1px #3b2a20; }
+.dots i.on { background: #3b2a20; width: 16px; }
+.dots i.warn { background: #d9534f; animation: blink 0.8s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0.35; } }
 .controls { display: flex; align-items: center; gap: 8px; height: 34px; flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
 .progress { flex: 1; margin: 0 3px; }
 .progress .bar { background: #f2c14e; box-shadow: inset 0 -3px 0 #d99a2b, inset 0 2px 0 #fff1a8; }

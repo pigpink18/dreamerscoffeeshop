@@ -45,7 +45,35 @@ export interface SaveData {
   introSeen: boolean // đã xem truyện mở đầu
   createdAt: number
   meta: MetaSave // mặt bằng, đối thủ, nhiệm vụ, album, đồ cho Cáo…
+  seating: Seating // khu khách ngồi: số bàn, loại bàn, nhân viên phục vụ
 }
+
+// ---------- KHU KHÁCH NGỒI ----------
+export interface Seating { tables: number; level: number; waiter: number }
+export interface Seat {
+  state: 'free' | 'busy' | 'dirty'
+  look?: Look
+  recipe?: RecipeId
+  t: number // busy: giây còn ngồi · dirty: giây đã bẩn
+  tip: number // tiền boa khách để lại trên bàn (nhận khi dọn)
+  taps: number // số lần đã lau (đủ CLEAN_TAPS là sạch)
+}
+export interface Waiter { seat: number | null; t: number; x: number } // seat = số thứ tự BÀN đang dọn
+/** Số bàn tối đa theo mặt bằng: quầy nhỏ 4 · gác gỗ 6 · flagship 6 (mỗi bàn 2 ghế) */
+export const MAX_TABLES = [4, 6, 6]
+/** Giá mua thêm 2 bàn (theo số bàn đang có: 2→4, 4→6, 6→8) */
+export const TABLE_COSTS: Record<number, number> = { 2: 400_000, 4: 1_200_000 }
+export const TABLE_LEVELS = [
+  { name: 'Bàn gỗ', tip: 1, sit: 1, desc: 'Ghế gỗ đơn giản' },
+  { name: 'Ghế đệm', tip: 1.5, sit: 1.15, desc: 'Khách ngồi êm hơn: boa x1.5' },
+  { name: 'Sofa nhung', tip: 2.2, sit: 1.3, desc: 'Khách mê ngồi lâu: boa x2.2, uy tín cao hơn' },
+]
+export const TABLE_LEVEL_COSTS = [700_000, 1_800_000] // nâng lên đệm, lên sofa
+export const WAITER_COSTS = [300_000, 800_000] // phí thuê phục vụ thứ 1, 2
+export const WAITER_WAGE = 50_000
+export const CLEAN_TAPS = 3
+export const SEATS_PER_TABLE = 2 // mỗi bàn 2 ghế: ui.seats[2*bàn] trái, [2*bàn+1] phải
+const DIRTY_PENALTY_T = 25 // bàn bẩn quá lâu: trừ uy tín
 
 export interface Customer {
   id: number
@@ -121,6 +149,7 @@ export type GameEvent =
   | { type: 'orderPacked'; name: string }
   | { type: 'boss'; idx: number }
   | { type: 'bossEnd'; win: boolean }
+  | { type: 'seatClean'; seat: number; tip: number; byWaiter: boolean }
 const listeners = new Set<(e: GameEvent) => void>()
 export const bus = {
   on(fn: (e: GameEvent) => void) { listeners.add(fn); return () => { listeners.delete(fn) } },
@@ -146,6 +175,10 @@ export interface DayStats {
   newRecipe: RecipeId | null // món mới mở khoá khi xong ngày
   goodsRev: number // tiền bán kèm bánh / lưu niệm
   goodsSold: number
+  seated?: number // khách ngồi lại quán
+  noSeat?: number // khách muốn ngồi nhưng hết bàn
+  cleaned?: number // bàn đã dọn
+  seatTips?: number // tiền boa ở khu ngồi
 }
 
 export interface DayReport extends DayStats {
@@ -193,6 +226,7 @@ function newSave(): SaveData {
     introSeen: false,
     createdAt: Date.now(),
     meta: newMeta(),
+    seating: { tables: 2, level: 0, waiter: 0 },
   }
 }
 
@@ -220,6 +254,7 @@ function loadSave(): SaveData {
           player: !data.player || data.player === 'Mây' ? base.player : data.player,
           playerId: data.playerId || base.playerId,
           meta: mergeMeta(base.meta, data.meta),
+          seating: { ...base.seating, ...data.seating, tables: Math.min(6, data.seating?.tables ?? base.seating.tables) },
         }
       }
     }
@@ -242,7 +277,7 @@ function mergeMeta(base: MetaSave, m?: Partial<MetaSave>): MetaSave {
 }
 
 function emptyStats(rep: number): DayStats {
-  return { revenue: 0, spent: 0, served: 0, angry: 0, tooExpensive: 0, full: 0, repStart: rep, tips: 0, delivered: 0, cancelled: 0, starsSum: 0, given: 0, donated: 0, boss: null, bossLog: [], newRecipe: null, goodsRev: 0, goodsSold: 0 }
+  return { revenue: 0, spent: 0, served: 0, angry: 0, tooExpensive: 0, full: 0, repStart: rep, tips: 0, delivered: 0, cancelled: 0, starsSum: 0, given: 0, donated: 0, boss: null, bossLog: [], newRecipe: null, goodsRev: 0, goodsSold: 0, seated: 0, noSeat: 0, cleaned: 0, seatTips: 0 }
 }
 
 // ---------- State ----------
@@ -260,6 +295,9 @@ export const ui = reactive({
   shippers: [] as Shipper[],
   staffProgress: [] as number[],
   staffJob: [] as (string | null)[], // nhân viên đang làm gì (hiện trên màn hình)
+  seats: [] as Seat[], // bàn ở khu khách ngồi
+  waiters: [] as Waiter[], // nhân viên phục vụ đang làm gì
+  page: 0, // đang xem: 0 = quầy, 1 = khu khách ngồi
   brew: null as Brew | null,
   talk: null as Talk | null,
   bossAt: 0, // thời điểm boss kế tiếp tới (giây mô phỏng)
@@ -287,7 +325,7 @@ export function persist() {
 // Lưu chung save + trạng thái ngày bán trong 1 khoá để luôn khớp nhau. Ghi mỗi 2 giây khi đang bán
 // và ngay khi người chơi rời app / đóng tab / tải lại trang. Mở lại sẽ vào đúng chỗ cũ (đang tạm dừng).
 const SESSION_KEY = 'coffee-tycoon-session-v1'
-const SESSION_UI = ['phase', 'tab', 'view', 'time', 'speed', 'queue', 'orders', 'shippers', 'staffProgress', 'brew', 'talk', 'bossAt', 'bossPlan', 'bossNext', 'bossState', 'stats', 'report', 'present'] as const
+const SESSION_UI = ['phase', 'tab', 'view', 'time', 'speed', 'queue', 'orders', 'shippers', 'staffProgress', 'brew', 'talk', 'bossAt', 'bossPlan', 'bossNext', 'bossState', 'stats', 'report', 'present', 'seats', 'waiters'] as const
 export function saveSession() {
   try {
     if (ui.phase !== 'open' && ui.phase !== 'report') { localStorage.removeItem(SESSION_KEY); return }
@@ -340,7 +378,9 @@ export const premise = computed(() => PREMISES[save.meta.premise] ?? PREMISES[0]
 export const rentToday = computed(() => premise.value.rent)
 export const queueCapacity = computed(() => 4 + save.upgrades.decor + premise.value.slots)
 export const staffServeTime = computed(() => 5 / (1 + 0.4 * save.upgrades.machine))
-export const wages = computed(() => save.upgrades.staff * STAFF_WAGE + save.upgrades.shipper * SHIPPER_WAGE)
+export const wages = computed(() => save.upgrades.staff * STAFF_WAGE + save.upgrades.shipper * SHIPPER_WAGE + save.seating.waiter * WAITER_WAGE)
+export const maxTables = computed(() => MAX_TABLES[save.meta.premise] ?? 4)
+export const dirtySeats = computed(() => { let n = 0; for (let tb = 0; tb * 2 < ui.seats.length; tb++) if (ui.seats[tb * 2]?.state === 'dirty' || ui.seats[tb * 2 + 1]?.state === 'dirty') n++; return n }) // số BÀN bẩn
 export const dailyCosts = computed(() => wages.value + rentToday.value)
 export const appRating = computed(() => {
   const r = save.reviews.slice(0, 30)
@@ -547,6 +587,9 @@ export function openShop() {
   for (let i = 0; i < save.upgrades.shipper; i++) addShipper(i)
   ui.staffProgress = Array(save.upgrades.staff).fill(0)
   ui.staffJob = []
+  ui.seats = Array.from({ length: save.seating.tables * SEATS_PER_TABLE }, newSeat)
+  ui.waiters = Array.from({ length: save.seating.waiter }, (_, i) => ({ seat: null, t: 0, x: 100 - i * 14 }))
+  ui.page = 0
   ui.stats = { ...emptyStats(save.reputation), spent: ui.stats.spent }
   planBoss()
   hooks.dayStart?.()
@@ -574,6 +617,9 @@ function restoreSession() {
   for (const k of SESSION_UI) if (k in s.ui) (ui as any)[k] = s.ui[k]
   if (!Array.isArray(ui.bossPlan)) { ui.bossPlan = [ui.bossAt]; ui.bossNext = ui.bossState === 'pending' ? 0 : 1 }
   if (!Array.isArray(ui.stats.bossLog)) ui.stats.bossLog = []
+  if (!Array.isArray(ui.seats) || ui.seats.length !== save.seating.tables * SEATS_PER_TABLE) ui.seats = Array.from({ length: save.seating.tables * SEATS_PER_TABLE }, newSeat)
+  if (ui.waiters?.some((w) => w.seat !== null && w.seat >= save.seating.tables)) ui.waiters.forEach((w) => { w.seat = null; w.t = 0 })
+  if (!Array.isArray(ui.waiters)) ui.waiters = []
   uid = Math.max(uid, s.uid || 1)
   if (ui.phase === 'report') { if (!ui.report) ui.phase = 'prep'; else setReportMode(true); return }
   // đang bán: tạm dừng, chờ người chơi chạm để chơi tiếp
@@ -708,6 +754,8 @@ function tick(dt: number) {
       }
     }
   }
+
+  tickSeating(dt)
 
   if (ui.time >= DAY_LENGTH) endDay()
 }
@@ -856,6 +904,7 @@ function completeWalkIn(c: Customer, perfect: boolean, byStaff: boolean, mistake
   changeRep((fast ? 0.5 : 0.2) + (cheap ? 0.2 : 0) + (tip ? 0.3 : 0))
   float(`${byStaff ? '🧑‍🍳 ' : ''}+${moneyShort(price)}${tip ? ` 💝${moneyShort(tip)}` : ''}`, 'good')
   sfx('coin')
+  seatCustomer(c, perfect && !byStaff)
   // món mua kèm: nhân viên tự lấy giúp; bạn tự phục vụ thì phải bấm ở kệ hàng (quên là mất đơn kèm)
   if (byStaff && c.addon && !c.addonDone) sellAddonTo(c)
   const albumKey = c.regular ? `reg:${c.regular}` : c.rare ? `rare:${c.rare}` : c.name ? `name:${c.name}` : undefined
@@ -1100,6 +1149,137 @@ export function cancelBrew() {
   toast('Đã đổ bỏ, pha lại nha', 'info', 1200)
 }
 
+
+// ---------- KHU KHÁCH NGỒI: logic ----------
+function newSeat(): Seat { return { state: 'free', t: 0, tip: 0, taps: 0 } }
+
+/** Khách vãng lai sau khi nhận nước: một phần muốn ngồi lại quán */
+function seatCustomer(c: Customer, perfect: boolean) {
+  const want = save.weather === 'rainy' ? 0.65 : save.weather === 'hot' ? 0.55 : 0.45
+  if (Math.random() > want) return
+  // ưu tiên bàn trống cả 2 ghế (khách lạ ít khi ngồi chung), hết thì ghép bàn
+  let i = ui.seats.findIndex((x, k) => x.state === 'free' && ui.seats[k ^ 1]?.state === 'free')
+  if (i >= 0 && Math.random() < 0.5) i ^= 1 // ngồi ghế trái hoặc phải ngẫu nhiên
+  if (i < 0) i = ui.seats.findIndex((x) => x.state === 'free')
+  if (i < 0) {
+    ui.stats.noSeat = (ui.stats.noSeat ?? 0) + 1
+    changeRep(-0.25)
+    const dirty = ui.seats.some((x) => x.state === 'dirty')
+    float(dirty ? 'Bàn bẩn, khách đứng uống' : 'Hết bàn ngồi', 'bad')
+    if (dirty && ui.page === 0 && (ui.stats.noSeat ?? 0) <= 2) toast('Khu ngồi có bàn bẩn – vuốt sang để dọn', 'bad', 2400)
+    return
+  }
+  const L = TABLE_LEVELS[save.seating.level] ?? TABLE_LEVELS[0]
+  const base = 2_000 + Math.round(Math.random() * 3) * 1_000 + (perfect ? 2_000 : 0)
+  ui.seats[i] = { state: 'busy', look: c.look, recipe: c.recipe, t: (16 + Math.random() * 14) * L.sit, tip: Math.round((base * L.tip) / 1000) * 1000, taps: 0 }
+  ui.stats.seated = (ui.stats.seated ?? 0) + 1
+}
+
+/** Dọn xong 1 bàn: thu tiền boa của mọi ghế bẩn ở bàn đó */
+function collectTable(tb: number, byWaiter: boolean) {
+  let tip = 0, n = 0
+  for (let k = tb * SEATS_PER_TABLE; k < (tb + 1) * SEATS_PER_TABLE; k++) {
+    const st = ui.seats[k]
+    if (!st || st.state !== 'dirty') continue
+    tip += st.tip
+    n++
+    ui.seats[k] = newSeat()
+  }
+  if (!n) return
+  ui.stats.cleaned = (ui.stats.cleaned ?? 0) + 1
+  if (tip) {
+    save.money += tip
+    ui.stats.revenue += tip
+    ui.stats.tips += tip
+    ui.stats.seatTips = (ui.stats.seatTips ?? 0) + tip
+  }
+  changeRep(0.15 * n)
+  bus.emit({ type: 'seatClean', seat: tb, tip, byWaiter })
+  if (!byWaiter) { sfx('coin'); vibrate(12) }
+}
+const tableDirty = (tb: number) => ui.seats[tb * 2]?.state === 'dirty' || ui.seats[tb * 2 + 1]?.state === 'dirty'
+
+/** Người chơi lau bàn bẩn (chạm CLEAN_TAPS lần vào bàn) */
+export function cleanSeat(tb: number) {
+  if (!tableDirty(tb) || ui.paused) return
+  const dirty = [ui.seats[tb * 2], ui.seats[tb * 2 + 1]].filter((x) => x?.state === 'dirty')
+  const taps = Math.max(...dirty.map((x) => x.taps)) + 1
+  dirty.forEach((x) => (x.taps = taps))
+  if (taps >= CLEAN_TAPS) collectTable(tb, false)
+  else { sfx('tap'); vibrate(6) }
+}
+
+function tickSeating(dt: number) {
+  for (let i = 0; i < ui.seats.length; i++) {
+    const st = ui.seats[i]
+    if (st.state === 'busy') {
+      st.t -= dt
+      if (st.t <= 0) {
+        // khách uống xong: để lại ly, vụn bánh và tiền boa trên bàn
+        ui.seats[i] = { state: 'dirty', t: 0, tip: st.tip + (save.seating.level >= 2 && Math.random() < 0.3 ? 5_000 : 0), taps: 0, recipe: st.recipe }
+      }
+    } else if (st.state === 'dirty') {
+      st.t += dt
+      if (st.t >= DIRTY_PENALTY_T) {
+        st.t = 0
+        changeRep(-0.5)
+        if (ui.page === 1) float('Bàn bẩn lâu quá!', 'bad')
+      }
+    }
+  }
+  // nhân viên phục vụ tự đi dọn bàn bẩn
+  const WALK = 1.2, CLEAN = 2.2
+  for (const w of ui.waiters) {
+    if (w.seat === null) {
+      const taken = new Set(ui.waiters.map((x) => x.seat))
+      let i = -1
+      for (let tb = 0; tb < save.seating.tables; tb++) if (tableDirty(tb) && !taken.has(tb)) { i = tb; break }
+      if (i < 0) continue
+      w.seat = i
+      w.t = 0
+    } else {
+      w.t += dt
+      if (!tableDirty(w.seat)) { w.seat = null; continue }
+      if (w.t >= WALK + CLEAN) { collectTable(w.seat, true); w.seat = null; w.t = 0 }
+    }
+  }
+}
+
+export function buyTables() {
+  const n = save.seating.tables
+  const cost = TABLE_COSTS[n]
+  if (n >= maxTables.value || !cost) { toast(n >= 6 ? 'Đã đủ 6 bàn!' : 'Mặt bằng này hết chỗ – thuê mặt bằng lớn hơn để kê thêm bàn', 'bad'); sfx('wrong'); return }
+  if (save.money < cost) { toast('Không đủ tiền!', 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return }
+  save.money -= cost
+  save.seating.tables = n + 2
+  if (ui.phase === 'open') for (let k = 0; k < 2 * SEATS_PER_TABLE; k++) ui.seats.push(newSeat())
+  toast(`Kê thêm 2 bàn → ${save.seating.tables} bàn`, 'good')
+  sfx('done'); vibrate([10, 30, 10])
+}
+
+export function upgradeTables() {
+  const lv = save.seating.level
+  const cost = TABLE_LEVEL_COSTS[lv]
+  if (cost === undefined) return
+  if (save.money < cost) { toast('Không đủ tiền!', 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return }
+  save.money -= cost
+  save.seating.level = lv + 1
+  toast(`Đổi sang ${TABLE_LEVELS[lv + 1].name}!`, 'good')
+  sfx('done'); vibrate([10, 30, 10])
+}
+
+export function hireWaiter() {
+  const n = save.seating.waiter
+  const cost = WAITER_COSTS[n]
+  if (cost === undefined) return
+  if (save.money < cost) { toast('Không đủ tiền!', 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return }
+  save.money -= cost
+  save.seating.waiter = n + 1
+  if (ui.phase === 'open') ui.waiters.push({ seat: null, t: 0, x: 100 - n * 14 })
+  toast(`Thuê phục vụ thứ ${n + 1} · lương ${moneyShort(WAITER_WAGE)}/ngày`, 'good')
+  sfx('done'); vibrate([10, 30, 10])
+}
+
 export function togglePause() { if (ui.resumed) { resumeSession(); sfx('tap'); return } ui.paused = !ui.paused; sfx('tap') }
 export function cycleSpeed() { ui.speed = ui.speed >= 3 ? 1 : ui.speed + 1; sfx('tap') }
 
@@ -1113,6 +1293,9 @@ function endDay() {
   ui.orders = []
   ui.brew = null
   ui.talk = null
+  // cuối ngày: tiền boa còn trên bàn bẩn chưa dọn thì mất
+  ui.seats = []
+  ui.waiters = []
   setBossMode(false)
   if (ui.bossState === 'here') {
     ui.stats.boss = 'lose'

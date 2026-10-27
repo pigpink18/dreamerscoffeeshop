@@ -197,8 +197,8 @@ export const FAMILY_REVIEWS: Record<'coffee' | 'matcha' | 'tea', { good: string[
 }
 
 export const UPGRADES: Upgrade[] = [
-  { id: 'staff', name: 'Thuê nhân viên', icon: '🧑‍🍳', desc: 'Nhân viên đứng quầy cạnh bạn, tự pha cho khách xếp hàng phía sau và đơn app (bạn lo khách đứng đầu). Quán đông hơn 15%/người. Lương 60k/ngày/người.', costs: [300_000, 700_000, 1_400_000],
-    effect: (l) => (l ? `${l} nhân viên đang làm · tự phục vụ khách xếp hàng` : 'Chưa có nhân viên') },
+  { id: 'staff', name: 'Thuê pha chế', icon: '🧑‍🍳', desc: 'Nhân viên pha chế đứng quầy cạnh bạn, tự pha cho khách xếp hàng phía sau và đơn app (bạn lo khách đứng đầu). Quán đông hơn 15%/người. Lương 60k/ngày/người. (Nhân viên phục vụ thuê ở Khu ngồi.)', costs: [300_000, 700_000, 1_400_000],
+    effect: (l) => (l ? `${l} pha chế đang làm · tự pha cho khách xếp hàng` : 'Chưa có pha chế') },
   { id: 'machine', name: 'Máy espresso xịn hơn', icon: '⚙️', desc: 'Đổi máy mới trên quầy: chiết xuất nhanh hơn cho cả bạn lẫn nhân viên.', costs: [400_000, 900_000, 2_000_000],
     effect: (l) => `Chiết xuất ${(1.1 / (1 + 0.35 * l)).toFixed(1)}s/lần · nhân viên pha ${(5 / (1 + 0.4 * l)).toFixed(1)}s/ly` },
   { id: 'shipper', name: 'Shipper rapper', icon: '🛵', desc: 'Mở bán trên app DreamersFood. Shipper vừa giao vừa rap. Lương 70k/ngày.', costs: [350_000, 800_000],

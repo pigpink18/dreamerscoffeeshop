@@ -5,8 +5,9 @@ import { money, moneyShort, START_MONEY } from '../game/data'
 import PixelIcon from './ui/PixelIcon.vue'
 import PremisePanel from './meta/PremisePanel.vue'
 import CaoShop from './meta/CaoShop.vue'
+import SeatingPanel from './SeatingPanel.vue'
 
-const seg = ref<'up' | 'prem' | 'cao'>('up')
+const seg = ref<'up' | 'seat' | 'prem' | 'cao'>('up')
 
 const UICON: Record<string, string> = { staff: 'staff', machine: 'gear', shipper: 'scooter', decor: 'plant', sign: 'megaphone', freezer: 'snow', green: 'plant', farmer: 'bean' }
 
@@ -26,10 +27,16 @@ function onReset() {
   <div>
     <div class="segs">
       <button :class="{ on: seg === 'up' }" @click="seg = 'up'">Nâng cấp</button>
+      <button :class="{ on: seg === 'seat' }" @click="seg = 'seat'">Khu ngồi</button>
       <button :class="{ on: seg === 'prem' }" @click="seg = 'prem'">Mặt bằng</button>
       <button :class="{ on: seg === 'cao' }" @click="seg = 'cao'">Tiệm của Cáo</button>
     </div>
-    <PremisePanel v-if="seg === 'prem'" />
+    <template v-if="seg === 'seat'">
+      <div class="section-title" style="margin-top: 4px">Khu khách ngồi</div>
+      <p class="muted hint">Khi đang bán, vuốt sang trái ở màn quầy để tới khu khách ngồi. Khách ngồi lại uống xong sẽ để lại ly bẩn và tiền boa trên bàn.</p>
+      <SeatingPanel />
+    </template>
+    <PremisePanel v-else-if="seg === 'prem'" />
     <CaoShop v-else-if="seg === 'cao'" />
     <template v-else>
     <div class="section-title" style="margin-top: 4px">Nâng cấp quán</div>

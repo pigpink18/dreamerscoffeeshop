@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { sceneW } from '../game/sceneSize'
 // Cảnh quầy pha chế pixel art: khách bước tới quầy, thiết bị, ly nước, hoạt ảnh.
 import { ref, computed, onMounted, onBeforeUnmount, onActivated, onDeactivated, watch } from 'vue'
 import {
@@ -354,7 +355,18 @@ function measure(): number {
   const box = el.parentElement
   const pw = box?.clientWidth || el.clientWidth
   const cs = box ? getComputedStyle(box) : null
-  const ph = box ? box.clientHeight - parseFloat(cs!.paddingTop) - parseFloat(cs!.paddingBottom) - 8 : Infinity
+  // chiều cao còn trống = cả trang trừ các phần khác (bảng pha chế…) – không đo theo chính khung cảnh
+  const page = box?.parentElement
+  let ph = Infinity
+  if (box && page && cs) {
+    let others = 0
+    for (const ch of Array.from(page.children) as HTMLElement[]) {
+      if (ch === box) continue
+      const st = getComputedStyle(ch)
+      others += ch.getBoundingClientRect().height + parseFloat(st.marginTop) + parseFloat(st.marginBottom)
+    }
+    ph = page.clientHeight - others - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - parseFloat(cs.marginTop) - parseFloat(cs.marginBottom) - 8
+  }
   // Rộng tối đa SCENE_PREF_W px; nếu khung thấp/hẹp hơn thì co lại cho vừa (không bị cắt)
   return Math.min(SCENE_PREF_W, pw, ph > 60 ? (ph * SCENE_W) / SCENE_H : pw)
 }
@@ -366,6 +378,7 @@ function resize(force: boolean | Event = false) {
   const big = !locked || vw !== locked.vw || Math.abs(vh - locked.vh) > 120
   if (force === true || big) locked = { vw, vh, w: measure() }
   const w = locked!.w
+  sceneW.value = w
   const dpr = window.devicePixelRatio || 1
   // vẽ ở độ phân giải nguyên (sắc nét) rồi co vừa khít khung bằng CSS
   scale = Math.max(1, Math.ceil((w * dpr) / SCENE_W))

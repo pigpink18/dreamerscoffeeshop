@@ -86,9 +86,10 @@ const weatherIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloud
         <div class="row"><PixelIcon name="coin" /><span class="lb">Doanh thu</span><b class="good">+{{ money(r.revenue) }}</b></div>
         <div v-if="r.goodsRev" class="row sub"><PixelIcon name="gift" :size="2" /><span class="lb">gồm bán kèm {{ r.goodsSold }} món bánh / lưu niệm</span><span>{{ money(r.goodsRev) }}</span></div>
         <div v-if="r.tips" class="row sub"><PixelIcon name="heart" :size="2" /><span class="lb">gồm tiền tip</span><span>{{ money(r.tips) }}</span></div>
+        <div v-if="r.seated || r.noSeat" class="row sub"><PixelIcon name="crowd" :size="2" /><span class="lb">Khu ngồi: {{ r.seated || 0 }} khách ngồi<template v-if="r.noSeat"> · {{ r.noSeat }} khách hết chỗ</template></span><span>{{ money(r.seatTips || 0) }}</span></div>
         <div class="row"><PixelIcon name="crate" /><span class="lb">Nhập hàng</span><b>{{ r.spent ? "-" + money(r.spent) : money(0) }}</b></div>
         <div class="row"><PixelIcon name="house" /><span class="lb">Mặt bằng</span><b>-{{ money(r.rent) }}</b></div>
-        <div v-if="r.wages" class="row"><PixelIcon name="staff" /><span class="lb">Lương nhân viên &amp; shipper</span><b>-{{ money(r.wages) }}</b></div>
+        <div v-if="r.wages" class="row"><PixelIcon name="staff" /><span class="lb">Lương pha chế, phục vụ &amp; shipper</span><b>-{{ money(r.wages) }}</b></div>
         <div v-if="r.meta && r.meta.spoiled" class="row sub"><PixelIcon name="cross" :size="2" /><span class="lb">Bánh tồn phải bỏ</span><span>{{ r.meta.spoiled }} cái</span></div>
         <div v-if="r.meltedIce" class="row sub"><PixelIcon name="ice" :size="2" /><span class="lb">Đá bị tan</span><span>{{ r.meltedIce }} phần</span></div>
         <div class="total"><span>CÒN LẠI</span><b :class="r.profit >= 0 ? 'good' : 'bad'">{{ fmt(r.profit) }}</b></div>

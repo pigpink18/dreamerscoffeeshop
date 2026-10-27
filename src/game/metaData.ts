@@ -38,7 +38,7 @@ export const goodUnlocked = (g: Good, premise: number) => (g.kind === 'souvenir'
 // ---------- Quán đối thủ trên phố ----------
 export interface RivalInfo { id: string; name: string; owner: string; slogan: string; color: string; power: number }
 export const RIVALS: RivalInfo[] = [
-  { id: 'suong', name: 'Sương Sớm Coffee', owner: 'Chị Thảo Sương', slogan: 'Mở cửa từ 5h sáng, ế từ 6h', color: '#7fb8d9', power: 1.15 },
+  { id: 'suong', name: 'E Di Háp Coffee', owner: 'Anh Ninh', slogan: 'Mở cửa từ 5h sáng, ế từ 6h', color: '#7fb8d9', power: 1.15 },
   { id: 'trum', name: 'Ông Trùm Phin', owner: 'Chú Tư Phin', slogan: 'Phin chậm, nói chuyện còn chậm hơn', color: '#5a3a28', power: 1.05 },
   { id: 'gac', name: 'Gác Mái Chill', owner: 'Hội anh em Indie', slogan: 'Nhạc buồn, ghế cứng, view triệu đô', color: '#c06c84', power: 0.95 },
   { id: 'may', name: 'Mây Lang Thang', owner: 'Bạn Mây Tím', slogan: 'Check-in là chính, cà phê là phụ', color: '#9b7fd0', power: 0.9 },
