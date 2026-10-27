@@ -132,7 +132,8 @@ function pickOrder(id: number) {
 @keyframes wantPulse { 50% { transform: translateY(-3px); } }
 .good:active { transform: translateY(2px); }
 .pix { image-rendering: pixelated; image-rendering: crisp-edges; }
-.recipe { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-height: 30px; }
+/* chiều cao cố định dù đang pha hay không → khung cảnh quán phía trên không bị to/nhỏ */
+.recipe { display: flex; flex-wrap: wrap; align-items: center; align-content: center; gap: 6px 8px; height: 60px; overflow: hidden; }
 
 .rhead { display: flex; flex: 1 1 0; align-items: baseline; gap: 8px; min-width: 0; }
 .rname { font-weight: 900; font-size: 13px; white-space: nowrap; }

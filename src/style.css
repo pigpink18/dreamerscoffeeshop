@@ -25,7 +25,7 @@
 html, body {
   height: 100%;
   overscroll-behavior: none;
-  background: var(--bg);
+  background: #6f4630; /* trùng màu thanh tab: nếu iPhone chừa khoảng dưới đáy cũng không lộ vệt sáng */
 }
 
 body {
@@ -36,7 +36,7 @@ body {
   touch-action: manipulation;
 }
 
-#app { position: fixed; inset: 0; } /* phủ kín màn hình (iPhone chế độ app có lúc 100% bị hụt đúng bằng thanh trạng thái) */
+#app { position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100%); background: var(--bg); } /* phủ kín màn hình (iPhone chế độ app có lúc 100% bị hụt đúng bằng thanh trạng thái) */
 
 button {
   font: inherit;

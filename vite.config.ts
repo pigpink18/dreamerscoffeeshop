@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 // base './' giúp chạy được ở bất kỳ đường dẫn nào (GitHub Pages: /ten-repo/)
 export default defineConfig({
   base: './',
+  // dấu thời gian bản build – hiện trong menu nhạc để biết điện thoại đã nhận bản mới chưa
+  define: { __BUILD__: JSON.stringify(new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 16).replace('T', ' ')) },
   plugins: [
     vue(),
     VitePWA({

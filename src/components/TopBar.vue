@@ -10,6 +10,7 @@ import logoUrl from '../assets/logo.png'
 
 function toggle(k: 'music' | 'sfx') { unlockAudio(); audio[k] = !audio[k] }
 const menu = ref(false)
+const BUILD = __BUILD__
 function choose(id: TrackChoice) { unlockAudio(); audio.track = id; audio.music = true; menu.value = false }
 const playingName = () => (audio.playing === 'boss' ? 'Kịch tính (boss)' : audio.playing === 'bossSoft' ? 'Hồi hộp nhẹ (boss)' : audio.playing === 'report' ? 'Mappy (tổng kết ngày)' : TRACK_LIST.find((t) => t.id === audio.playing)?.name ?? '')
 
@@ -44,7 +45,7 @@ const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, 
           <span v-if="audio.track === t.id" class="chk"><PixelIcon name="play" :size="2" /></span>
         </button>
         <div v-if="audio.music && audio.playing" class="now">Đang phát: {{ playingName() }}</div>
-        <div class="note">Nhạc quán: bossa nova sáng tác riêng cho Dreamers Coffee · Nhạc boss: “Hồi hộp nhẹ” sáng tác riêng · “Kịch tính”: Abstraction / Tallbeard (CC0)</div>
+        <div class="note">Nhạc quán: bossa nova sáng tác riêng cho Dreamers Coffee · Bản cập nhật: {{ BUILD }}</div>
       </div>
     </Transition>
     <div class="money">
