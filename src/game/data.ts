@@ -9,7 +9,7 @@ export type RecipeId = 'denDa' | 'suaDa' | 'bacXiu' | 'latte' | 'americano' | 't
 export type UpgradeId = 'staff' | 'machine' | 'decor' | 'sign' | 'freezer' | 'shipper' | 'green' | 'farmer'
 export type WeatherId = 'sunny' | 'hot' | 'cloudy' | 'rainy'
 
-export type HairStyle = 'short' | 'long' | 'bun' | 'messy' | 'bob' | 'spiky' | 'nonla' | 'helmet' | 'hardhat' | 'cap' | 'beret' | 'slick' | 'afro' | 'combover' | 'mohawk' | 'curlers' | 'sunhat'
+export type HairStyle = 'short' | 'long' | 'bun' | 'messy' | 'bob' | 'shoulder' | 'spiky' | 'nonla' | 'helmet' | 'hardhat' | 'cap' | 'beret' | 'slick' | 'afro' | 'combover' | 'mohawk' | 'curlers' | 'sunhat'
 export type Acc = 'glasses' | 'tie' | 'collar' | 'hoodie' | 'beard' | 'blush' | 'earring' | 'shades' | 'chain' | 'unibrow' | 'mustache' | 'lipstick' | 'catglasses' | 'bottleglasses' | 'nosering' | 'hoops' | 'scarf' | 'tattoobrow' | 'goldtooth'
 /** Ngoại hình nhân vật pixel */
 export interface Look { skin: string; hair: string; style: HairStyle; shirt: string; accent?: string; acc?: Acc[] }

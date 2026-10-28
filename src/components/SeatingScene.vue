@@ -3,7 +3,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { ui, save, bus, cleanSeat, maxTables, dirtySeats, CLEAN_TAPS, DAY_LENGTH, type GameEvent } from '../game/store'
 import { moneyShort } from '../game/data'
-import { SCENE_W, SCENE_H, px, box, OUT, sky, mixWeighted, drawPerson, drawPlant } from '../game/pixel'
+import { SCENE_W, SCENE_H, px, box, OUT, sky, mixWeighted, drawPerson, drawPlant, CZ, woodFrame, brassLamp } from '../game/pixel'
 import type { Look } from '../game/data'
 import PixelIcon from './ui/PixelIcon.vue'
 
@@ -69,28 +69,34 @@ let ro: ResizeObserver | null = null
 function drawWall(c: CanvasRenderingContext2D, t: number) {
   const f = Math.min(1, ui.time / DAY_LENGTH)
   const premise = save.meta.premise
-  const wall = premise === 2 ? '#e9dccb' : premise === 1 ? '#e8cfa8' : '#f4e1c6'
+  const wall = premise === 2 ? '#f1d9cc' : premise === 1 ? CZ.w4 : '#f0dcb4'
   px(c, 0, 0, SCENE_W, 30, wall)
-  for (let x = 0; x < SCENE_W; x += 8) px(c, x, 0, 4, 24, shadeHex(wall, -6))
-  // ốp gỗ chân tường
-  px(c, 0, 24, SCENE_W, 6, '#b07a52'); px(c, 0, 24, SCENE_W, 1, '#8a5a3c')
-  // 2 cửa sổ
+  if (premise === 1) for (let x = 0; x < SCENE_W; x += 9) { px(c, x, 0, 1, 24, CZ.w2); px(c, x + 1, 0, 1, 24, CZ.w5) } // ván gỗ
+  else for (let r = 0; r < 4; r++) for (let x = 4 + (r % 2) * 4; x < SCENE_W; x += 8) px(c, x, 3 + r * 6, 1, 1, shadeHex(wall, -22))
+  // ốp chân tường: xanh rêu / gạch đỏ / gạch men, nẹp gỗ trên
+  const dado = premise === 1 ? CZ.r1 : premise === 2 ? '#6fb8ae' : CZ.t1
+  px(c, 0, 24, SCENE_W, 6, dado)
+  if (premise === 1) for (let x = 0; x < SCENE_W; x += 8) { px(c, x, 27, 8, 1, CZ.w1); px(c, x + 4, 24, 1, 3, CZ.w1); px(c, x, 27, 1, 3, CZ.w1) }
+  else if (premise === 2) for (let x = 0; x < SCENE_W; x += 4) px(c, x, 25, 1, 5, '#3f8279')
+  else for (let x = 2; x < SCENE_W; x += 14) { px(c, x, 26, 11, 4, CZ.t0); px(c, x + 1, 27, 10, 3, CZ.t1) }
+  px(c, 0, 22, SCENE_W, 3, CZ.ink); px(c, 0, 22, SCENE_W, 1, CZ.w5); px(c, 0, 23, SCENE_W, 1, CZ.w3)
+  // 2 cửa sổ khung gỗ
   const [st, sb] = sky(f, save.weather === 'rainy')
   for (const wx of [8, 86]) {
-    box(c, wx - 2, 2, 38, 18, '#7a4e33')
-    for (let i = 0; i < 16; i++) px(c, wx, 3 + i, 34, 1, mixWeighted(st, sb, i / 16))
-    px(c, wx + 16, 3, 2, 16, '#7a4e33')
-    if (save.weather === 'rainy') for (let k = 0; k < 6; k++) { const yy = 3 + ((Math.floor(t * 30) + k * 5) % 15); px(c, wx + 3 + k * 5, yy, 1, 2, '#dfe8f2') }
+    woodFrame(c, wx, 3, 34, 15)
+    for (let i = 0; i < 15; i++) px(c, wx, 3 + i, 34, 1, mixWeighted(st, sb, i / 15))
+    c.fillStyle = 'rgba(255,255,255,0.16)'
+    c.beginPath(); c.moveTo(wx + 3, 18); c.lineTo(wx + 8, 18); c.lineTo(wx + 15, 3); c.lineTo(wx + 10, 3); c.fill()
+    px(c, wx + 16, 3, 3, 15, CZ.ink); px(c, wx + 17, 3, 1, 15, CZ.w3)
+    if (save.weather === 'rainy') for (let k = 0; k < 6; k++) { const yy = 3 + ((Math.floor(t * 30) + k * 5) % 14); px(c, wx + 3 + k * 5, yy, 1, 2, '#dfe8f2') }
   }
   // bảng phấn menu giữa tường
-  box(c, 50, 4, 28, 16, '#33423a')
-  px(c, 53, 7, 14, 1, '#e8e2da'); px(c, 53, 10, 20, 1, '#cfc8be'); px(c, 53, 13, 10, 1, '#cfc8be'); px(c, 53, 16, 17, 1, '#cfc8be')
-  // đèn thả
-  for (const lx of [32, 64, 96]) {
-    px(c, lx, 0, 1, 5, OUT)
-    box(c, lx - 3, 5, 7, 3, '#f2c14e')
-    if (f > 0.7) px(c, lx - 1, 8, 3, 1, '#fff3b0')
-  }
+  woodFrame(c, 53, 6, 22, 11)
+  px(c, 53, 6, 22, 11, '#2c4a40')
+  px(c, 55, 8, 11, 1, '#eef2ea'); px(c, 55, 11, 14, 1, 'rgba(238,242,234,0.75)'); px(c, 55, 14, 9, 1, 'rgba(238,242,234,0.75)'); px(c, 70, 11, 3, 1, CZ.b2); px(c, 70, 14, 3, 1, CZ.b2)
+  // đèn thả chao đồng (sáng hơn khi chiều tối)
+  for (const lx of [32, 96]) brassLamp(c, lx, 2)
+  if (f > 0.7) { c.fillStyle = 'rgba(255,226,150,0.12)'; c.fillRect(0, 0, SCENE_W, H) }
 }
 function shadeHex(hex: string, amt: number) {
   const n = parseInt(hex.slice(1), 16)
@@ -102,15 +108,16 @@ function drawFloor(c: CanvasRenderingContext2D) {
   if (premise === 2) {
     for (let y = 30; y < H; y += 6) for (let x = 0; x < SCENE_W; x += 6) px(c, x, y, 6, 6, ((x + y) / 6) % 2 ? '#d9cdbd' : '#efe6d8')
   } else {
-    px(c, 0, 30, SCENE_W, H - 30, premise === 1 ? '#b98552' : '#c8925f')
+    // sàn ván gỗ: mạch tối, mép sáng, vân
+    const [base, seam, hi] = premise === 1 ? [CZ.w2, CZ.w1, CZ.w3] : [CZ.w3, CZ.w2, CZ.w4]
+    px(c, 0, 30, SCENE_W, H - 30, base)
     for (let y = 30; y < H; y += 5) {
-      px(c, 0, y, SCENE_W, 1, '#a87444')
+      px(c, 0, y, SCENE_W, 1, seam); px(c, 0, y + 1, SCENE_W, 1, hi)
       const off = ((y / 5) % 2) * 11
-      for (let x = off; x < SCENE_W; x += 22) px(c, x, y, 1, 5, '#a87444')
+      for (let x = off; x < SCENE_W; x += 22) { px(c, x, y, 1, 5, seam); px(c, x + 6, y + 3, 4, 1, seam) }
     }
   }
-  // thảm dưới khu bàn
-  px(c, 4, 40, SCENE_W - 8, 2, 'rgba(0,0,0,0.05)')
+  px(c, 0, 30, SCENE_W, 2, 'rgba(38,28,27,0.25)') // bóng chân tường
 }
 
 // ---------- Bàn & ghế nhìn ngang: mỗi bàn 2 ghế hai bên, khách ngồi quay mặt vào bàn ----------
@@ -126,9 +133,9 @@ function pen(c: CanvasRenderingContext2D, cx: number, ty: number, side: 0 | 1): 
 }
 
 const CHAIR = [
-  { wood: '#8a5a3c', light: '#a87444', pad: '' },
-  { wood: '#6b4026', light: '#8a5a3c', pad: '#c8463f' },
-  { wood: '#3c4f8f', light: '#5b6fb5', pad: '#7d8fd0' },
+  { wood: CZ.w1, light: CZ.w3, pad: '' },
+  { wood: CZ.w0, light: CZ.w2, pad: CZ.r1 },
+  { wood: CZ.t0, light: CZ.t1, pad: CZ.t3 },
 ]
 function drawChair(P: Pen, lv: number) {
   const C = CHAIR[lv] ?? CHAIR[0]
@@ -207,9 +214,9 @@ function drawSitter(P: Pen, L: Look, t: number, k: number, lv: number) {
 }
 
 const TABLE = [
-  { top: '#c98e5a', edge: '#8a5a3c', leg: '#6b4026' },
-  { top: '#f6efe6', edge: '#c8463f', leg: '#3b2a20' },
-  { top: '#f4f1ec', edge: '#c9c2b8', leg: '#d4a73c' },
+  { top: CZ.w5, edge: CZ.w3, leg: CZ.w1 },
+  { top: '#f6efe6', edge: CZ.r1, leg: CZ.ink },
+  { top: '#f4f1ec', edge: '#c9c2b8', leg: CZ.b1 },
 ]
 function drawTable(c: CanvasRenderingContext2D, cx: number, ty: number, lv: number) {
   const T = TABLE[lv] ?? TABLE[0]
@@ -225,7 +232,7 @@ function drawTable(c: CanvasRenderingContext2D, cx: number, ty: number, lv: numb
   if (lv === 1) {
     // khăn trải bàn caro rủ xuống
     px(c, cx - 7, ty + 1, 14, 4, OUT)
-    for (let i = 0; i < 12; i++) px(c, cx - 6 + i, ty + 1, 1, 3, (i + 1) % 2 ? '#ffffff' : '#c8463f')
+    for (let i = 0; i < 12; i++) px(c, cx - 6 + i, ty + 1, 1, 3, (i + 1) % 2 ? '#ffffff' : CZ.r1)
   }
   if (lv === 2) px(c, cx - 5, ty - 1, 3, 1, '#ffffff')
 }
@@ -249,10 +256,14 @@ function draw(now: number) {
   {
     const first = slot(0), last = slot(Math.max(0, maxTables.value - 1))
     const ry = first.ty - 24, rh = last.ty + 16 - ry
-    const rugC = save.meta.premise === 2 ? '#b9a6c9' : save.meta.premise === 1 ? '#7d9a6a' : '#cf8566'
-    px(c, 6, ry, SCENE_W - 12, rh, shadeHex(rugC, -35))
-    px(c, 8, ry + 2, SCENE_W - 16, rh - 4, rugC)
-    for (let x = 12; x < SCENE_W - 12; x += 8) { px(c, x, ry + 4, 4, 1, shadeHex(rugC, 30)); px(c, x + 2, ry + rh - 5, 4, 1, shadeHex(rugC, 30)) }
+    const rugC = save.meta.premise === 2 ? '#9a86b0' : save.meta.premise === 1 ? '#5e8a5a' : CZ.r1
+    px(c, 6, ry, SCENE_W - 12, rh, CZ.ink)
+    px(c, 7, ry + 1, SCENE_W - 14, rh - 2, shadeHex(rugC, -30))
+    px(c, 9, ry + 3, SCENE_W - 18, rh - 6, rugC)
+    px(c, 11, ry + 5, SCENE_W - 22, 1, CZ.b2); px(c, 11, ry + rh - 6, SCENE_W - 22, 1, CZ.b2)
+    px(c, 11, ry + 5, 1, rh - 10, CZ.b2); px(c, SCENE_W - 12, ry + 5, 1, rh - 10, CZ.b2)
+    for (let x = 16; x < SCENE_W - 16; x += 10) { px(c, x, ry + 8, 3, 1, shadeHex(rugC, 35)); px(c, x + 1, ry + 7, 1, 3, shadeHex(rugC, 35)) }
+    for (let x = 8; x < SCENE_W - 8; x += 3) { px(c, x, ry - 1, 1, 1, CZ.paper); px(c, x, ry + rh, 1, 1, CZ.paper) } // tua thảm
     if (H - (last.ty + 12) > 22) { drawPlant(c, 3, H - 19, true); drawPlant(c, SCENE_W - 11, H - 19, true) }
   }
 

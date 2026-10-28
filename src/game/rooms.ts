@@ -1,10 +1,10 @@
 // Cảnh quán theo mặt bằng: 1 = Quán gác gỗ đồi thông, 2 = Dreamers Flagship (bảng menu lớn, đèn thả,
 // kệ hũ, tường gạch men, tủ bánh, ghế bar). Mặt bằng 0 dùng drawRoom gốc trong pixel.ts.
-import { px, box, sky, mixWeighted, SCENE_W, SCENE_H, COUNTER_Y, OUT, type Ctx } from './pixel'
+import { px, box, sky, mixWeighted, CZ, rivet, woodFrame, woodShelf, glassJar, brassLamp, SCENE_W, SCENE_H, COUNTER_Y, OUT, type Ctx } from './pixel'
 
 /** Cửa sổ nhìn ra ngoài (trời theo giờ + thời tiết), có đồi thông */
-function windowView(c: Ctx, x: number, y: number, w: number, h: number, dayFrac: number, weather: string, time: number, frame = '#7a4e33') {
-  box(c, x - 2, y - 2, w + 4, h + 4, frame)
+function windowView(c: Ctx, x: number, y: number, w: number, h: number, dayFrac: number, weather: string, time: number) {
+  woodFrame(c, x, y, w, h)
   const [st, sb] = sky(dayFrac, weather === 'rainy')
   for (let i = 0; i < h; i++) px(c, x, y + i, w, 1, mixWeighted(st, sb, i / h))
   c.save(); c.beginPath(); c.rect(x, y, w, h); c.clip()
@@ -23,109 +23,146 @@ function windowView(c: Ctx, x: number, y: number, w: number, h: number, dayFrac:
   c.fillRect(Math.round(x + fx), y + h - 9, 22, 2)
   c.fillRect(Math.round(x + fx * 0.7 + 10), y + h - 5, 18, 2)
   if (weather === 'rainy') for (let i = 0; i < 14; i++) px(c, x + ((i * 11 + time * 30) % w), y + ((i * 7 + time * 60) % h), 1, 3, 'rgba(220,235,255,0.8)')
+  // ánh kính
+  c.fillStyle = 'rgba(255,255,255,0.16)'
+  c.beginPath(); c.moveTo(x + 2, y + h); c.lineTo(x + 7, y + h); c.lineTo(x + 7 + h * 0.5, y); c.lineTo(x + 2 + h * 0.5, y); c.fill()
   c.restore()
 }
 
 function jars(c: Ctx, x: number, y: number, n: number, cols: string[]) {
-  for (let i = 0; i < n; i++) { box(c, x + i * 7, y, 5, 7, cols[i % cols.length]); px(c, x + 1 + i * 7, y - 1, 3, 2, '#5a3a28') }
+  for (let i = 0; i < n; i++) glassJar(c, x + i * 7, y - 1, cols[i % cols.length])
+}
+
+/** song cửa gỗ dọc */
+function mullion(c: Ctx, x: number, y: number, h: number) {
+  px(c, x, y, 3, h, CZ.ink); px(c, x + 1, y, 1, h, CZ.w3)
 }
 
 // ---------------- Mặt bằng 1: Quán gác gỗ đồi thông ----------------
 export function drawRoomMid(c: Ctx, dayFrac: number, weather: string, time: number) {
-  // tường ván gỗ
-  px(c, 0, 0, SCENE_W, COUNTER_Y, '#c99a6b')
-  for (let x = 0; x < SCENE_W; x += 9) { px(c, x, 0, 1, 44, '#a8784f'); px(c, x + 4, 6 + ((x * 7) % 20), 1, 2, '#a8784f') }
-  // xà ngang
-  px(c, 0, 0, SCENE_W, 3, '#6f4630')
-  // chân tường gạch
-  px(c, 0, 44, SCENE_W, COUNTER_Y - 44, '#b5654a')
-  for (let y = 44; y < COUNTER_Y; y += 4) {
-    px(c, 0, y, SCENE_W, 1, '#8f4a35')
-    for (let x = ((y / 4) % 2) * 4; x < SCENE_W; x += 8) px(c, x, y, 1, 4, '#8f4a35')
+  // tường ván gỗ thông: ván dọc có khe, vân và mắt gỗ
+  px(c, 0, 0, SCENE_W, COUNTER_Y, CZ.w4)
+  for (let x = 0; x < SCENE_W; x += 9) {
+    px(c, x, 0, 1, 44, CZ.w2); px(c, x + 1, 0, 1, 44, CZ.w5)
+    px(c, x + 4, 6 + ((x * 7) % 20), 1, 5, CZ.w3)
+    if (x % 27 === 0) { px(c, x + 5, 20 + ((x * 3) % 14), 2, 2, CZ.w2); px(c, x + 5, 20 + ((x * 3) % 14), 1, 1, CZ.w1) }
   }
-  px(c, 0, 43, SCENE_W, 2, '#6f4630')
-  // cửa sổ vòm lớn
-  windowView(c, 5, 6, 50, 33, dayFrac, weather, time)
-  px(c, 29, 6, 2, 33, '#7a4e33')
-  px(c, 2, 41, 56, 2, '#6f4630')
+  // xà ngang
+  px(c, 0, 0, SCENE_W, 4, CZ.ink); px(c, 0, 0, SCENE_W, 3, CZ.w1); px(c, 0, 0, SCENE_W, 1, CZ.w2)
+  for (let x = 6; x < SCENE_W; x += 30) rivet(c, x, 1)
+  // chân tường gạch đỏ, mạch vữa
+  px(c, 0, 44, SCENE_W, COUNTER_Y - 44, CZ.r1)
+  for (let y = 46; y < COUNTER_Y; y += 4) {
+    px(c, 0, y, SCENE_W, 1, CZ.w1)
+    for (let x = ((y / 2) % 2) * 4; x < SCENE_W; x += 8) { px(c, x, y, 1, 4, CZ.w1); px(c, x + 1, y + 1, 5, 1, CZ.r2) }
+  }
+  px(c, 0, 42, SCENE_W, 4, CZ.ink); px(c, 0, 42, SCENE_W, 1, CZ.w5); px(c, 0, 43, SCENE_W, 1, CZ.w3); px(c, 0, 44, SCENE_W, 1, CZ.w1)
+  // cửa sổ lớn nhìn ra đồi thông
+  windowView(c, 6, 7, 48, 31, dayFrac, weather, time)
+  mullion(c, 29, 7, 31)
+  // bậu cửa
+  px(c, 1, 40, 58, 3, CZ.ink); px(c, 2, 40, 56, 1, CZ.w5); px(c, 2, 41, 56, 1, CZ.w3)
   // bảng phấn
-  box(c, 62, 6, 32, 22, '#2f4a3a', '#7a4e33')
-  px(c, 66, 9, 18, 1, '#e8efe6')
-  for (let i = 0; i < 4; i++) { px(c, 65, 13 + i * 3, 12 + ((i * 5) % 6), 1, 'rgba(232,239,230,0.75)'); px(c, 85, 13 + i * 3, 5, 1, 'rgba(242,193,78,0.85)') }
+  woodFrame(c, 65, 9, 26, 16)
+  px(c, 65, 9, 26, 16, '#2c4a40')
+  px(c, 67, 11, 14, 1, '#eef2ea')
+  for (let i = 0; i < 3; i++) { px(c, 67, 15 + i * 3, 10 + ((i * 5) % 6), 1, 'rgba(238,242,234,0.75)'); px(c, 84, 15 + i * 3, 5, 1, CZ.b2) }
+  px(c, 84, 10, 3, 3, '#eef2ea'); px(c, 87, 11, 1, 1, '#eef2ea') // ly vẽ phấn
   // kệ + hũ
-  px(c, 96, 30, 30, 2, '#6f4630')
+  woodShelf(c, 95, 30, 31)
   jars(c, 98, 23, 4, ['#7fb34d', '#e0a03a', '#f4a46e', '#9fd3ea'])
-  // chậu cây treo
+  // chậu cây treo đất nung
   for (const hx of [108, 122]) {
-    px(c, hx, 0, 1, 8, '#5a3a28')
-    box(c, hx - 3, 8, 7, 5, '#d9744a')
-    px(c, hx - 4, 12, 2, 6, '#4e7f2e'); px(c, hx + 3, 12, 2, 8, '#6aa84f'); px(c, hx - 1, 13, 2, 5, '#4e7f2e')
+    px(c, hx, 4, 1, 4, CZ.ink)
+    px(c, hx - 4, 8, 9, 6, CZ.ink); px(c, hx - 3, 8, 7, 1, '#e8936a'); px(c, hx - 3, 9, 7, 4, '#c0643f'); px(c, hx - 3, 12, 7, 1, '#8f4a35')
+    px(c, hx - 5, 12, 2, 7, '#3f7a3a'); px(c, hx + 4, 12, 2, 9, '#5e9a48'); px(c, hx - 1, 13, 2, 6, '#3f7a3a')
+    px(c, hx - 5, 12, 1, 3, '#8cc46a'); px(c, hx + 5, 13, 1, 3, '#8cc46a')
   }
 }
 
 export function drawCounterMid(c: Ctx) {
-  px(c, 0, COUNTER_Y, SCENE_W, 5, '#8a5a3c')
-  px(c, 0, COUNTER_Y, SCENE_W, 1, '#b07a52')
-  px(c, 0, COUNTER_Y + 4, SCENE_W, 1, '#4a2e1f')
-  px(c, 0, COUNTER_Y + 5, SCENE_W, SCENE_H - COUNTER_Y - 5, '#5a3a28')
-  for (let x = 0; x < SCENE_W; x += 8) px(c, x, COUNTER_Y + 5, 1, SCENE_H - COUNTER_Y, '#4a2e1f')
+  // mặt quầy gỗ óc chó
+  px(c, 0, COUNTER_Y - 1, SCENE_W, 1, CZ.ink)
+  px(c, 0, COUNTER_Y, SCENE_W, 4, CZ.w1)
+  px(c, 0, COUNTER_Y, SCENE_W, 1, CZ.w3)
+  for (let x = 5; x < SCENE_W; x += 14) px(c, x, COUNTER_Y + 2, 7, 1, CZ.w2)
+  px(c, 0, COUNTER_Y + 4, SCENE_W, 1, CZ.w0)
+  px(c, 0, COUNTER_Y + 5, SCENE_W, 1, CZ.ink)
+  // thân quầy ván ngang, nẹp dọc đồng
+  const by = COUNTER_Y + 6, bh = SCENE_H - by
+  px(c, 0, by, SCENE_W, bh, CZ.w1)
+  for (let y = by + 3; y < SCENE_H; y += 4) { px(c, 0, y, SCENE_W, 1, CZ.w0); px(c, 0, y + 1, SCENE_W, 1, CZ.w2) }
+  px(c, 0, by, SCENE_W, 2, CZ.w0)
+  for (let x = 0; x < SCENE_W; x += 24) { px(c, x, by, 3, bh, CZ.ink); px(c, x + 1, by, 1, bh, CZ.w3); rivet(c, x, by + 3); rivet(c, x, SCENE_H - 5) }
 }
 
 // ---------------- Mặt bằng 2: Dreamers Flagship ----------------
 export function drawRoomBig(c: Ctx, dayFrac: number, weather: string, time: number) {
-  // tường hồng be
+  // tường hồng be, gờ trần gỗ
   px(c, 0, 0, SCENE_W, COUNTER_Y, '#f1d9cc')
-  // gạch men xanh ngọc sau quầy
-  px(c, 0, 40, SCENE_W, COUNTER_Y - 40, '#7fc4bf')
-  for (let y = 40; y < COUNTER_Y; y += 4) px(c, 0, y, SCENE_W, 1, '#5ea9a3')
-  for (let x = 0; x < SCENE_W; x += 4) px(c, x, 40, 1, COUNTER_Y - 40, '#5ea9a3')
-  // bảng menu lớn
-  box(c, 5, 3, 56, 18, '#6e2f3a', '#4a1f28')
-  for (let i = 0; i < 7; i++) px(c, 9 + i * 3, 6, 2, 2, '#fbe9e0') // chữ COFFEES
-  for (let i = 0; i < 3; i++) {
-    px(c, 9, 11 + i * 3, 16 + ((i * 7) % 8), 1, 'rgba(251,233,224,0.8)'); px(c, 31, 11 + i * 3, 3, 1, '#f2c14e')
-    px(c, 37, 11 + i * 3, 14 + ((i * 5) % 6), 1, 'rgba(251,233,224,0.8)'); px(c, 55, 11 + i * 3, 3, 1, '#f2c14e')
+  for (let r = 0; r < 6; r++) for (let x = 3 + (r % 2) * 5; x < SCENE_W; x += 10) px(c, x, 6 + r * 6, 1, 1, '#e6c6b6')
+  px(c, 0, 0, SCENE_W, 2, CZ.w1); px(c, 0, 2, SCENE_W, 1, CZ.w3)
+  // gạch men xanh ngọc sau quầy: viên có viền sáng/tối
+  px(c, 0, 40, SCENE_W, COUNTER_Y - 40, '#3f8279')
+  for (let y = 41; y < COUNTER_Y; y += 4) for (let x = ((y - 41) / 4 % 2) * 2; x < SCENE_W; x += 4) {
+    px(c, x, y, 3, 3, '#6fb8ae'); px(c, x, y, 3, 1, '#9fd6cc'); px(c, x + 2, y + 1, 1, 2, '#58a096')
   }
-  px(c, 33, 5, 1, 15, 'rgba(251,233,224,0.35)')
-  // kệ 2 tầng với hũ màu
-  for (const sy of [30, 38]) px(c, 5, sy, 56, 2, '#a86a4a')
-  jars(c, 7, 23, 8, ['#f6e7d0', '#d9534f', '#7fb34d', '#5ea9a3'])
-  jars(c, 10, 31, 7, ['#e0a03a', '#f6e7d0', '#d9534f', '#5ea9a3'])
-  // giá treo cốc
-  px(c, 66, 27, 30, 1, '#a86a4a')
-  for (let i = 0; i < 5; i++) { px(c, 68 + i * 6, 28, 1, 2, OUT); box(c, 66 + i * 6, 30, 5, 5, i % 2 ? '#ffffff' : '#7fc4bf') }
-  // đồng hồ treo tường
+  px(c, 0, 38, SCENE_W, 3, CZ.ink); px(c, 0, 38, SCENE_W, 1, CZ.w5); px(c, 0, 39, SCENE_W, 1, CZ.w3)
+  // bảng menu lớn khung gỗ
+  woodFrame(c, 8, 6, 50, 12)
+  px(c, 8, 6, 50, 12, '#4a2328')
+  for (let i = 0; i < 7; i++) px(c, 12 + i * 3, 7, 2, 2, '#fbe9e0') // chữ COFFEES
+  for (let i = 0; i < 2; i++) {
+    px(c, 11, 11 + i * 3, 14 + ((i * 7) % 8), 1, 'rgba(251,233,224,0.8)'); px(c, 29, 11 + i * 3, 3, 1, CZ.b2)
+    px(c, 35, 11 + i * 3, 12 + ((i * 5) % 6), 1, 'rgba(251,233,224,0.8)'); px(c, 52, 11 + i * 3, 3, 1, CZ.b2)
+  }
+  px(c, 33, 7, 1, 10, 'rgba(251,233,224,0.3)')
+  // kệ 2 tầng với hũ thuỷ tinh
+  for (const sy of [29, 37]) woodShelf(c, 5, sy, 56)
+  jars(c, 7, 22, 8, ['#f6e7d0', '#d9534f', '#7fb34d', '#5ea9a3'])
+  jars(c, 10, 30, 7, ['#e0a03a', '#f6e7d0', '#d9534f', '#5ea9a3'])
+  // giá treo cốc gốm
+  px(c, 65, 26, 32, 2, CZ.ink); px(c, 66, 26, 30, 1, CZ.w4)
+  for (let i = 0; i < 5; i++) {
+    const cx = 66 + i * 6
+    px(c, cx + 2, 28, 1, 2, CZ.ink)
+    px(c, cx, 30, 5, 5, CZ.ink); px(c, cx + 1, 30, 3, 4, i % 2 ? '#fbf6ee' : '#6fb8ae'); px(c, cx + 1, 30, 1, 3, '#ffffff')
+  }
+  // đồng hồ treo tường viền đồng
   const cx = 86, cy = 11
-  px(c, cx - 5, cy - 6, 11, 13, '#8a6a58'); px(c, cx - 6, cy - 5, 13, 11, '#8a6a58')
-  px(c, cx - 4, cy - 5, 9, 11, '#fbf6ee'); px(c, cx - 5, cy - 4, 11, 9, '#fbf6ee')
+  px(c, cx - 5, cy - 6, 11, 13, CZ.ink); px(c, cx - 6, cy - 5, 13, 11, CZ.ink)
+  px(c, cx - 4, cy - 5, 9, 11, CZ.b1); px(c, cx - 5, cy - 4, 11, 9, CZ.b1)
+  px(c, cx - 3, cy - 4, 7, 9, '#fbf6ee'); px(c, cx - 4, cy - 3, 9, 7, '#fbf6ee')
   const h = (7 + dayFrac * 14) % 12
   const ah = (h / 12) * Math.PI * 2, am = ((h % 1) * Math.PI * 2)
   for (let r = 0; r < 4; r++) px(c, Math.round(cx + Math.sin(am) * r), Math.round(cy - Math.cos(am) * r), 1, 1, OUT)
-  for (let r = 0; r < 3; r++) px(c, Math.round(cx + Math.sin(ah) * r), Math.round(cy - Math.cos(ah) * r), 1, 1, '#a3302a')
+  for (let r = 0; r < 3; r++) px(c, Math.round(cx + Math.sin(ah) * r), Math.round(cy - Math.cos(ah) * r), 1, 1, CZ.r0)
   // cửa sổ cao
-  windowView(c, 102, 4, 22, 32, dayFrac, weather, time, '#a86a4a')
-  px(c, 112, 4, 2, 32, '#a86a4a')
-  // đèn thả mái vòm xanh
-  for (const lx of [20, 38, 56]) {
-    px(c, lx, 0, 1, 13, '#5a3a28')
-    px(c, lx - 4, 13, 9, 2, '#9cc47a'); px(c, lx - 5, 15, 11, 3, '#9cc47a'); px(c, lx - 5, 17, 11, 1, '#6f9a52')
-    px(c, lx - 2, 18, 5, 1, '#fff3b0')
-    c.fillStyle = 'rgba(255,236,170,0.10)'
-    c.beginPath(); c.moveTo(lx - 4, 18); c.lineTo(lx + 5, 18); c.lineTo(lx + 13, 40); c.lineTo(lx - 12, 40); c.fill()
-  }
+  windowView(c, 103, 5, 20, 30, dayFrac, weather, time)
+  mullion(c, 112, 5, 30)
+  // đèn thả chao đồng
+  for (const lx of [20, 38, 56]) brassLamp(c, lx, 13)
 }
 
 /** Thân quầy Flagship: mặt quầy nâu đỏ, tủ bánh kính bên phải, ghế bar phía trước */
 export function drawCounterBig(c: Ctx, t: number, goods: Record<string, number> = {}) {
-  px(c, 0, COUNTER_Y, SCENE_W, 4, '#7a3e2e')
-  px(c, 0, COUNTER_Y, SCENE_W, 1, '#a35a44')
-  px(c, 0, COUNTER_Y + 4, SCENE_W, SCENE_H - COUNTER_Y - 4, '#e2725b')
-  px(c, 0, COUNTER_Y + 4, SCENE_W, 2, '#c45a45')
-  for (let x = 0; x < SCENE_W; x += 16) px(c, x, COUNTER_Y + 6, 1, SCENE_H - COUNTER_Y, '#c45a45')
+  // mặt quầy đá nâu đỏ
+  px(c, 0, COUNTER_Y - 1, SCENE_W, 1, CZ.ink)
+  px(c, 0, COUNTER_Y, SCENE_W, 4, CZ.r0)
+  px(c, 0, COUNTER_Y, SCENE_W, 1, CZ.r2)
+  for (let x = 7; x < SCENE_W; x += 19) px(c, x, COUNTER_Y + 2, 4, 1, CZ.r1)
+  px(c, 0, COUNTER_Y + 4, SCENE_W, 1, CZ.ink)
+  // thân quầy ốp san hô, nẹp đồng
+  const by = COUNTER_Y + 5, bh = SCENE_H - by
+  px(c, 0, by, SCENE_W, bh, CZ.r2)
+  px(c, 0, by, SCENE_W, 2, CZ.r1)
+  for (let x = 0; x < SCENE_W; x += 16) { px(c, x, by + 2, 1, bh, CZ.r1); px(c, x + 1, by + 2, 1, bh, '#ef8f72') }
+  px(c, 0, SCENE_H - 3, SCENE_W, 1, CZ.b1); px(c, 0, SCENE_H - 2, SCENE_W, 2, CZ.r0)
   // tủ bánh kính (thấp, để ghế bar thò lên phía dưới)
   const dx = 80, dy = COUNTER_Y + 6
-  box(c, dx, dy, 44, 15, '#dff4fb', '#5a3a28')
-  px(c, dx + 1, dy + 7, 42, 1, '#9fb8c2')
+  woodFrame(c, dx + 2, dy + 2, 40, 12)
+  px(c, dx + 2, dy + 2, 40, 12, '#dff4fb')
+  px(c, dx + 2, dy + 7, 40, 1, CZ.b1)
   // tủ có bánh nào thì hiện bánh đó (hết hàng → kệ trống)
   const top = [goods.croissant, goods.bongLan, goods.croissant, goods.bongLan, goods.croissant]
   const bot = [goods.cupcake, goods.tiramisu, goods.cupcake, goods.tiramisu, goods.cupcake]

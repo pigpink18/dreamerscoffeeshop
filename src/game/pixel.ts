@@ -45,12 +45,24 @@ const IMG_FILES = {
   pot: 'coffee-pot.png',
   potMachine: 'coffee-pot-machine-2.png',
 }
-export type ImgKey = keyof typeof IMG_FILES
-export const IMG_URL = Object.fromEntries(Object.entries(IMG_FILES).map(([k, f]) => [k, `${base}assets/karsiori/${f}`])) as Record<ImgKey, string>
+// Đồ nội thất / cây cảnh từ bộ Brew & Bloom (public/assets/cozy, xuất bằng tools/cozy.py)
+const COZY_FILES = ['sack', 'pot', 'boxwood', 'tulip'] as const
+export type ImgKey = keyof typeof IMG_FILES | (typeof COZY_FILES)[number]
+export const IMG_URL = {
+  ...Object.fromEntries(Object.entries(IMG_FILES).map(([k, f]) => [k, `${base}assets/karsiori/${f}`])),
+  ...Object.fromEntries(COZY_FILES.map((k) => [k, `${base}assets/cozy/${k}.png`])),
+} as Record<ImgKey, string>
 export const images: Partial<Record<ImgKey, HTMLImageElement>> = {}
+/** Vẽ sprite với (x, y) = góc dưới trái (đặt đồ lên mặt sàn/kệ). Trả false nếu ảnh chưa tải để vẽ hình dự phòng. */
+export function spr(c: Ctx, key: ImgKey, x: number, y: number) {
+  const im = images[key]
+  if (!im) return false
+  c.drawImage(im, Math.round(x), Math.round(y) - im.height)
+  return true
+}
 export function loadImages() {
   return Promise.all(
-    (Object.keys(IMG_FILES) as ImgKey[]).map(
+    (Object.keys(IMG_URL) as ImgKey[]).map(
       (k) => new Promise<void>((res) => {
         const im = new Image()
         im.onload = () => { images[k] = im; res() }
@@ -264,6 +276,11 @@ export function drawPerson(c: Ctx, L: Look, x: number, y: number, mood: Mood, bl
   // tóc dài phía sau
   if (L.style === 'long') box(c, x + 1, y + 3, 14, 14, L.hair)
   if (L.style === 'bob') box(c, x + 1, y + 3, 14, 9, L.hair)
+  if (L.style === 'shoulder') { // tóc ngang vai, đuôi tóc hơi cụp vào
+    box(c, x + 1, y + 3, 14, 13, L.hair)
+    px(c, x + 1, y + 15, 2, 1, OUT); px(c, x + 13, y + 15, 2, 1, OUT)
+    px(c, x + 2, y + 5, 1, 7, shade(L.hair, 30))
+  }
   if (L.style === 'afro') {
     // tóc xù tổ quạ to đùng
     box(c, x - 4, y - 5, 24, 18, L.hair)
@@ -347,7 +364,7 @@ export function drawPerson(c: Ctx, L: Look, x: number, y: number, mood: Mood, bl
   // tóc / nón
   const H = L.hair
   switch (L.style) {
-    case 'short': case 'long': case 'bob': case 'messy': case 'spiky': case 'bun':
+    case 'short': case 'long': case 'bob': case 'shoulder': case 'messy': case 'spiky': case 'bun':
       box(c, x + 2, y + 1, 12, 6, H)
       px(c, x + 3, y + 2, 10, 1, shade(H, 25))
       px(c, x + 3, y + 7, 1, 3, H); px(c, x + 12, y + 7, 1, 3, H)
@@ -356,6 +373,7 @@ export function drawPerson(c: Ctx, L: Look, x: number, y: number, mood: Mood, bl
       if (L.style === 'spiky') { for (let i = 0; i < 5; i++) px(c, x + 3 + i * 2, y - 1 - (i % 2), 1, 2, H) }
       if (L.style === 'bun') { box(c, x + 5, y - 3, 6, 5, H); px(c, x + 6, y - 2, 2, 1, shade(H, 30)) }
       if (L.style === 'bob') { px(c, x + 3, y + 6, 10, 1, H) }
+      if (L.style === 'shoulder') { px(c, x + 3, y + 7, 1, 6, H); px(c, x + 12, y + 7, 1, 6, H); px(c, x + 9, y + 2, 3, 1, shade(H, 45)) }
       break
     case 'afro':
       break // đã vẽ phía sau đầu
@@ -449,18 +467,82 @@ export function mixWeighted(c1: string, c2: string, t: number) {
   return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join('')
 }
 
+// ---------- Bảng màu & chi tiết theo phong cách Brew & Bloom ----------
+/** gỗ ấm (w0 tối → w5 sáng), xanh rêu (t0 → t3), đồng thau (b0 → b2), viền mực */
+export const CZ = {
+  ink: '#261c1b',
+  w0: '#3d2c16', w1: '#603b25', w2: '#80502c', w3: '#a16b36', w4: '#bf8a4a', w5: '#dab46d',
+  t0: '#173637', t1: '#24585b', t2: '#337d7b', t3: '#4f9a92',
+  b0: '#886321', b1: '#d5a534', b2: '#f0d27a',
+  r0: '#903c3f', r1: '#ba4e44', r2: '#db6c54',
+  paper: '#eed59b', cream: '#ffe0bd',
+}
+
+/** Ốc đồng thau 2x2 ở góc đồ gỗ */
+export function rivet(c: Ctx, x: number, y: number) {
+  px(c, x, y, 2, 2, CZ.b0)
+  px(c, x, y, 1, 1, CZ.b2)
+}
+
+/** Khung gỗ dày 3px quanh ô (x, y, w, h): sáng trên-trái, tối dưới-phải, ốc đồng 4 góc */
+export function woodFrame(c: Ctx, x: number, y: number, w: number, h: number) {
+  px(c, x - 3, y - 3, w + 6, h + 6, CZ.ink)
+  px(c, x - 2, y - 2, w + 4, h + 4, CZ.w2)
+  px(c, x - 2, y - 2, w + 4, 1, CZ.w4); px(c, x - 2, y - 2, 1, h + 4, CZ.w3)
+  px(c, x - 2, y + h + 1, w + 4, 1, CZ.w1); px(c, x + w + 1, y - 2, 1, h + 4, CZ.w1)
+  px(c, x - 1, y - 1, w + 2, h + 2, CZ.ink)
+  rivet(c, x - 3, y - 3); rivet(c, x + w + 1, y - 3); rivet(c, x - 3, y + h + 1); rivet(c, x + w + 1, y + h + 1)
+}
+
+/** Kệ gỗ treo tường dày 3px có 2 ke đỡ */
+export function woodShelf(c: Ctx, x: number, y: number, w: number) {
+  px(c, x, y, w, 4, CZ.ink)
+  px(c, x + 1, y, w - 2, 1, CZ.w5); px(c, x + 1, y + 1, w - 2, 1, CZ.w3); px(c, x + 1, y + 2, w - 2, 1, CZ.w1)
+  for (const kx of [x + 3, x + w - 5]) { px(c, kx, y + 4, 2, 3, CZ.w1); px(c, kx, y + 4, 1, 3, CZ.w3); px(c, kx, y + 7, 2, 1, CZ.ink) }
+}
+
+/** Hũ thuỷ tinh nắp đồng (5x8) đựng nguyên liệu màu col */
+export function glassJar(c: Ctx, x: number, y: number, col: string) {
+  px(c, x, y + 1, 5, 7, CZ.ink)
+  px(c, x + 1, y + 2, 3, 5, '#dcebe6')
+  px(c, x + 1, y + 4, 3, 3, col); px(c, x + 1, y + 4, 3, 1, shade(col, 30))
+  px(c, x + 1, y + 2, 1, 3, '#ffffff')
+  px(c, x, y, 5, 2, CZ.ink); px(c, x + 1, y, 3, 1, CZ.b1); px(c, x + 1, y + 1, 3, 1, CZ.b0)
+}
+
+/** Đèn thả chao đồng thau + quầng sáng (lx = tâm, cord = độ dài dây) */
+export function brassLamp(c: Ctx, lx: number, cord: number) {
+  px(c, lx, 0, 1, cord, CZ.ink)
+  const y = cord
+  px(c, lx - 1, y, 3, 1, CZ.ink); px(c, lx - 3, y + 1, 7, 1, CZ.ink); px(c, lx - 4, y + 2, 9, 3, CZ.ink)
+  px(c, lx - 2, y + 1, 5, 1, CZ.b1); px(c, lx - 3, y + 2, 7, 2, CZ.b1); px(c, lx - 2, y + 2, 2, 1, CZ.b2)
+  px(c, lx - 3, y + 4, 7, 1, CZ.b0)
+  px(c, lx - 2, y + 5, 5, 1, '#fff3b0')
+  c.fillStyle = 'rgba(255,226,150,0.13)'
+  c.beginPath(); c.moveTo(lx - 3, y + 5); c.lineTo(lx + 4, y + 5); c.lineTo(lx + 14, 44); c.lineTo(lx - 13, 44); c.fill()
+}
+
 export function drawRoom(c: Ctx, dayFrac: number, weather: string, time: number, jarCount = 5) {
-  // tường
-  px(c, 0, 0, SCENE_W, COUNTER_Y, '#f4e1c6')
-  for (let x = 0; x < SCENE_W; x += 8) px(c, x, 0, 4, 44, '#efd8b9')
-  // ốp gỗ
-  px(c, 0, 44, SCENE_W, COUNTER_Y - 44, '#b07a52')
-  px(c, 0, 44, SCENE_W, 2, '#8a5a3c')
-  for (let x = 4; x < SCENE_W; x += 12) px(c, x, 48, 8, 12, '#a06c46')
+  // tường vữa kem, giấy dán sọc chấm
+  px(c, 0, 0, SCENE_W, COUNTER_Y, '#f0dcb4')
+  for (let x = 0; x < SCENE_W; x += 8) px(c, x, 0, 1, 44, '#e6cb9c')
+  for (let r = 0; r < 7; r++) for (let x = 4 + (r % 2) * 4; x < SCENE_W; x += 8) px(c, x, 6 + r * 6, 1, 1, '#dcbd8a')
+  // gờ trần gỗ
+  px(c, 0, 0, SCENE_W, 2, CZ.w1); px(c, 0, 2, SCENE_W, 1, CZ.w3); px(c, 0, 3, SCENE_W, 1, 'rgba(38,28,27,0.18)')
+  // ốp chân tường xanh rêu, nẹp gỗ, ô panel lõm
+  px(c, 0, 43, SCENE_W, 1, CZ.ink)
+  px(c, 0, 44, SCENE_W, 1, CZ.w5); px(c, 0, 45, SCENE_W, 1, CZ.w3); px(c, 0, 46, SCENE_W, 1, CZ.w1)
+  px(c, 0, 47, SCENE_W, COUNTER_Y - 47, CZ.t1)
+  px(c, 0, 47, SCENE_W, 1, CZ.t0)
+  for (let x = 2; x < SCENE_W; x += 14) {
+    px(c, x, 50, 11, COUNTER_Y - 50, CZ.t0)
+    px(c, x + 1, 51, 10, COUNTER_Y - 51, CZ.t1)
+    px(c, x + 10, 51, 1, COUNTER_Y - 51, CZ.t2)
+  }
 
   // cửa sổ
   const wx = 6, wy = 6, ww = 38, wh = 30
-  box(c, wx - 2, wy - 2, ww + 4, wh + 4, '#7a4e33')
+  woodFrame(c, wx, wy, ww, wh)
   const [st, sb] = sky(dayFrac, weather === 'rainy')
   for (let i = 0; i < wh; i++) px(c, wx, wy + i, ww, 1, mixWeighted(st, sb, i / wh))
   // mặt trời / trăng
@@ -474,10 +556,15 @@ export function drawRoom(c: Ctx, dayFrac: number, weather: string, time: number,
   const cx = wx + ((time * 2) % (ww + 20)) - 14
   c.save(); c.beginPath(); c.rect(wx, wy, ww, wh); c.clip()
   px(c, cx, wy + 6, 10, 3, 'rgba(255,255,255,0.8)'); px(c, cx + 3, wy + 4, 5, 2, 'rgba(255,255,255,0.8)')
-  // nhà phố phía xa
+  // nhà phố phía xa: mái ngói đỏ, cửa sổ sáng đèn khi tối
   const bld = ['#c9a68a', '#b58e74', '#d6b89c', '#a8806a']
-  for (let i = 0; i < 5; i++) px(c, wx + i * 8, wy + wh - 8 - ((i * 5) % 7), 8, 20, bld[i % 4])
-  for (let i = 0; i < 5; i++) for (let j = 0; j < 2; j++) px(c, wx + i * 8 + 2, wy + wh - 5 - ((i * 5) % 7) + j * 3, 2, 1, dayFrac > 0.85 ? '#ffd56b' : '#8a6a58')
+  for (let i = 0; i < 5; i++) {
+    const by = wy + wh - 8 - ((i * 5) % 7)
+    px(c, wx + i * 8, by, 8, 20, bld[i % 4])
+    px(c, wx + i * 8, by - 1, 8, 2, i % 2 ? CZ.r1 : CZ.r0)
+    px(c, wx + i * 8 + 7, by + 1, 1, 20, 'rgba(38,28,27,0.15)')
+  }
+  for (let i = 0; i < 5; i++) for (let j = 0; j < 2; j++) px(c, wx + i * 8 + 2, wy + wh - 5 - ((i * 5) % 7) + j * 3, 2, 1, dayFrac > 0.85 ? '#ffd56b' : '#7a5a48')
   // mưa
   if (weather === 'rainy') {
     for (let i = 0; i < 18; i++) {
@@ -486,46 +573,66 @@ export function drawRoom(c: Ctx, dayFrac: number, weather: string, time: number,
       px(c, rx, ry, 1, 3, 'rgba(220,235,255,0.8)')
     }
   }
+  // ánh kính
+  c.fillStyle = 'rgba(255,255,255,0.18)'
+  c.beginPath(); c.moveTo(wx + 2, wy + wh); c.lineTo(wx + 8, wy + wh); c.lineTo(wx + 22, wy); c.lineTo(wx + 16, wy); c.fill()
   c.restore()
-  px(c, wx + ww / 2 - 1, wy, 2, wh, '#7a4e33')
-  px(c, wx, wy + wh / 2 - 1, ww, 2, '#7a4e33')
+  // song cửa gỗ
+  px(c, wx + ww / 2 - 1, wy, 3, wh, CZ.ink); px(c, wx + ww / 2, wy, 1, wh, CZ.w3)
+  px(c, wx, wy + wh / 2 - 1, ww, 3, CZ.ink); px(c, wx, wy + wh / 2, ww, 1, CZ.w3)
   // bậu cửa + chậu cây
-  px(c, wx - 3, wy + wh + 2, ww + 6, 2, '#8a5a3c')
-  box(c, wx + 2, wy + wh - 4, 7, 6, '#d9744a')
-  px(c, wx + 3, wy + wh - 8, 2, 4, '#4e7f2e'); px(c, wx + 6, wy + wh - 9, 2, 5, '#6aa84f'); px(c, wx + 4, wy + wh - 10, 2, 2, '#7fb34d')
-
-  // bảng menu phấn
-  const bx = 50, by = 5
-  box(c, bx, by, 34, 26, '#2f4a3a', '#7a4e33')
-  px(c, bx + 4, by + 3, 26, 1, '#e8efe6') // tiêu đề
-  for (let i = 0; i < 5; i++) {
-    px(c, bx + 3, by + 7 + i * 4, 14 + ((i * 5) % 6), 1, 'rgba(232,239,230,0.75)')
-    px(c, bx + 25, by + 7 + i * 4, 6, 1, 'rgba(242,193,78,0.85)')
+  px(c, wx - 5, wy + wh + 3, ww + 10, 4, CZ.ink)
+  px(c, wx - 4, wy + wh + 3, ww + 8, 1, CZ.w5); px(c, wx - 4, wy + wh + 4, ww + 8, 1, CZ.w3); px(c, wx - 4, wy + wh + 5, ww + 8, 1, CZ.w1)
+  px(c, wx - 4, wy + wh + 7, ww + 8, 1, 'rgba(38,28,27,0.2)')
+  if (!spr(c, 'tulip', wx, wy + wh + 3)) {
+    box(c, wx + 2, wy + wh - 3, 7, 6, '#d9744a')
+    px(c, wx + 3, wy + wh - 7, 2, 4, '#4e7f2e'); px(c, wx + 6, wy + wh - 8, 2, 5, '#6aa84f'); px(c, wx + 4, wy + wh - 9, 2, 2, '#7fb34d')
   }
-  px(c, bx + 26, by + 2, 3, 3, '#ff9aa8')
 
-  // đèn treo
-  for (const lx of [94, 116]) {
-    px(c, lx, 0, 1, 10, '#5a3a28')
-    box(c, lx - 4, 9, 9, 5, '#2fa38c')
-    px(c, lx - 2, 14, 5, 1, '#fff3b0')
-    c.fillStyle = 'rgba(255,230,150,0.12)'
-    c.beginPath(); c.moveTo(lx - 3, 14); c.lineTo(lx + 4, 14); c.lineTo(lx + 14, 44); c.lineTo(lx - 13, 44); c.fill()
+  // bảng menu phấn khung gỗ
+  const bx = 53, by = 8, bw = 28, bh = 20
+  woodFrame(c, bx, by, bw, bh)
+  px(c, bx, by, bw, bh, '#2c4a40')
+  for (let i = 0; i < 9; i++) px(c, bx + ((i * 11) % bw), by + ((i * 7) % bh), 2, 1, 'rgba(255,255,255,0.06)') // vệt phấn mờ
+  px(c, bx + 3, by + 2, 15, 1, '#eef2ea') // tiêu đề
+  // ly cà phê vẽ phấn
+  px(c, bx + 21, by + 3, 4, 3, '#eef2ea'); px(c, bx + 25, by + 4, 1, 1, '#eef2ea'); px(c, bx + 22, by + 1, 1, 1, 'rgba(238,242,234,0.6)'); px(c, bx + 23, by, 1, 1, 'rgba(238,242,234,0.6)')
+  for (let i = 0; i < 4; i++) {
+    px(c, bx + 2, by + 7 + i * 3, 11 + ((i * 5) % 6), 1, 'rgba(238,242,234,0.75)')
+    px(c, bx + 22, by + 7 + i * 3, 4, 1, CZ.b2)
   }
-  // kệ + hũ
-  px(c, 90, 30, 34, 2, '#7a4e33')
-  const jars = ['#7fb34d', '#e0a03a', '#c98a2b', '#f4a46e', '#9fd3ea']
-  jars.slice(0, jarCount).forEach((j, i) => { box(c, 91 + i * 7, 23, 5, 7, j); px(c, 92 + i * 7, 22, 3, 2, '#5a3a28') })
+  px(c, bx + 2, by + bh - 1, 6, 1, '#f4f0e6'); px(c, bx + 9, by + bh - 1, 3, 1, '#ff9aa8') // phấn trên gờ bảng
+
+  // đèn thả chao đồng
+  for (const lx of [94, 116]) brassLamp(c, lx, 8)
+  // kệ + hũ thuỷ tinh
+  woodShelf(c, 89, 30, 36)
+  const jars = ['#7fb34d', '#e0a03a', '#9a5b34', '#f4a46e', '#9fd3ea']
+  jars.slice(0, jarCount).forEach((j, i) => glassJar(c, 91 + i * 7, 22, j))
 }
 
 export function drawCounter(c: Ctx) {
-  // mặt quầy
-  px(c, 0, COUNTER_Y, SCENE_W, 5, '#d9a877')
-  px(c, 0, COUNTER_Y, SCENE_W, 1, '#f0c79a')
-  px(c, 0, COUNTER_Y + 4, SCENE_W, 1, '#8a5a3c')
-  // thân quầy
-  px(c, 0, COUNTER_Y + 5, SCENE_W, SCENE_H - COUNTER_Y - 5, '#8a5a3c')
-  for (let x = 0; x < SCENE_W; x += 10) px(c, x, COUNTER_Y + 5, 1, SCENE_H - COUNTER_Y, '#7a4e33')
+  // mặt quầy gỗ dày có vân
+  px(c, 0, COUNTER_Y - 1, SCENE_W, 1, CZ.ink)
+  px(c, 0, COUNTER_Y, SCENE_W, 4, CZ.w3)
+  px(c, 0, COUNTER_Y, SCENE_W, 1, CZ.w5)
+  for (let x = 3; x < SCENE_W; x += 13) { px(c, x, COUNTER_Y + 2, 6, 1, CZ.w4); px(c, x + 8, COUNTER_Y + 1, 2, 1, CZ.w4) }
+  px(c, 0, COUNTER_Y + 4, SCENE_W, 1, CZ.w1)
+  px(c, 0, COUNTER_Y + 5, SCENE_W, 1, CZ.ink)
+  // thân quầy gỗ: ván dọc, ô panel xanh rêu lồng khung, ốc đồng
+  const by = COUNTER_Y + 6, bh = SCENE_H - by - 2
+  px(c, 0, by, SCENE_W, bh, CZ.w2)
+  for (let x = 2; x < SCENE_W; x += 5) px(c, x, by, 1, bh, CZ.w1)
+  px(c, 0, by, SCENE_W, 2, CZ.w0) // bóng dưới mặt quầy
+  for (let x = 4; x < SCENE_W; x += 32) {
+    px(c, x, by + 4, 24, bh - 7, CZ.ink)
+    px(c, x + 1, by + 5, 22, bh - 9, CZ.t1)
+    px(c, x + 1, by + 5, 22, 1, CZ.t0); px(c, x + 1, by + 5, 1, bh - 9, CZ.t0)
+    px(c, x + 3, by + 8, 18, bh - 15, CZ.t2); px(c, x + 4, by + 9, 16, bh - 17, CZ.t1)
+    rivet(c, x - 2, by + 3); rivet(c, x + 24, by + 3); rivet(c, x - 2, by + bh - 4); rivet(c, x + 24, by + bh - 4)
+  }
+  // chân quầy
+  px(c, 0, SCENE_H - 2, SCENE_W, 1, CZ.w3); px(c, 0, SCENE_H - 1, SCENE_W, 1, CZ.w1)
   // bảng hiệu: vẽ riêng trong sign.ts (drawSign) vì có chuyển động
 }
 
@@ -551,6 +658,7 @@ export function espressoKey(level: number): ImgKey {
 
 /** Chậu cây trên quầy */
 export function drawPlant(c: Ctx, x: number, y: number, big = false) {
+  if (big ? spr(c, 'boxwood', x - 3, y + 15) : spr(c, 'pot', x, y + 11)) return
   box(c, x, y + (big ? 8 : 5), 8, big ? 7 : 6, '#d9744a')
   px(c, x + 1, y + (big ? 9 : 6), 6, 1, '#e8936a')
   const g = ['#4e7f2e', '#6aa84f', '#7fb34d']
@@ -619,6 +727,7 @@ export function drawFridge(c: Ctx, x: number, y: number) {
 
 /** Bao cà phê Cầu Đất */
 export function drawSack(c: Ctx, x: number, y: number) {
+  if (spr(c, 'sack', x + 1, y + 15)) return
   box(c, x, y + 2, 14, 13, '#b98a62', '#5a3a28')
   px(c, x + 3, y, 8, 3, '#b98a62'); px(c, x + 4, y, 6, 1, '#5a3a28')
   px(c, x + 3, y + 6, 8, 4, '#f4e1c6'); px(c, x + 5, y + 7, 4, 1, '#6aa84f'); px(c, x + 4, y + 8, 6, 1, '#6f4e37')

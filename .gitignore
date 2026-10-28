@@ -25,3 +25,6 @@ dist-ssr
 
 # file nén tạm
 .*.tgz
+
+# bộ ảnh Brew & Bloom gốc (giấy phép không cho phân phối lại nguyên bộ) – chỉ chép món dùng vào public/assets/cozy bằng tools/cozy.py
+Cozy_World_Free_80/
