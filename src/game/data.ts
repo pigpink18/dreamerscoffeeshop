@@ -103,7 +103,7 @@ export const RECIPES: Recipe[] = [
   { id: 'bacXiu', name: 'Bạc xỉu', icon: '🥛', steps: ['ly', 'suaDac', 'suaTuoi', 'da', 'chiet'], fairPrice: 29_000, unlockCost: 0, popularity: 1.1, hotBonus: 0.1, coffee: true, family: 'coffee' },
   { id: 'latte', name: 'Latte đá', icon: '🥛', steps: ['ly', 'da', 'suaTuoi', 'chiet'], fairPrice: 35_000, unlockCost: 0, popularity: 1, hotBonus: 0.2, coffee: true, family: 'coffee' },
   { id: 'traDao', name: 'Trà đào', icon: '🍑', steps: ['ly', 'da', 'tra', 'dao', 'syrup', 'lac'], fairPrice: 35_000, unlockCost: 0, popularity: 1.1, hotBonus: 1.2, coffee: false, family: 'tea' },
-  // mở khoá dần: thắng boss mỗi ngày được tặng 1 món mới (hoặc mua sớm trong tab Menu)
+  // mở khoá dần: hết mỗi ngày bán được tặng 1 món mới (hoặc mua sớm trong tab Menu)
   { id: 'matchaLatte', name: 'Matcha latte', icon: '🍵', steps: ['ly', 'da', 'matcha', 'suaTuoi', 'syrup', 'lac'], fairPrice: 39_000, unlockCost: 250_000, popularity: 1.3, hotBonus: 0.6, coffee: false, family: 'matcha' },
   { id: 'americano', name: 'Americano đá', icon: '🧊', steps: ['ly', 'da', 'chiet', 'chiet'], fairPrice: 32_000, unlockCost: 250_000, popularity: 0.9, hotBonus: 0.3, coffee: true, family: 'coffee' },
   { id: 'cafeMuoi', name: 'Cà phê muối', icon: '🧂', steps: ['ly', 'da', 'chiet', 'kem'], fairPrice: 35_000, unlockCost: 350_000, popularity: 1.3, hotBonus: 0.3, coffee: true, family: 'coffee' },
@@ -118,7 +118,7 @@ export const RECIPES: Recipe[] = [
   { id: 'cacaoKemMuoi', name: 'Cacao kem muối', icon: '🍫', steps: ['ly', 'da', 'cacao', 'suaTuoi', 'lac', 'kem'], fairPrice: 49_000, unlockCost: 0, popularity: 1.3, hotBonus: 0.5, coffee: false, family: 'tea', secret: true },
   { id: 'suongMu', name: 'Sương Mù Đà Lạt', icon: '🌫️', steps: ['ly', 'chiet', 'trung', 'cacao', 'kemTuoi'], fairPrice: 65_000, unlockCost: 0, popularity: 1.8, hotBonus: 0, coffee: true, family: 'coffee', secret: true },
 ]
-/** Món có sẵn từ đầu & thứ tự món mới được tặng khi thắng boss */
+/** Món có sẵn từ đầu & thứ tự món mới được tặng sau mỗi ngày bán */
 export const STARTER_RECIPES: RecipeId[] = ['denDa', 'suaDa', 'bacXiu', 'latte', 'traDao']
 export const UNLOCK_ORDER: RecipeId[] = ['matchaLatte', 'americano', 'cafeMuoi', 'traDaoKem', 'matchaKemMuoi', 'matchaXay']
 
@@ -278,7 +278,7 @@ export const REVIEWS = {
   4: ['Ngon nha, mà shipper rap dài, em nghe hết 1 album mới nhận được ly', 'Nước ngon, mỗi tội ống hút bị bẻ cong theo flow', 'Ngon nha, ship hơi lâu xíu thôi', 'Ổn áp, lần sau nhanh hơn chút là perfect', 'Vị ok, shipper dễ thương, rap hơi lạc beat 😆'],
   3: ['Tạm được, đá tan còn nhanh hơn deadline của em', 'Không tệ, nhưng chưa đủ để em bỏ trà sữa', 'Tạm ổn, đá tan hơi nhiều rồi', 'Bình thường thôi, chờ hơi lâu', 'Nước được mà giao chậm quá'],
   2: ['Ly tới nơi thì nước đã thành nước lọc pha màu 🥲', 'Giao trễ tới mức em tự pha ở nhà xong rồi', 'Chờ mòn mỏi, nước tới thì nhạt như tình cũ', 'Giao trễ dữ thần, hơi buồn'],
-  1: ['Đơn đi lạc còn hơn em giữa Sài Gòn 🥲', 'Chờ tới mức em quên luôn mình đã đặt món gì', 'Đơn bị huỷ vì chờ quá lâu, buồn ghê 🥲', 'Đặt từ sáng tới chiều chưa thấy, out!', 'Hết cứu, không đặt nữa đâu'],
+  1: ['Đơn đi lạc còn hơn khách du lịch giữa mấy con dốc Đà Lạt 🥲', 'Chờ tới mức em quên luôn mình đã đặt món gì', 'Đơn bị huỷ vì chờ quá lâu, buồn ghê 🥲', 'Đặt từ sáng tới chiều chưa thấy, out!', 'Hết cứu, không đặt nữa đâu'],
 } as Record<number, string[]>
 
 export const SHIPPERS = [
@@ -410,9 +410,9 @@ export const REGULARS: Regular[] = [
         { text: 'Vậy em pha đậm hơn chút cho anh tỉnh nha', answer: 'Em hiểu anh quá trời luôn á 😂', bond: 9 },
         { text: 'Họp vậy là còn ít đó anh', answer: 'Ờ… nghe cũng có lý 😐', bond: 2 },
       ] },
-      { say: 'Kẹt xe từ Hàng Xanh tới đây mất 45 phút, hết hồn', replies: [
+      { say: 'Cuối tuần khách du lịch đông, kẹt xe từ vòng xoay chợ Đà Lạt lên tới đây mất 45 phút, hết hồn', replies: [
         { text: 'Ngồi nghỉ xíu đi anh, nhạc quán chill lắm', answer: 'Ừ, nghe lofi một lát cho đỡ mệt 🎧', bond: 8 },
-        { text: 'Sao anh không đi sớm hơn?', answer: 'Thì… đi sớm cũng kẹt em ơi 🥲', bond: 1 },
+        { text: 'Sao anh không đi sớm hơn?', answer: 'Thì… đi sớm cũng gặp đoàn khách đi săn mây em ơi 🥲', bond: 1 },
       ] },
       { say: 'Cuối tuần này em có đi đâu chơi không?', replies: [
         { text: 'Em ở quán bán nè, anh ghé nha!', answer: 'Ok, chủ nhật anh dắt cả team qua luôn 👍', bond: 9 },
@@ -533,77 +533,25 @@ export function randomLook(): Look {
   return { skin: pick(SKINS), hair: pick(HAIRS), style: pick(STYLES), shirt: pick(SHIRTS), accent: pick(SHIRTS), acc }
 }
 
-// ---------- BOSS: vị khách khó tính mỗi màn ----------
-export interface Boss {
+// ---------- Khách cá tính trên phố (trước đây là boss) – giờ ghé như khách thường, có album riêng ----------
+export interface Character {
   name: string
   title: string
   look: Look
-  stingy?: boolean // keo kiệt: thắng cũng không tip, còn đòi bớt tiền
-  lines?: Partial<Record<'greet' | 'taunt' | 'win' | 'lose', string[]>> // câu thoại riêng
 }
-export const BOSSES: Boss[] = [
+export const CHARACTERS: Character[] = [
   { name: 'Jessica Tổ Quạ', title: 'Soi từng giọt cà phê', look: { skin: '#f3cfae', hair: '#8e4fc4', style: 'afro', shirt: '#ff7aa8', accent: '#d81b60', acc: ['catglasses', 'lipstick', 'hoops'] } },
   { name: 'Chú Johnny Ria Mép', title: 'Cả đời chưa cười lần nào', look: { skin: '#e2b089', hair: '#2b2b2b', style: 'combover', shirt: '#6b8e23', acc: ['unibrow', 'mustache'] } },
   { name: 'Bà Mary Lô Cuốn', title: 'Đi chợ tiện ghé qua chê', look: { skin: '#eac3a0', hair: '#5a3a28', style: 'curlers', shirt: '#2fa38c', accent: '#ff9ac1', acc: ['bottleglasses', 'scarf', 'lipstick'] } },
   { name: 'Tony Mào Gà', title: 'Chê trước, uống sau', look: { skin: '#f0c8a2', hair: '#39d353', style: 'mohawk', shirt: '#1d1d1d', accent: '#c0c0c0', acc: ['nosering', 'tattoobrow', 'chain'] } },
-  {
-    name: 'Đại Gia Bill Keo', title: 'Giàu nứt vách, tip không một xu', stingy: true,
-    look: { skin: '#e2b089', hair: '#111', style: 'slick', shirt: '#8e1b2c', accent: '#7a5a00', acc: ['shades', 'chain', 'mustache', 'goldtooth'] },
-    lines: {
-      greet: [
-        'Ly {drink} bao nhiêu? Đắt vậy? Thôi lấy, nhanh lên, thời gian là tiền bạc! 💰',
-        '{drink}. Bớt 2 ngàn được không? Không à? Vậy pha cho nhanh bù lại! ⏱️',
-        'Tôi có 3 căn nhà mặt tiền đó. Một {drink}, đừng có chặt chém. 😏',
-      ],
-      taunt: ['Mỗi giây tôi đứng đây là mất cả trăm triệu đó!', 'Lâu vậy chắc tính thêm phí chờ hả?', 'Nhanh lên, tôi còn đi đòi nợ!'],
-      win: [
-        '5 sao. Ngon… nhưng tip thì khỏi nha, tiền đâu mà vung. 😤',
-        'Được, 5 sao. Mà làm tròn xuống giùm tôi mấy trăm lẻ nhé.',
-        'Nhanh đấy, 5 sao. Ly này tôi giữ lại đựng nước lọc, đỡ mua ly mới.',
-      ],
-      lose: [
-        'Chờ lâu vậy mà còn đòi tính tiền? 1 sao, khỏi trả luôn! 💸',
-        'Thời gian của tôi đáng giá hơn cả cái quán này. 1 sao.',
-        'Lần sau tôi mang cà phê gói từ nhà đi cho lẹ. 1 sao.',
-      ],
-    },
-  },
+  { name: 'Đại Gia Bill Keo', title: 'Giàu nứt vách, tip không một xu', look: { skin: '#e2b089', hair: '#111', style: 'slick', shirt: '#8e1b2c', accent: '#7a5a00', acc: ['shades', 'chain', 'mustache', 'goldtooth'] } },
   { name: 'Cô Selena Nón Rộng', title: 'Check-in xong mới chê', look: { skin: '#f6d3b3', hair: '#2b1d16', style: 'sunhat', shirt: '#f2c14e', accent: '#e86a5a', acc: ['tattoobrow', 'hoops', 'lipstick', 'shades'] } },
 ]
-export const BOSS_LINES = {
-  greet: [
-    'Một ly {drink}. Nhanh lên, tôi không có cả ngày đâu. ⏱️',
-    'Nghe đồn quán ngon? Để coi. {drink}, đúng công thức, đúng giờ.',
-    'Tôi đi review quán 10 năm rồi. {drink}. Làm sai là lên bài liền. 📱',
-    'Hừm… menu gì mà lèo tèo. Thôi, {drink}. Tôi bấm giờ đó nha.',
-    'Tránh ra, tôi tới trước! {drink}, lẹ lên! 😤',
-  ],
-  taunt: [
-    'Tíc tắc… tíc tắc… ⏱️',
-    'Tôi đang đếm từng giây đó nha.',
-    'Chậm vậy định để tôi viết sớ hả?',
-    'Story của tôi đang chờ ly nước đó!',
-    'Pha cà phê hay đang trồng cà phê vậy?',
-  ],
-  win: [
-    'Ngon. Nhưng tôi vẫn sẽ chê cái ghế. 5 sao.',
-    'Hừm, lần này tha. 5 sao, đừng có cười. 😑',
-    'Ừm… cũng được. 5 sao đó, nhưng đừng có tưởng bở. 😒',
-    'Nhanh đấy. Ngon… tạm. 5 sao, lần sau tôi sẽ khó hơn.',
-    'Hừ, không có gì để chê… thấy khó chịu ghê. 5 sao. 😑',
-    'Ly hơi nhỏ, đá hơi nhiều, nhạc hơi to… mà thôi, 5 sao.',
-    'Tôi định chê mà tìm không ra chỗ chê. Bực ghê. 5 sao.',
-  ],
-  lose: [
-    'Phục vụ chậm vậy chắc quán bán theo lịch âm. 1 sao.',
-    'Tôi chờ tới mức tóc mọc thêm 2 phân. 1 sao.',
-    'Chờ ly nước mà như chờ người yêu cũ quay lại. 1 sao, khỏi cảm ơn.',
-    'Quán tên Dreamers đúng rồi, vì phục vụ nhanh chỉ có trong mơ. 1 sao.',
-    'Tốc độ phục vụ ngang wifi nhà hàng xóm. 1 sao, tạm biệt.',
-    'Đề nghị quán đổi tên thành “Đợi Hoài Coffee”. 1 sao.',
-    'Tôi vào quán lúc còn trẻ, giờ ra về đã có nếp nhăn. 1 sao.',
-  ],
-}
+
+// ===== Khách du lịch theo nhóm (guests.ts) + hội khách cá tính =====
+import { GUEST_GROUPS, makeCharacterGroup } from './guests'
+GUEST_GROUPS.push(makeCharacterGroup(CHARACTERS))
+export { GUEST_GROUPS }
 
 // ===== Gộp kho chuyện tám & review mở rộng (chatter.ts) =====
 import { MORE_GENERIC_CHATS, MORE_REGULAR_CHATS, MORE_COUNTER_REVIEWS, MORE_APP_REVIEWS } from './chatter'
@@ -617,4 +565,4 @@ for (const [k, arr] of Object.entries(MORE_APP_REVIEWS)) {
 
 // ===== Không dùng emoji trong game: làm sạch toàn bộ thoại, review, tên… (chỉ giữ icon pixel art) =====
 import { scrubDeep } from './emoji'
-scrubDeep([LINES, REVIEWS, COUNTER_REVIEWS, FAMILY_REVIEWS, GENERIC_CHATS, REGULARS, GENERIC_ORDERS, BOSS_LINES, BOSSES, RAPS, SHIPPERS, NEEDY, BOND_LEVELS, UPGRADES, RECIPES, INGREDIENTS, STEPS, WEATHERS])
+scrubDeep([LINES, REVIEWS, COUNTER_REVIEWS, FAMILY_REVIEWS, GENERIC_CHATS, REGULARS, GENERIC_ORDERS, GUEST_GROUPS, CHARACTERS, RAPS, SHIPPERS, NEEDY, BOND_LEVELS, UPGRADES, RECIPES, INGREDIENTS, STEPS, WEATHERS])

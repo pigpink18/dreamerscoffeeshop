@@ -6,13 +6,12 @@ import {
   ui, save, bus, openTalk, talkChat, talkReply, brewFromTalk, startBrew, canMake, stepMs, DAY_LENGTH, staffServeTime, skipPresent,
   type Customer, type GameEvent,
 } from '../game/store'
-import { drawBoss, bossSkin } from '../game/bossSprites'
 import { drawSign, SIGN_W } from '../game/sign'
 import TypeText from './TypeText.vue'
 import { noEmoji } from '../game/emoji'
 import PixelIcon from './ui/PixelIcon.vue'
 import { tick } from '../game/audio'
-import { recipeById, REGULARS, NEEDY, BOND_LEVELS, bondLevel, STEPS, BOSSES, type StepId } from '../game/data'
+import { recipeById, REGULARS, NEEDY, BOND_LEVELS, bondLevel, STEPS, GUEST_GROUPS, type StepId } from '../game/data'
 import {
   SCENE_W, SCENE_H, LAYOUT, COUNTER_Y, images, loadImages, drawRoom, drawCounter, drawCup, drawPerson, iconUrl,
   emptyCup, px, espressoKey, drawPlant, drawLights, drawBunting, drawOpenSign, drawPoster, drawCat, drawFridge, drawSack, drawGreen, drawScooter, drawBarista, drawCorgi,
@@ -46,10 +45,6 @@ const actorView = ref<{ id: number; x: number; state: string } | null>(null)
 const review = ref<{ stars: number; text: string; needy: boolean; price: number; tip: number } | null>(null)
 const angry = ref<string | null>(null)
 const shaking = ref(false)
-const bossBanner = ref<number | null>(null)
-const bossResult = ref<boolean | null>(null)
-const isBoss = computed(() => cur.value?.boss !== undefined)
-const lastBossStingy = computed(() => !!BOSSES[(save.day - 1) % BOSSES.length].stingy)
 
 // hoạt ảnh thao tác
 let actStep: StepId | null = null
@@ -65,11 +60,12 @@ const who = computed(() => {
   if (!c) return ''
   if (reg.value) return `${reg.value.name} · ${BOND_LEVELS[bondLevel(save.bonds[reg.value.id] ?? 0)].name}`
   if (c.needy !== undefined) return `${NEEDY[c.needy].who} · ly treo`
-  if (c.boss !== undefined) return `BOSS · ${BOSSES[c.boss].name}`
   if (c.rare) return `${rareById[c.rare]?.name ?? c.name} · khách hiếm`
+  const g = c.group ? GUEST_GROUPS.find((x) => x.id === c.group) : undefined
+  if (g) return `${c.name} · ${g.label}`
   return c.name ?? 'Khách'
 })
-const whoKind = computed(() => (cur.value?.boss !== undefined ? 'boss' : cur.value?.rare ? 'rare' : cur.value?.regular ? 'reg' : ''))
+const whoKind = computed(() => (cur.value?.rare ? 'rare' : cur.value?.regular ? 'reg' : cur.value?.group && GUEST_GROUPS.find((g) => g.id === cur.value!.group)?.foreign ? 'intl' : ''))
 const talkHere = computed(() => ui.talk && cur.value && ui.talk.custId === cur.value.id ? ui.talk : null)
 const brewingHere = computed(() => ui.brew && ui.brew.target === 'cust' && cur.value && ui.brew.id === cur.value.id)
 const bubbleText = computed(() => {
@@ -90,11 +86,10 @@ const lineInstant = computed(() => (seenTick.value, typedSeen.has(lineKey.value)
 watch(lineKey, (k) => { typed.value = typedSeen.has(k) }, { immediate: true })
 function onTyped() { typed.value = true; if (lineKey.value && !typedSeen.has(lineKey.value)) { typedSeen.add(lineKey.value); seenTick.value++ } }
 const typer = ref<InstanceType<typeof TypeText> | null>(null)
-/** giọng: boss trầm, người cần ly treo nhỏ nhẹ, khách khác cao thấp khác nhau theo mã khách */
+/** giọng: người cần ly treo nhỏ nhẹ, khách khác cao thấp khác nhau theo mã khách */
 const voice = computed(() => {
   const c = cur.value
   if (!c) return 560
-  if (c.boss !== undefined) return 300
   if (c.needy !== undefined) return 430
   return 480 + ((c.id * 53) % 5) * 45
 })
@@ -118,17 +113,9 @@ function onEvent(e: GameEvent) {
     setTimeout(() => (shaking.value = false), 320)
   } else if (e.type === 'served' && actor && actor.id === e.id) {
     actor.holding = { ...(lastCup ?? emptyCup()), cup: true, straw: true, lid: true }
-    actor.mood = e.needy ? 'love' : actor.cust.boss !== undefined ? 'grumpy' : e.stars >= 4 ? 'happy' : e.stars === 3 ? 'neutral' : 'sad'
+    actor.mood = e.needy ? 'love' : e.stars >= 4 ? 'happy' : e.stars === 3 ? 'neutral' : 'sad'
     actor.holdUntil = now + 2200
     review.value = { stars: e.stars, text: e.text, needy: e.needy, price: e.price, tip: e.tip }
-  } else if (e.type === 'boss') {
-    bossBanner.value = e.idx
-    shaking.value = true
-    setTimeout(() => (shaking.value = false), 500)
-    setTimeout(() => (bossBanner.value = null), 2200)
-  } else if (e.type === 'bossEnd') {
-    bossResult.value = e.win
-    setTimeout(() => (bossResult.value = null), 2200)
   } else if (e.type === 'angry' && actor && actor.id === e.id) {
     actor.mood = 'angry'
     actor.holdUntil = now + 1800
@@ -167,7 +154,7 @@ function cupLook(): CupLook | null {
 function updateActor(now: number, dt: number) {
   const f = front.value
   if (!actor && f && ui.phase === 'open') {
-    actor = { id: f.id, cust: f, x: SCENE_W + 8, target: LAYOUT.customerX, state: 'enter', mood: f.boss !== undefined ? 'grumpy' : 'neutral', holding: null, holdUntil: 0 }
+    actor = { id: f.id, cust: f, x: SCENE_W + 8, target: LAYOUT.customerX, state: 'enter', mood: 'neutral', holding: null, holdUntil: 0 }
     review.value = null
     angry.value = null
   }
@@ -192,7 +179,7 @@ function updateActor(now: number, dt: number) {
     angry.value = null
     return
   }
-  if (actor.cust.patience / actor.cust.maxPatience < 0.3 && (actor.mood === 'neutral' || actor.mood === 'grumpy') && stillHere) actor.mood = actor.cust.boss !== undefined ? 'angry' : 'sad'
+  if (actor.cust.patience / actor.cust.maxPatience < 0.3 && (actor.mood === 'neutral' || actor.mood === 'grumpy') && stillHere) actor.mood = 'sad'
   actorView.value = { id: actor.id, x: actor.x, state: actor.state }
 }
 
@@ -236,29 +223,18 @@ function draw(now: number) {
     const walking = actor.x !== actor.target
     const bob = walking ? Math.floor(t * 8) % 2 : actor.mood === 'happy' || actor.mood === 'love' ? Math.floor(t * 3) % 2 : 0
     const blink = Math.floor(t * 10) % 37 === 0
-    const isBossActor = actor.cust.boss !== undefined
-    if (isBossActor) {
-      // hào quang đỏ của boss (khung 24x32 to hơn khách thường)
-      const a = 0.16 + 0.1 * Math.sin(t * 6)
-      c.fillStyle = `rgba(217,40,40,${a})`
-      c.fillRect(Math.round(actor.x) - 6, LAYOUT.customerY - 6, 28, 32)
-      c.fillStyle = `rgba(217,40,40,${a * 0.6})`
-      c.fillRect(Math.round(actor.x) - 8, LAYOUT.customerY - 2, 32, 28)
-      drawBoss(c, actor.cust.boss!, Math.round(actor.x) - 4, LAYOUT.customerY - 4 - bob, actor.mood, blink)
-    } else {
-      drawPerson(c, actor.cust.look, Math.round(actor.x), LAYOUT.customerY - bob, actor.mood, blink)
-    }
+    drawPerson(c, actor.cust.look, Math.round(actor.x), LAYOUT.customerY - bob, actor.mood, blink)
     if (actor.holding) {
-      const hx = Math.round(actor.x) - (isBossActor ? 13 : 11)
+      const hx = Math.round(actor.x) - 11
       const hy = COUNTER_Y - 18 - bob
       drawCup(c, actor.holding, hx, hy)
-      px(c, hx + 9, hy + 9, 3, 3, isBossActor ? bossSkin(actor.cust.boss!) : actor.cust.look.skin)
+      px(c, hx + 9, hy + 9, 3, 3, actor.cust.look.skin)
     }
     if (actor.mood === 'love') {
       const hy = LAYOUT.customerY - 8 - (Math.floor(t * 4) % 3)
       px(c, actor.x + 6, hy, 2, 2, '#ff6b81'); px(c, actor.x + 9, hy, 2, 2, '#ff6b81'); px(c, actor.x + 6, hy + 2, 5, 1, '#ff6b81'); px(c, actor.x + 7, hy + 3, 3, 1, '#ff6b81'); px(c, actor.x + 8, hy + 4, 1, 1, '#ff6b81')
     }
-    if (actor.mood === 'angry' && !isBossActor) {
+    if (actor.mood === 'angry') {
       const ay = LAYOUT.customerY - 6
       px(c, actor.x + 12, ay, 3, 1, '#e8503a'); px(c, actor.x + 13, ay - 1, 1, 3, '#e8503a')
     }
@@ -347,7 +323,7 @@ function draw(now: number) {
 const SCENE_PREF_W = 460 // độ rộng mong muốn của .scene-wrap (px)
 
 // Kích thước cảnh được KHOÁ sau khi đo: chỉ đo lại khi đổi chiều rộng màn hình / xoay máy / mở lại tab,
-// không co giãn theo nội dung bên dưới (boss, pha chế, kệ hàng, thanh địa chỉ Safari ẩn/hiện…).
+// không co giãn theo nội dung bên dưới (pha chế, kệ hàng, thanh địa chỉ Safari ẩn/hiện…).
 let locked: { vw: number; vh: number; w: number } | null = null
 
 function measure(): number {
@@ -425,7 +401,7 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
 
     <!-- Đồng hồ kiên nhẫn kiểu game: mặt cảm xúc + thanh 10 ô + giây còn lại, đặt cạnh đầu khách -->
     <div v-if="actorView && cur && actorView.state === 'idle' && !review" class="pat" :class="patLevel"
-      :style="{ left: pctX(actorView.x + (isBoss ? 21 : 17)), top: pctY(LAYOUT.customerY + 1) }">
+      :style="{ left: pctX(actorView.x + 17), top: pctY(LAYOUT.customerY + 1) }">
       <div class="pat-top">
         <PixelIcon :name="patLevel === 'ok' ? 'faceHappy' : patLevel === 'warn' ? 'faceMeh' : 'faceAngry'" :size="2.4" class="pface" />
         <span class="psec">{{ patSecs }}<small>s</small></span>
@@ -435,7 +411,7 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
     </div>
 
     <!-- Dòng thông báo nhỏ ở đáy cảnh (thay hộp thông báo xanh to che nút) -->
-    <Transition name="tick"><div v-if="ticker && bossBanner === null && bossResult === null" :key="ticker.id" class="ticker" :class="ticker.kind">{{ ticker.text }}</div></Transition>
+    <Transition name="tick"><div v-if="ticker" :key="ticker.id" class="ticker" :class="ticker.kind">{{ ticker.text }}</div></Transition>
 
     <!-- HUD gọn: số khách chờ + tiến độ từng nhân viên (chỉ icon, không chữ) -->
     <div v-if="ui.phase === 'open' && (waiting > 0 || ui.staffProgress.length)" class="hud">
@@ -445,26 +421,6 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
       </span>
     </div>
 
-    <!-- Đồng hồ đếm ngược của boss -->
-    <div v-if="isBoss && cur && actorView?.state === 'idle' && !review" class="boss-timer" :class="{ hurry: cur.patience < 8 }">
-      <PixelIcon name="clock" :size="2" /> {{ Math.max(0, Math.ceil(cur.patience)) }}s
-    </div>
-    <div v-if="ui.bossState === 'here' || bossBanner !== null" class="boss-vignette" />
-
-    <!-- Boss xuất hiện -->
-    <Transition name="banner">
-      <div v-if="bossBanner !== null" class="boss-banner">
-        <div class="warn"><PixelIcon name="warn" :size="2" /> BOSS XUẤT HIỆN <PixelIcon name="warn" :size="2" /></div>
-        <div class="bname">{{ BOSSES[bossBanner].name }} <small>· {{ BOSSES[bossBanner].title }}</small></div>
-      </div>
-    </Transition>
-    <Transition name="banner">
-      <div v-if="bossResult !== null" class="boss-banner" :class="bossResult ? 'win' : 'lose'">
-        <div class="warn"><PixelIcon :name="bossResult ? 'trophy' : 'cross'" :size="2" /> {{ bossResult ? 'ĐÃ CHINH PHỤC BOSS!' : 'THUA BOSS…' }}</div>
-        <div class="bhint">{{ bossResult ? (lastBossStingy ? '+5 sao · nhưng keo kiệt, không tip còn đòi bớt 2k' : '+5 sao (dù vẫn mặt nặng mày nhẹ) · thưởng lớn') : '1 sao xéo sắc · mất danh tiếng' }}</div>
-      </div>
-    </Transition>
-
     <!-- Bong bóng thoại -->
     <Transition name="pop" mode="out-in">
       <div v-if="review" key="rv" class="bubble review">
@@ -473,7 +429,7 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
         <div class="money" v-if="!review.needy">+{{ (review.price / 1000).toFixed(0) }}k<span v-if="review.tip"> · tip {{ (review.tip / 1000).toFixed(0) }}k</span></div>
       </div>
       <div v-else-if="angry" key="an" class="bubble angry"><div class="txt"><TypeText :text="`“${angry}”`" :pitch="340" :speed="24" /></div></div>
-      <div v-else-if="cur && actorView?.state === 'idle'" :key="'c' + cur.id + (talkHere?.mode ?? '') + (brewingHere ? 'b' : '')" class="bubble" :class="{ boss: isBoss }" @click="typer?.skip()">
+      <div v-else-if="cur && actorView?.state === 'idle'" :key="'c' + cur.id + (talkHere?.mode ?? '') + (brewingHere ? 'b' : '')" class="bubble" @click="typer?.skip()">
         <div class="who" :class="whoKind">{{ who }}</div>
         <div class="txt" :class="{ hurry: cur.line && cur.patience / cur.maxPatience < 0.5 && !talkHere }"><TypeText ref="typer" :text="bubbleText" :pitch="voice" :instant="lineInstant" @done="onTyped" /></div>
         <div v-if="cur.addon" class="addon" :class="{ done: cur.addonDone }"><img :src="iconUrl(cur.addon)" alt="" /><span>{{ cur.addonDone ? 'Đã trao' : 'Kèm' }}: <b>{{ goodName(cur.addon) }}</b></span></div>
@@ -485,7 +441,7 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
           <button class="main" :class="{ dis: !canMake(cur.recipe) }" @click="talkHere ? brewFromTalk() : startBrew('cust', cur.id)">
             <PixelIcon name="cup" :size="2" /> {{ cur.needy !== undefined ? 'Dạ có, con pha liền!' : `Nhận order: ${recipeById[cur.recipe].name}` }}
           </button>
-           <button v-if="!cur.chatted && cur.needy === undefined && cur.boss === undefined" @click="talkHere ? talkChat() : (openTalk(cur.id), talkChat())"><PixelIcon name="chat" :size="2" /> Tám chuyện xíu</button>
+           <button v-if="!cur.chatted && cur.needy === undefined" @click="talkHere ? talkChat() : (openTalk(cur.id), talkChat())"><PixelIcon name="chat" :size="2" /> Tám chuyện xíu</button>
         </div>
       </div>
     </Transition>
@@ -603,7 +559,7 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
 }
 .who.reg { --tag: #2f9e6b; }
 .who.rare { --tag: #7a4fd0; }
-.who.boss { --tag: #b3261e; }
+.who.intl { --tag: #2e6fb0; }
 .txt { font-weight: 700; margin-top: 2px; min-height: 1.35em; cursor: pointer; }
 .txt.hurry { color: #c0392b; }
 .skip-hint {
@@ -633,39 +589,9 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
 .choices button.main:hover { background: #f7cf68; }
 .choices button.dis { opacity: 0.6; }
 .bubble.review { --bd: #24704d; --shade: #dcefe2; }
-.bubble.boss { --bd: #7d1a14; --paper: #fff4f2; --shade: #f7d9d4; }
-.boss-timer {
-  position: absolute; right: 6px; top: 6px; z-index: 3;
-  background: #b3261e; color: #fff; font-weight: 900; font-size: 18px;
-  display: flex; align-items: center; gap: 5px;
-  padding: 3px 10px; box-shadow: 0 0 0 2px #3b2a20; font-variant-numeric: tabular-nums;
-  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
-}
-.boss-timer.hurry { animation: beat 0.5s ease-in-out infinite; background: #ff2d2d; }
 @keyframes beat { 50% { transform: scale(1.15); } }
-.boss-vignette {
-  position: absolute; inset: 0; pointer-events: none; z-index: 2;
-  box-shadow: inset 0 0 40px 10px rgba(179, 38, 30, 0.45);
-  animation: pulse-v 1.2s ease-in-out infinite;
-}
 @keyframes pulse-v { 50% { box-shadow: inset 0 0 55px 16px rgba(179, 38, 30, 0.6); } }
-.boss-banner {
-  position: absolute; left: 4px; right: 4px; bottom: 4px; z-index: 6; pointer-events: none;
-  background: rgba(43, 20, 20, 0.94); color: #fff; text-align: center;
-  border: 2px solid #f2c14e; border-radius: 8px; padding: 4px 8px 5px;
-  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35);
-}
-.boss-banner .warn { display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 900; color: #ffcf4d; font-size: 12px; letter-spacing: 0.04em; animation: blink 0.4s steps(2) infinite; }
 @keyframes blink { 50% { opacity: 0.4; } }
-.boss-banner .bname { font-weight: 900; font-size: 14px; line-height: 1.2; }
-.boss-banner .bname small { font-size: 11px; font-weight: 700; opacity: 0.8; }
-.boss-banner .btitle { font-size: 12px; opacity: 0.8; }
-.boss-banner .bhint { font-size: 11px; font-weight: 700; color: #ffd9d4; }
-.boss-banner.win, .boss-banner.lose { padding: 4px 8px 5px; }
-.boss-banner.win { background: #123a26; border-color: #6ad08f; }
-.boss-banner.win .warn { color: #8ff0b0; animation: none; }
-.boss-banner.lose { background: #3a1212; }
-.boss-banner.lose .warn { animation: none; }
 .banner-enter-active { transition: all 0.35s cubic-bezier(0.3, 1.6, 0.5, 1); }
 .banner-leave-active { transition: all 0.25s; }
 .banner-enter-from { opacity: 0; transform: scale(0.6); }

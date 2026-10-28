@@ -122,9 +122,6 @@ const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, 
 .vol input::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 20px; background: #f2c14e; box-shadow: 0 0 0 2px #3b2a20, inset 0 -3px 0 #d99a2b; cursor: pointer; }
 .vol input::-moz-range-thumb { width: 14px; height: 20px; border: none; border-radius: 0; background: #f2c14e; box-shadow: 0 0 0 2px #3b2a20; cursor: pointer; }
 .mm-sub { font-size: 10px; font-weight: 900; letter-spacing: 0.12em; color: #a9744f; margin: 10px 2px 6px; }
-.bossm { display: flex; gap: 6px; }
-.bossm button { flex: 1; font-size: 11px; font-weight: 900; padding: 5px 2px 7px; background: #f1e2cf; color: #8a7566; box-shadow: var(--px-border-2), inset 0 -3px 0 #d8bf9f; }
-.bossm button.on { background: #6f4630; color: #ffe8b8; box-shadow: var(--px-border-2), inset 0 -3px 0 #4a2e1f; }
 .trk { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 7px 8px; margin-top: 4px; }
 .trk.sel { background: #fff0cc; box-shadow: var(--px-border-2); }
 .tt { flex: 1; display: flex; flex-direction: column; }

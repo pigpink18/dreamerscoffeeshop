@@ -145,9 +145,10 @@ export const ACHIEVEMENTS: AchDef[] = [
   { id: 'perfect30', name: 'Chuẩn từng giọt', desc: '30 ly pha không sai bước', beans: 6, goal: 30, stat: (m) => m.s.perfect },
   { id: 'perfect200', name: 'Tay không run', desc: '200 ly pha không sai bước', beans: 15, goal: 200, stat: (m) => m.s.perfect },
   { id: 'perfect800', name: 'Thần pha chế', desc: '800 ly pha không sai bước', beans: 40, goal: 800, stat: (m) => m.s.perfect },
-  { id: 'boss5', name: 'Trị khách khó', desc: 'Thắng 5 boss', beans: 6, goal: 5, stat: (m) => m.s.bossWins },
-  { id: 'boss25', name: 'Sát thủ boss', desc: 'Thắng 25 boss', beans: 15, goal: 25, stat: (m) => m.s.bossWins },
-  { id: 'boss80', name: 'Boss phải nể', desc: 'Thắng 80 boss', beans: 40, goal: 80, stat: (m) => m.s.bossWins },
+  // id/stat 'boss…' giữ tên cũ cho tương thích bản lưu – giờ đếm khách nước ngoài
+  { id: 'boss5', name: 'Xin chào thế giới', desc: 'Phục vụ 10 khách nước ngoài', beans: 6, goal: 10, stat: (m) => m.s.bossWins },
+  { id: 'boss25', name: 'Đại sứ du lịch', desc: 'Phục vụ 60 khách nước ngoài', beans: 15, goal: 60, stat: (m) => m.s.bossWins },
+  { id: 'boss80', name: 'Liên hợp quốc thu nhỏ', desc: 'Phục vụ 200 khách nước ngoài', beans: 40, goal: 200, stat: (m) => m.s.bossWins },
   { id: 'days7', name: 'Tuần đầu sống sót', desc: 'Mở quán 7 ngày', beans: 5, goal: 7, stat: (m) => m.s.days },
   { id: 'days30', name: 'Một tháng mộng mơ', desc: 'Mở quán 30 ngày', beans: 20, goal: 30, stat: (m) => m.s.days },
   { id: 'days60', name: 'Dân Đà Lạt chính hiệu', desc: 'Mở quán 60 ngày', beans: 40, goal: 60, stat: (m) => m.s.days },

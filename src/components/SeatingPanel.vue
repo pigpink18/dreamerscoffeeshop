@@ -22,12 +22,14 @@ const waiterCost = computed(() => WAITER_COSTS[save.seating.waiter])
     <div class="row">
       <span class="ic"><PixelIcon name="house" :size="3" /></span>
       <div class="grow">
-        <b>Bàn ghế {{ save.seating.tables }}/{{ maxTables }}</b>
-        <small v-if="tableCost">Kê thêm 2 bàn: nhiều khách được ngồi lại, boa thêm</small>
+        <b v-if="!save.seating.tables">Khu ngồi bỏ hoang</b>
+        <b v-else>Bàn ghế {{ save.seating.tables }}/{{ maxTables }}</b>
+        <small v-if="!save.seating.tables">Bụi bặm, mạng nhện giăng kín. Dọn dẹp & kê 2 bàn đầu tiên để khách ngồi lại, boa thêm</small>
+        <small v-else-if="tableCost">Kê thêm 2 bàn: nhiều khách được ngồi lại, boa thêm</small>
         <small v-else-if="nextPremise">Mặt bằng này tối đa {{ maxTables }} bàn · thuê "{{ nextPremise.name }}" để kê thêm</small>
         <small v-else>Đã kín chỗ</small>
       </div>
-      <button v-if="tableCost" class="btn sm accent" :disabled="save.money < tableCost" @click="buyTables">+2 · {{ moneyShort(tableCost) }}</button>
+      <button v-if="tableCost" class="btn sm accent" :disabled="save.money < tableCost" @click="buyTables">{{ save.seating.tables ? '+2' : 'Dọn dẹp' }} · {{ moneyShort(tableCost) }}</button>
       <span v-else class="pxtag good">TỐI ĐA</span>
     </div>
 

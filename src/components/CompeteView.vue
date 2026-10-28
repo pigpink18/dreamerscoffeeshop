@@ -43,7 +43,7 @@ const MEDAL = ['#f2c14e', '#c4cbd1', '#d9874a']
         <div class="sc"><b>{{ r.week }}</b><small v-if="r.last">+{{ r.last }}</small></div>
       </div>
     </div>
-    <p class="muted note">Điểm phố mỗi ngày = ly bán + ly chuẩn + boss thắng + doanh thu + sao đánh giá. Đối thủ mạnh dần mỗi tuần – đứng top để đông khách hơn.</p>
+    <p class="muted note">Điểm phố mỗi ngày = ly bán + ly chuẩn + khách nước ngoài + doanh thu + sao đánh giá. Đối thủ mạnh dần mỗi tuần – đứng top để đông khách hơn.</p>
 
     <div class="section-title">Thưởng chốt tuần</div>
     <div class="card list">

@@ -1,12 +1,12 @@
 import { noEmoji } from './text'
 import { reactive, computed, watch } from 'vue'
 import {
-  INGREDIENTS, RECIPES, WEATHERS, CUSTOMER_FACES, UPGRADES, STEPS, LINES, REVIEWS, SHIPPERS, ORDER_NAMES, NEEDY, REGULARS, GENERIC_ORDERS, GENERIC_CHATS, BOND_LEVELS, bondLevel, COUNTER_REVIEWS, FAMILY_REVIEWS, randomLook, stepIngredient, BOSSES, BOSS_LINES, STARTER_RECIPES, UNLOCK_ORDER, funnyName,
+  INGREDIENTS, RECIPES, WEATHERS, CUSTOMER_FACES, UPGRADES, STEPS, LINES, REVIEWS, SHIPPERS, ORDER_NAMES, NEEDY, REGULARS, GENERIC_ORDERS, GENERIC_CHATS, BOND_LEVELS, bondLevel, COUNTER_REVIEWS, FAMILY_REVIEWS, randomLook, stepIngredient, GUEST_GROUPS, STARTER_RECIPES, UNLOCK_ORDER, funnyName,
   DAY_LENGTH, OPEN_HOUR, CLOSE_HOUR, STAFF_WAGE, SHIPPER_WAGE, START_MONEY,
   ingredientById, recipeById, weatherById, moneyShort, recipeNeeds, pick,
   type IngredientId, type RecipeId, type UpgradeId, type WeatherId, type StepId, type ChatTopic, type Look,
 } from './data'
-import { sfx, setDayFrac, setBossMode, setReportMode, preloadReport, audio } from './audio'
+import { sfx, setDayFrac, setReportMode, preloadReport, audio } from './audio'
 import { hooks, type MetaDayResult } from './hooks'
 import { PREMISES, rareById, newMeta, RIVALS, type MetaSave } from './metaData'
 
@@ -61,8 +61,8 @@ export interface Seat {
 export interface Waiter { seat: number | null; t: number; x: number } // seat = số thứ tự BÀN đang dọn
 /** Số bàn tối đa theo mặt bằng: quầy nhỏ 4 · gác gỗ 6 · flagship 6 (mỗi bàn 2 ghế) */
 export const MAX_TABLES = [4, 6, 6]
-/** Giá mua thêm 2 bàn (theo số bàn đang có: 2→4, 4→6, 6→8) */
-export const TABLE_COSTS: Record<number, number> = { 2: 400_000, 4: 1_200_000 }
+/** Giá mua thêm 2 bàn (theo số bàn đang có: 0→2 là dọn dẹp góc bỏ hoang, 2→4, 4→6) */
+export const TABLE_COSTS: Record<number, number> = { 0: 150_000, 2: 400_000, 4: 1_200_000 }
 export const TABLE_LEVELS = [
   { name: 'Bàn gỗ', tip: 1, sit: 1, desc: 'Ghế gỗ đơn giản' },
   { name: 'Ghế đệm', tip: 1.5, sit: 1.15, desc: 'Khách ngồi êm hơn: boa x1.5' },
@@ -83,7 +83,8 @@ export interface Customer {
   maxPatience: number
   line?: string // câu đang nói
   needy?: number // index trong NEEDY – người nhận cà phê treo
-  boss?: number // index trong BOSSES – khách boss khó tính
+  group?: string // id nhóm khách du lịch (guests.ts): han, trung, anh, phap, y, duc, nga, vn, vanphong, pho
+  album?: string // khoá album riêng (khách cá tính: boss:i)
   regular?: string // id khách quen
   rare?: string // id khách hiếm (album)
   addon?: string // món mua kèm khách muốn (bánh / lưu niệm)
@@ -147,8 +148,6 @@ export type GameEvent =
   | { type: 'served'; id: number; stars: number; text: string; price: number; tip: number; needy: boolean }
   | { type: 'angry'; id: number; line: string }
   | { type: 'orderPacked'; name: string }
-  | { type: 'boss'; idx: number }
-  | { type: 'bossEnd'; win: boolean }
   | { type: 'seatClean'; seat: number; tip: number; byWaiter: boolean }
 const listeners = new Set<(e: GameEvent) => void>()
 export const bus = {
@@ -170,8 +169,6 @@ export interface DayStats {
   starsSum: number
   given: number
   donated: number
-  boss: 'win' | 'lose' | null // kết quả boss gần nhất
-  bossLog: { idx: number; win: boolean }[] // tất cả boss trong ngày
   newRecipe: RecipeId | null // món mới mở khoá khi xong ngày
   goodsRev: number // tiền bán kèm bánh / lưu niệm
   goodsSold: number
@@ -226,7 +223,7 @@ function newSave(): SaveData {
     introSeen: false,
     createdAt: Date.now(),
     meta: newMeta(),
-    seating: { tables: 2, level: 0, waiter: 0 },
+    seating: { tables: 0, level: 0, waiter: 0 }, // khu ngồi bỏ hoang, phải dọn dẹp mới có bàn
   }
 }
 
@@ -277,7 +274,7 @@ function mergeMeta(base: MetaSave, m?: Partial<MetaSave>): MetaSave {
 }
 
 function emptyStats(rep: number): DayStats {
-  return { revenue: 0, spent: 0, served: 0, angry: 0, tooExpensive: 0, full: 0, repStart: rep, tips: 0, delivered: 0, cancelled: 0, starsSum: 0, given: 0, donated: 0, boss: null, bossLog: [], newRecipe: null, goodsRev: 0, goodsSold: 0, seated: 0, noSeat: 0, cleaned: 0, seatTips: 0 }
+  return { revenue: 0, spent: 0, served: 0, angry: 0, tooExpensive: 0, full: 0, repStart: rep, tips: 0, delivered: 0, cancelled: 0, starsSum: 0, given: 0, donated: 0, newRecipe: null, goodsRev: 0, goodsSold: 0, seated: 0, noSeat: 0, cleaned: 0, seatTips: 0 }
 }
 
 // ---------- State ----------
@@ -300,10 +297,6 @@ export const ui = reactive({
   page: 0, // đang xem: 0 = quầy, 1 = khu khách ngồi
   brew: null as Brew | null,
   talk: null as Talk | null,
-  bossAt: 0, // thời điểm boss kế tiếp tới (giây mô phỏng)
-  bossPlan: [] as number[], // lịch boss trong ngày
-  bossNext: 0, // boss thứ mấy sắp tới
-  bossState: 'pending' as 'pending' | 'here' | 'done',
   present: null as null | { recipe: RecipeId; cup: Brew; target: 'cust' | 'order'; name: string },
   stats: emptyStats(save.reputation),
   report: null as DayReport | null,
@@ -325,7 +318,7 @@ export function persist() {
 // Lưu chung save + trạng thái ngày bán trong 1 khoá để luôn khớp nhau. Ghi mỗi 2 giây khi đang bán
 // và ngay khi người chơi rời app / đóng tab / tải lại trang. Mở lại sẽ vào đúng chỗ cũ (đang tạm dừng).
 const SESSION_KEY = 'coffee-tycoon-session-v1'
-const SESSION_UI = ['phase', 'tab', 'view', 'time', 'speed', 'queue', 'orders', 'shippers', 'staffProgress', 'brew', 'talk', 'bossAt', 'bossPlan', 'bossNext', 'bossState', 'stats', 'report', 'present', 'seats', 'waiters'] as const
+const SESSION_UI = ['phase', 'tab', 'view', 'time', 'speed', 'queue', 'orders', 'shippers', 'staffProgress', 'brew', 'talk', 'stats', 'report', 'present', 'seats', 'waiters'] as const
 export function saveSession() {
   try {
     if (ui.phase !== 'open' && ui.phase !== 'report') { localStorage.removeItem(SESSION_KEY); return }
@@ -497,47 +490,19 @@ function addShipper(i: number) {
   ui.shippers.push({ name: s.name, face: s.face, orderId: null, t: 0, total: 0 })
 }
 
-// ---------- BOSS ----------
-// Số boss mỗi ngày theo sao của quán: mới mở (2 ngày đầu) hoặc < 1.5★ → 1 boss; 2★ → 2 … 5★ → 5 boss/ngày
+// ---------- Khách du lịch theo nhóm (guests.ts) ----------
 export const shopStars = computed(() => save.reputation / 20)
-// Mỗi ngày 1 boss; quán đã 4.5 sao trở lên và từ ngày 10 mới thêm boss thứ 2 (không dồn dập)
-export const bossesToday = computed(() => (save.day >= 10 && shopStars.value >= 4.5 ? 2 : 1))
-export const bossIndex = (n = 0) => (save.day - 1 + n) % BOSSES.length
-export const todayBoss = computed(() => BOSSES[bossIndex()])
-export const todayBosses = computed(() => Array.from({ length: bossesToday.value }, (_, n) => bossIndex(n)))
-function planBoss() {
-  const n = bossesToday.value
-  const span = 0.66 / n // chia ngày thành n khúc (12%→78% ngày), mỗi khúc 1 boss
-  ui.bossPlan = Array.from({ length: n }, (_, i) => DAY_LENGTH * (0.12 + span * i + span * (0.2 + Math.random() * 0.6)))
-  ui.bossNext = 0
-  ui.bossAt = ui.bossPlan[0]
-  ui.bossState = 'pending'
-}
-export const bossClock = computed(() => {
-  const hours = OPEN_HOUR + (ui.bossAt / DAY_LENGTH) * (CLOSE_HOUR - OPEN_HOUR)
-  return `${String(Math.floor(hours)).padStart(2, '0')}:${Math.floor(hours) === hours ? '00' : '30'}`
+/** Đoàn khách nổi bật hôm nay (đổi mỗi ngày): ghé quán nhiều gấp 3 */
+export const featuredGroup = computed(() => {
+  const pool = GUEST_GROUPS.filter((g) => g.id !== 'pho')
+  return pool[(save.day * 5 + 2) % pool.length]
 })
-
-function spawnBoss() {
-  ui.bossState = 'here'
-  const idx = bossIndex(ui.bossNext)
-  ui.bossNext++
-  const B = BOSSES[idx]
-  // boss gọi món khó (ngẫu nhiên trong 2 món nhiều bước nhất đã mở khoá)
-  const hard = [...save.unlocked].sort((a, b) => recipeById[b].steps.length - recipeById[a].steps.length).slice(0, 2)
-  const recipe = pick(hard)
-  const steps = recipeById[recipe].steps.length
-  const maxP = Math.max(24, 18 + steps * 4 - Math.min(8, (save.day - 1) * 0.6)) // boss: gắt hơn khách thường nhưng vẫn đủ thời gian pha
-  const boss: Customer = {
-    id: nextId(), face: '👑', recipe, patience: maxP, maxPatience: maxP, boss: idx, look: B.look,
-    greeting: pick(B.lines?.greet ?? BOSS_LINES.greet).replace('{drink}', recipeById[recipe].name),
-  }
-  // boss chen ngang: đứng ngay sau khách đang ở quầy
-  ui.queue.splice(Math.min(1, ui.queue.length), 0, boss)
-  setBossMode(true)
-  sfx('boss')
-  vibrate([60, 40, 60, 40, 120])
-  bus.emit({ type: 'boss', idx })
+const groupById = (id?: string) => (id ? GUEST_GROUPS.find((g) => g.id === id) : undefined)
+function pickGuestGroup() {
+  const f = featuredGroup.value
+  const w = (g: (typeof GUEST_GROUPS)[number]) => g.weight * (g === f ? 3 : 1)
+  let r = Math.random() * GUEST_GROUPS.reduce((a, g) => a + w(g), 0)
+  return GUEST_GROUPS.find((g) => (r -= w(g)) <= 0) ?? GUEST_GROUPS[0]
 }
 
 /** Xong 1 ngày: mở khoá 1 món mới + tặng nguyên liệu dùng thử */
@@ -550,19 +515,6 @@ function unlockNextRecipe(): RecipeId | null {
     if (save.stock[ing] < pack.packSize) save.stock[ing] += pack.packSize
   }
   return next
-}
-
-function endBoss(win: boolean, idx: number) {
-  ui.stats.boss = win ? 'win' : 'lose'
-  ui.stats.bossLog.push({ idx, win })
-  hooks.bossEnd?.(win)
-  if (ui.bossNext < ui.bossPlan.length) {
-    ui.bossState = 'pending'
-    ui.bossAt = Math.max(ui.bossPlan[ui.bossNext], ui.time + 8) // nghỉ thở ít nhất 1 chút
-  } else ui.bossState = 'done'
-  setTimeout(() => { if (ui.bossState !== 'here') setBossMode(false) }, 3200)
-  sfx(win ? 'bossWin' : 'bossLose')
-  bus.emit({ type: 'bossEnd', win })
 }
 
 // ---------- Mô phỏng ngày bán ----------
@@ -591,7 +543,6 @@ export function openShop() {
   ui.waiters = Array.from({ length: save.seating.waiter }, (_, i) => ({ seat: null, t: 0, x: 100 - i * 14 }))
   ui.page = 0
   ui.stats = { ...emptyStats(save.reputation), spent: ui.stats.spent }
-  planBoss()
   hooks.dayStart?.()
   preloadReport()
   last = performance.now()
@@ -615,8 +566,6 @@ function restoreSession() {
   if (!s) return
   Object.assign(save, s.save)
   for (const k of SESSION_UI) if (k in s.ui) (ui as any)[k] = s.ui[k]
-  if (!Array.isArray(ui.bossPlan)) { ui.bossPlan = [ui.bossAt]; ui.bossNext = ui.bossState === 'pending' ? 0 : 1 }
-  if (!Array.isArray(ui.stats.bossLog)) ui.stats.bossLog = []
   if (!Array.isArray(ui.seats) || ui.seats.length !== save.seating.tables * SEATS_PER_TABLE) ui.seats = Array.from({ length: save.seating.tables * SEATS_PER_TABLE }, newSeat)
   if (ui.waiters?.some((w) => w.seat !== null && w.seat >= save.seating.tables)) ui.waiters.forEach((w) => { w.seat = null; w.t = 0 })
   if (!Array.isArray(ui.waiters)) ui.waiters = []
@@ -637,7 +586,6 @@ function restoreSession() {
   }
   ui.present = null
   setDayFrac(ui.time / DAY_LENGTH)
-  if (ui.bossState === 'here') setBossMode(true)
   last = performance.now()
   raf = requestAnimationFrame(loop)
 }
@@ -657,9 +605,6 @@ function tick(dt: number) {
   setDayFrac(ui.time / DAY_LENGTH)
   const curve = rushCurve(ui.time / DAY_LENGTH) / CURVE_AVG
 
-  // Boss xuất hiện
-  if (ui.bossState === 'pending' && ui.time >= ui.bossAt) spawnBoss()
-
   // Khách mới đến quán
   if (Math.random() < (expectedCustomers() / DAY_LENGTH) * curve * dt) spawnCustomer()
   // Đơn mới trên app
@@ -668,25 +613,10 @@ function tick(dt: number) {
   // Khách mất kiên nhẫn
   for (let i = ui.queue.length - 1; i >= 0; i--) {
     const c = ui.queue[i]
-    // đồng hồ của boss chỉ chạy khi boss đã đứng ở quầy
-    if (c.boss !== undefined && i !== 0) continue
     c.patience -= dt
-    if (!c.line && c.needy === undefined && c.patience / c.maxPatience < 0.5) c.line = pick(c.boss !== undefined ? BOSSES[c.boss].lines?.taunt ?? BOSS_LINES.taunt : LINES.impatient)
-    if (c.patience <= 0 && (!isBrewing('cust', c.id) || c.boss !== undefined)) {
-      if (isBrewing('cust', c.id)) ui.brew = null
+    if (!c.line && c.needy === undefined && c.patience / c.maxPatience < 0.5) c.line = pick(groupById(c.group)?.impatient ?? LINES.impatient)
+    if (c.patience <= 0 && !isBrewing('cust', c.id)) {
       ui.queue.splice(i, 1)
-      if (c.boss !== undefined) {
-        if (ui.talk?.custId === c.id) ui.talk = null
-        // boss bỏ về: 1 sao xéo sắc
-        const text = pick(BOSSES[c.boss].lines?.lose ?? BOSS_LINES.lose)
-        save.reviews.unshift({ id: nextId(), name: BOSSES[c.boss].name, stars: 1, text, recipe: c.recipe, day: save.day, src: 'quan' })
-        if (save.reviews.length > 40) save.reviews.length = 40
-        ui.stats.angry++
-        changeRep(-6)
-        bus.emit({ type: 'angry', id: c.id, line: '⭐ ' + text })
-        endBoss(false, c.boss)
-        continue
-      }
       if (ui.talk?.custId === c.id) ui.talk = null
       if (c.regular) addBond(c.regular, -8)
       if (c.needy !== undefined) {
@@ -719,7 +649,7 @@ function tick(dt: number) {
 
   // Nhân viên tự phục vụ: ưu tiên khách tại quán, sau đó đơn app
   // mỗi nhân viên nhận 1 việc khác nhau (không pha trùng khách)
-  const custs = ui.queue.filter((c, i) => i > 0 && c.boss === undefined && !isBrewing('cust', c.id) && canMake(c.recipe))
+  const custs = ui.queue.filter((c, i) => i > 0 && !isBrewing('cust', c.id) && canMake(c.recipe))
   const ords = ui.orders.filter((o) => o.state === 'new' && !isBrewing('order', o.id) && canMake(o.recipe))
   for (let s = 0; s < ui.staffProgress.length; s++) {
     const cust = custs[s]
@@ -820,9 +750,21 @@ function spawnCustomer() {
     return
   }
   const maxPatience = 58 * (1 + 0.1 * save.upgrades.decor)
+  const drink = recipeById[choice.id].name
+  // khách du lịch theo nhóm (Hàn, Trung, Anh, Pháp, Ý, Đức, Nga, khách Việt săn mây, dân văn phòng, khách cá tính)
+  if (Math.random() < 0.6) {
+    const G = pickGuestGroup()
+    const P = G.people ? pick(G.people) : null
+    const look = P?.look ?? G.look()
+    const maxP = maxPatience * G.patience
+    push({ id: nextId(), face: pick(CUSTOMER_FACES), recipe: choice.id, patience: maxP, maxPatience: maxP, look, group: G.id,
+      name: P?.name ?? pick(G.names), album: P?.album, greeting: pick(P?.greet ?? G.greet).replace('{drink}', drink) })
+    sfx('bell')
+    return
+  }
   const look = randomLook()
   push({ id: nextId(), face: pick(CUSTOMER_FACES), recipe: choice.id, patience: maxPatience, maxPatience, look, name: funnyName(look),
-    greeting: pick(GENERIC_ORDERS).replace('{drink}', recipeById[choice.id].name) })
+    greeting: pick(GENERIC_ORDERS).replace('{drink}', drink) })
   sfx('bell')
 }
 
@@ -863,28 +805,6 @@ function completeWalkIn(c: Customer, perfect: boolean, byStaff: boolean, mistake
     return
   }
 
-  if (c.boss !== undefined) {
-    // phục vụ kịp giờ: 5 sao nhưng vẫn khó chịu, thưởng lớn
-    if (ui.talk?.custId === c.id) ui.talk = null
-    const B = BOSSES[c.boss]
-    // đại gia keo kiệt: trả đúng giá còn đòi bớt, không tip
-    const price = B.stingy ? Math.max(1_000, save.prices[c.recipe] - 2_000) : save.prices[c.recipe] * 2
-    const tip = B.stingy ? 0 : 30_000
-    save.money += price + tip
-    ui.stats.revenue += price + tip
-    ui.stats.tips += tip
-    const text = pick(B.lines?.win ?? BOSS_LINES.win)
-    save.reviews.unshift({ id: nextId(), name: BOSSES[c.boss].name, stars: 5, text, recipe: c.recipe, day: save.day, src: 'quan' })
-    if (save.reviews.length > 40) save.reviews.length = 40
-    changeRep(4)
-    float(`👑 +${moneyShort(price + tip)}`, 'good')
-    sfx('coin')
-    hooks.served?.({ kind: 'boss', recipe: c.recipe, perfect: true, byStaff, price, tip, stars: 5, albumKey: `boss:${c.boss}` })
-    bus.emit({ type: 'served', id: c.id, stars: 5, text, price, tip, needy: false })
-    endBoss(true, c.boss)
-    return
-  }
-
   if (ui.talk?.custId === c.id) ui.talk = null
   const price = save.prices[c.recipe]
   let tip = 0
@@ -907,7 +827,9 @@ function completeWalkIn(c: Customer, perfect: boolean, byStaff: boolean, mistake
   seatCustomer(c, perfect && !byStaff)
   // món mua kèm: nhân viên tự lấy giúp; bạn tự phục vụ thì phải bấm ở kệ hàng (quên là mất đơn kèm)
   if (byStaff && c.addon && !c.addonDone) sellAddonTo(c)
-  const albumKey = c.regular ? `reg:${c.regular}` : c.rare ? `rare:${c.rare}` : c.name ? `name:${c.name}` : undefined
+  const albumKey = c.album ?? (c.regular ? `reg:${c.regular}` : c.rare ? `rare:${c.rare}` : c.group && c.name ? `intl:${c.name}` : c.name ? `name:${c.name}` : undefined)
+  const G = groupById(c.group)
+  if (G?.foreign) hooks.intlServed?.()
   const ratio0 = c.patience / c.maxPatience
   hooks.served?.({ kind: 'walkin', recipe: c.recipe, perfect: perfect && !byStaff, byStaff, price, tip, albumKey, look: c.look,
     stars: byStaff ? 4 : mistakes === 0 ? (ratio0 > 0.4 ? 5 : 4) : mistakes === 1 ? 3 : 2 })
@@ -921,6 +843,9 @@ function completeWalkIn(c: Customer, perfect: boolean, byStaff: boolean, mistake
     let text = pick(COUNTER_REVIEWS[stars])
     if (stars === 5 && Math.random() < 0.4) text = pick(fam.good)
     if (stars === 4 && Math.random() < 0.5) text = pick(fam.meh)
+    // khách du lịch review theo kiểu riêng của nhóm
+    if (G && stars >= 4 && Math.random() < 0.75) text = pick(G.good)
+    if (G && stars <= 3 && Math.random() < 0.75) text = pick(G.meh)
     text = text.replace('{drink}', r.name.toLowerCase())
     if (R && stars >= 4) text = R.thanks
     const name = c.regular ? REGULARS.find((x) => x.id === c.regular)!.name : c.name ?? pick(ORDER_NAMES)
@@ -1005,9 +930,10 @@ export function openTalk(custId: number) {
 export function talkChat() {
   const t = ui.talk
   const c = t && ui.queue.find((x) => x.id === t.custId)
-  if (!t || !c || c.chatted || c.boss !== undefined) return
+  if (!t || !c || c.chatted) return
   const reg = c.regular ? REGULARS.find((r) => r.id === c.regular) : undefined
-  const topics = reg ? reg.chats : GENERIC_CHATS
+  const G = groupById(c.group)
+  const topics = reg ? reg.chats : G?.chats.length && Math.random() < 0.75 ? G.chats : GENERIC_CHATS
   t.topic = pick(topics)
   t.mode = 'chat'
   c.chatted = true
@@ -1155,6 +1081,7 @@ function newSeat(): Seat { return { state: 'free', t: 0, tip: 0, taps: 0 } }
 
 /** Khách vãng lai sau khi nhận nước: một phần muốn ngồi lại quán */
 function seatCustomer(c: Customer, perfect: boolean) {
+  if (!save.seating.tables) return // khu ngồi còn bỏ hoang: khách mua mang đi, không trừ uy tín
   const want = save.weather === 'rainy' ? 0.65 : save.weather === 'hot' ? 0.55 : 0.45
   if (Math.random() > want) return
   // ưu tiên bàn trống cả 2 ghế (khách lạ ít khi ngồi chung), hết thì ghép bàn
@@ -1253,7 +1180,7 @@ export function buyTables() {
   save.money -= cost
   save.seating.tables = n + 2
   if (ui.phase === 'open') for (let k = 0; k < 2 * SEATS_PER_TABLE; k++) ui.seats.push(newSeat())
-  toast(`Kê thêm 2 bàn → ${save.seating.tables} bàn`, 'good')
+  toast(n === 0 ? 'Quét sạch mạng nhện, kê 2 bàn đầu tiên! Khách đã có chỗ ngồi lại' : `Kê thêm 2 bàn → ${save.seating.tables} bàn`, 'good')
   sfx('done'); vibrate([10, 30, 10])
 }
 
@@ -1296,12 +1223,6 @@ function endDay() {
   // cuối ngày: tiền boa còn trên bàn bẩn chưa dọn thì mất
   ui.seats = []
   ui.waiters = []
-  setBossMode(false)
-  if (ui.bossState === 'here') {
-    ui.stats.boss = 'lose'
-    ui.stats.bossLog.push({ idx: bossIndex(Math.max(0, ui.bossNext - 1)), win: false })
-  }
-  ui.bossState = 'done'
   // Xong 1 ngày → mở khoá món mới
   const nr = unlockNextRecipe()
   if (nr) ui.stats.newRecipe = nr

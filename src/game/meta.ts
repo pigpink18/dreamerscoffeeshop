@@ -5,8 +5,9 @@ import { save, ui, toast, vibrate } from './store'
 import { sfx } from './audio'
 import { hooks, type ServeInfo, type MetaDayResult } from './hooks'
 import { submitScore } from './online'
+import { INTL_NAMES } from './guests'
 import {
-  REGULARS, BOSSES, FEMALE_NAMES, MALE_NAMES, RECIPES, recipeById, ingredientById, recipeNeeds, pick, bondLevel,
+  REGULARS, CHARACTERS, FEMALE_NAMES, MALE_NAMES, RECIPES, recipeById, ingredientById, recipeNeeds, pick, bondLevel,
   type RecipeId, type StepId, type IngredientId,
 } from './data'
 import {
@@ -17,6 +18,7 @@ import {
 const M = () => save.meta
 
 // ---------- Đếm trong ngày (không cần lưu) ----------
+// bossWins: tên cũ giữ cho tương thích bản lưu – giờ là số khách nước ngoài đã phục vụ
 export const today = reactive({ perfect: 0, bossWins: 0, beans: 0, quests: [] as string[], ach: [] as string[], served: 0 })
 
 function addBeans(n: number) {
@@ -25,7 +27,7 @@ function addBeans(n: number) {
 }
 
 // ---------- Album ----------
-export const ALBUM_TOTAL = REGULARS.length + BOSSES.length + RARE.length + FEMALE_NAMES.length + MALE_NAMES.length
+export const ALBUM_TOTAL = REGULARS.length + CHARACTERS.length + RARE.length + FEMALE_NAMES.length + MALE_NAMES.length + INTL_NAMES.length
 export const albumCount = computed(() => Object.keys(M().album).length)
 
 function addAlbum(key: string, info: ServeInfo) {
@@ -111,7 +113,7 @@ function rivalTarget(day: number) { return Math.min(1100, 140 + 24 * (day - 1)) 
 function dayScore(): number {
   const s = ui.stats
   const avgStars = s.delivered ? s.starsSum / s.delivered : 4
-  const base = s.served * 8 + s.delivered * 6 + today.perfect * 4 + today.bossWins * 25 + s.revenue / 20000 + avgStars * 10
+  const base = s.served * 8 + s.delivered * 6 + today.perfect * 4 + today.bossWins * 5 + s.revenue / 20000 + avgStars * 10
   return Math.round(base * (isContestDay.value ? 2 : 1))
 }
 
@@ -125,7 +127,7 @@ function questText(q: Quest): string {
     case 'revenue': return `Doanh thu ${k(q.target)}`
     case 'recipe': return `Bán ${q.target} ly ${r}`
     case 'chat': return `Tám chuyện với ${q.target} khách`
-    case 'boss': return `Thắng ${q.target} boss`
+    case 'boss': return `Phục vụ ${q.target} khách nước ngoài`
     case 'app': return `Giao ${q.target} đơn app`
     case 'calm': return 'Không để quá 1 khách bỏ về'
     case 'tips': return `Nhận ${k(q.target)} tiền tip`
@@ -147,7 +149,7 @@ function makeQuests(): Quest[] {
     if (kind === 'revenue') { q.target = Math.round(((250_000 + L * 2_000_000) * prem) / 50_000) * 50_000; q.beans = 5 }
     if (kind === 'recipe') { q.recipe = pick(save.unlocked); q.target = 2 + Math.round(L * 3); q.beans = 4 }
     if (kind === 'chat') { q.target = 2 + Math.round(L * 3); q.beans = 3 }
-    if (kind === 'boss') { q.target = 1; q.beans = 6 }
+    if (kind === 'boss') { q.target = 3 + Math.round(L * 5); q.beans = 5 } // 'boss' = khách nước ngoài (giữ id cũ)
     if (kind === 'app') { q.target = Math.round(3 + L * 6); q.beans = 4 }
     if (kind === 'calm') { q.target = 1; q.beans = 6 }
     if (kind === 'goods') { q.target = Math.round(3 + L * 9); q.beans = 5 }
@@ -356,8 +358,7 @@ export function initMeta() {
 
   hooks.chat = () => { M().stats.chats++; bumpQuest('chat') }
 
-  hooks.bossEnd = (win) => {
-    if (!win) return
+  hooks.intlServed = () => {
     M().stats.bossWins++
     today.bossWins++
     bumpQuest('boss')

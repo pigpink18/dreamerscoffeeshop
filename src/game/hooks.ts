@@ -3,7 +3,7 @@ import type { RecipeId, Look } from './data'
 import type { DayStats } from './store'
 
 export interface ServeInfo {
-  kind: 'walkin' | 'boss' | 'app'
+  kind: 'walkin' | 'app'
   recipe: RecipeId
   perfect: boolean
   byStaff: boolean
@@ -29,7 +29,7 @@ export interface MetaDayResult {
 export const hooks: {
   served?: (i: ServeInfo) => void
   chat?: (bond: number) => void
-  bossEnd?: (win: boolean) => void
+  intlServed?: () => void // phục vụ xong 1 khách nước ngoài
   dayStart?: () => void
   dayEnd?: (s: DayStats) => MetaDayResult | null
   customerMul?: () => number

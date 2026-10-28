@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import {
   save, ui, weather, forecast, wages, expectedCustomers, expectedOrders, portionsLeft, canMake,
-  openShop, togglePause, cycleSpeed, todayBoss, DAY_LENGTH, clock,
+  openShop, togglePause, cycleSpeed, featuredGroup, DAY_LENGTH, clock,
 } from '../game/store'
 import { recipeById, money, moneyShort } from '../game/data'
 import { rentToday, premise } from '../game/store'
@@ -18,11 +18,10 @@ import { dirtySeats } from '../game/store'
 import WorkPanel from './WorkPanel.vue'
 import PixelIcon from './ui/PixelIcon.vue'
 import DrinkIcon from './ui/DrinkIcon.vue'
-import BossPortrait from './ui/BossPortrait.vue'
-import { todayBosses } from '../game/store'
-import { BOSSES } from '../game/data'
+import PersonPortrait from './ui/PersonPortrait.vue'
 
-const bossNames = computed(() => todayBosses.value.map((i) => BOSSES[i].name).join(' · '))
+// đoàn khách nổi bật hôm nay: 3 gương mặt tiêu biểu của nhóm
+const guestFaces = computed(() => Array.from({ length: 3 }, () => featuredGroup.value.look()))
 const WX: Record<string, string> = { sunny: 'sunny', hot: 'hot', cloudy: 'cloudy', rainy: 'rainy' }
 
 const expected = computed(() => Math.round(expectedCustomers()))
@@ -81,14 +80,14 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
       </div>
     </div>
 
-    <div class="card boss-card">
-      <div class="boss-pts">
-        <div v-for="(bi, n) in todayBosses" :key="n" class="boss-pt" :style="{ marginLeft: n ? '-22px' : '0', zIndex: 9 - n }"><BossPortrait :idx="bi" mood="grumpy" :scale="2" /></div>
+    <div class="card guest-card">
+      <div class="g-pts">
+        <div v-for="(lk, n) in guestFaces" :key="n" class="g-pt" :style="{ marginLeft: n ? '-14px' : '0', zIndex: 9 - n }"><PersonPortrait :look="lk" mood="happy" :scale="2" /></div>
       </div>
       <div class="grow">
-        <div class="tiny bk"><PixelIcon name="crown" :size="2" /> HÔM NAY: {{ todayBosses.length }} BOSS</div>
-        <b>{{ bossNames }}</b>
-        <div class="small bt">{{ todayBosses.length > 1 ? 'Ghé rải rác trong ngày' : todayBoss.title + ' · sẽ ghé vào giữa ngày' }}, thời gian phục vụ rất ngắn! <span class="muted">Quán từ 4.5 sao (từ ngày 10) sẽ có thêm boss thứ 2.</span></div>
+        <div class="tiny gk"><PixelIcon name="megaphone" :size="2" /> HÔM NAY Ở ĐÀ LẠT</div>
+        <b>{{ featuredGroup.headline }}</b>
+        <div class="small gt">{{ featuredGroup.blurb }}. Ghé quán nhiều hơn thường ngày!</div>
       </div>
     </div>
 
@@ -224,12 +223,6 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 .tomorrow { display: flex; flex-direction: column; align-items: center; gap: 3px; background: #f1e2cf; padding: 6px 8px; box-shadow: var(--px-border-2); }
 .tomorrow .tiny { font-weight: 900; letter-spacing: 0.08em; color: #8a5a3c; font-size: 9px; }
 .tomorrow .fn { letter-spacing: 0; font-size: 10px; }
-.boss-card { display: flex; align-items: center; gap: 12px; margin-top: 14px; background: #3a1a16; color: #fff; --paper-shade: #2a110e; }
-.boss-pts { display: flex; flex: none; }
-.boss-pt { position: relative; background: #f3dcc2; box-shadow: 0 0 0 2px #f2c14e, 0 0 0 4px #3b2a20; flex: none; animation: bossGlow 1.6s ease-in-out infinite; }
-@keyframes bossGlow { 50% { box-shadow: 0 0 0 2px #ff6b5a, 0 0 0 4px #3b2a20, 0 0 12px 2px rgba(255, 90, 70, 0.5); } }
-.boss-card .bk { display: flex; align-items: center; gap: 5px; color: #ffcf4d; font-weight: 900; letter-spacing: 0.12em; margin-bottom: 2px; }
-.boss-card .bt { opacity: 0.8; }
 .treo { display: flex; align-items: center; gap: 12px; margin-top: 14px; background: #fff6d9; --paper-shade: #f3e2a8; font-size: 14px; }
 .list { padding: 4px 14px; }
 .item { padding: 8px 0; border-bottom: 2px dotted #e6d3b8; }
@@ -413,4 +406,9 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 .big-ic { font-size: 36px; }
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+.guest-card { display: flex; align-items: center; gap: 12px; margin-top: 14px; background: #1f3f3c; color: #fff; --paper-shade: #15302d; }
+.g-pts { display: flex; flex: none; }
+.g-pt { position: relative; background: #f3dcc2; box-shadow: 0 0 0 2px #d5a534, 0 0 0 4px #261c1b; flex: none; }
+.guest-card .gk { display: flex; align-items: center; gap: 5px; color: #f0d27a; font-weight: 900; letter-spacing: 0.12em; margin-bottom: 2px; }
+.guest-card .gt { opacity: 0.85; }
 </style>

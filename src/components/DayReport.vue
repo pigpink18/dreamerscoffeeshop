@@ -1,13 +1,12 @@
 <script setup lang="ts">
-// Màn tổng kết cuối ngày kiểu game: chấm sao, số lợi nhuận chạy, sổ thu chi, chỉ số, boss, danh tiếng.
+// Màn tổng kết cuối ngày kiểu game: chấm sao, số lợi nhuận chạy, sổ thu chi, chỉ số, danh tiếng.
 // Toàn bộ icon là pixel art (PixelIcon) — không dùng emoji.
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
-import { ui, save, nextDay, forecast, bossIndex } from '../game/store'
-import { money, moneyShort, BOSSES, recipeById } from '../game/data'
+import { ui, save, nextDay, forecast } from '../game/store'
+import { money, moneyShort, recipeById } from '../game/data'
 import { sfx } from '../game/audio'
 import PixelIcon from './ui/PixelIcon.vue'
 import PixelNum from './ui/PixelNum.vue'
-import BossPortrait from './ui/BossPortrait.vue'
 
 const r = computed(() => ui.report!)
 const repDelta = computed(() => r.value.repEnd - r.value.repStart)
@@ -24,7 +23,7 @@ const stars = computed(() => {
   let s = 0
   if (r.value.profit >= 0) s++
   if (s && happyRatio.value >= 0.6) s++
-  if (s === 2 && happyRatio.value >= 0.85 && r.value.profit > 0 && r.value.boss !== 'lose') s++
+  if (s === 2 && happyRatio.value >= 0.85 && r.value.profit > 0) s++
   return s
 })
 const verdict = computed(() => (r.value.bankrupt ? 'PHÁ SẢN RỒI…' : ['NGÀY KHÓ KHĂN', 'TẠM ỔN', 'LÀM TỐT LẮM!', 'NGÀY TUYỆT VỜI!'][stars.value]))
@@ -53,11 +52,6 @@ onBeforeUnmount(() => { cancelAnimationFrame(raf); timers.forEach(clearTimeout) 
 const SEG = 20
 const repSeg = computed(() => Math.round((Math.max(0, Math.min(100, r.value.repEnd)) / 100) * SEG))
 
-const bossList = computed(() => {
-  const log = r.value.bossLog?.length ? r.value.bossLog : r.value.boss ? [{ idx: bossIndex(), win: r.value.boss === 'win' }] : []
-  return log.map((b) => ({ ...b, ...BOSSES[b.idx] }))
-})
-const bossWins = computed(() => bossList.value.filter((b) => b.win).length)
 const weatherIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloudy', rainy: 'rainy' } as Record<string, string>)[save.forecast] || 'sunny')
 </script>
 
@@ -108,17 +102,6 @@ const weatherIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloud
         <div class="tile"><i class="ic"><PixelIcon name="star" /></i><b>{{ r.delivered ? (r.starsSum / r.delivered).toFixed(1) : '–' }}</b><span>Sao trung bình</span></div>
       </div>
 
-      <!-- boss -->
-      <div v-if="bossList.length > 1" class="boss-sum">BOSS HÔM NAY · thắng <b>{{ bossWins }}/{{ bossList.length }}</b></div>
-      <div v-for="(boss, i) in bossList" :key="i" class="panel boss" :class="boss.win ? 'win' : 'lose'">
-        <div class="pt"><BossPortrait :idx="boss.idx" :mood="boss.win ? 'grumpy' : 'happy'" :scale="2" /></div>
-        <div class="info">
-          <div class="bname">BOSS · {{ boss.name }}</div>
-          <div class="chip">{{ boss.win ? 'ĐÃ CHINH PHỤC' : 'THẤT BẠI' }}</div>
-          <div class="note">{{ boss.win ? 'Nhận 5 sao — dù vẫn mặt nặng mày nhẹ' : 'Bị chấm 1 sao xéo sắc, mất danh tiếng' }}</div>
-        </div>
-        <PixelIcon v-if="boss.win" class="trophy" name="trophy" :size="4" />
-      </div>
 
       <!-- đua top phố -->
       <div v-if="r.meta" class="panel street" :class="{ contest: r.meta.contest }">
@@ -334,21 +317,6 @@ const weatherIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloud
 .new-recipe { padding: 10px 12px; background: #fff3dc; font-size: 13px; text-align: center; }
 .new-recipe b:first-child { display: block; font-size: 11px; letter-spacing: 0.06em; color: #b7791f; margin-bottom: 2px; }
 
-/* boss */
-.boss-sum { font-size: 12px; font-weight: 800; color: #8a5a3c; text-align: center; letter-spacing: 0.04em; }
-.boss { display: flex; align-items: center; gap: 12px; padding: 8px 12px; overflow: hidden; }
-.boss.win { background: #eefaf2; --shade: #c9ecd6; }
-.boss.lose { background: #fff1ef; --shade: #f5d2cd; }
-.boss .pt { background: #f3dcc2; box-shadow: 0 0 0 2px var(--ink); flex: none; }
-.boss .info { flex: 1; min-width: 0; }
-.boss .bname { font-size: 11px; font-weight: 900; letter-spacing: 0.06em; color: #8a5a3c; }
-.boss .chip {
-  display: inline-block; margin: 4px 0; padding: 2px 8px; font-size: 13px; font-weight: 900; letter-spacing: 0.08em; color: #fff;
-  background: #2f9e6b; box-shadow: 0 0 0 2px var(--ink), inset 0 -2px 0 rgba(0, 0, 0, 0.2);
-}
-.boss.lose .chip { background: #b3261e; }
-.boss .note { font-size: 12px; font-weight: 600; color: #6f5a4a; }
-.boss .trophy { animation: bob 1.2s ease-in-out infinite; }
 @keyframes bob { 50% { transform: translateY(-3px); } }
 
 /* danh tiếng */

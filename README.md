@@ -73,9 +73,10 @@ vite.config.ts     # Cấu hình PWA (manifest, icon, service worker offline)
   - Khách chờ lâu sẽ “cà khịa” kiểu Gen Z rồi bỏ về.
 - **📖 Truyện mở đầu:** lần đầu mở game sẽ có cutscene pixel từng cảnh: **Yến**, 24 tuổi, bỏ deadline Hà Nội vào Đà Lạt, gặp bé corgi mập lông muối tiêu **Cáo** và cùng mở **Dreamers Coffee**. Bấm vào chữ *DREAMERS COFFEE* trên thanh trên cùng để xem lại.
 - **🎁 Mỗi ngày một món mới:** bán xong 1 ngày là mở khoá thêm 1 món (kèm nguyên liệu dùng thử), đến khi đủ 11 món.
-- **👑 Boss:** những vị khách cực khó tính (Jessica Tổ Quạ, Chú Johnny Ria Mép, Bà Mary Lô Cuốn, Tony Mào Gà, Đại Gia Bill Keo, Cô Selena Nón Rộng) chen ngang hàng, gọi món khó, và chỉ cho **rất ít thời gian**. Nhạc quán chuyển sang bản hồi hộp.
-  - Số boss mỗi ngày theo sao của quán: quán mới / dưới 1.5★ → 1 boss; ~2★ → 2; ~3★ → 3; ~4★ → 4; 4.5★ trở lên → 5 boss/ngày.
-  - Kịp giờ: 5 sao + thưởng lớn, nhưng boss vẫn mặt nặng mày nhẹ. Trễ giờ: 1 sao kèm review xéo sắc, mất danh tiếng.
+- **🌏 Khách du lịch khắp nơi:** khách Hàn, Trung, Anh, Pháp, Ý, Đức, Nga, khách Hà Nội/Sài Gòn lên săn mây, và **dân văn phòng đi "nghỉ dưỡng" vẫn chạy deadline**. Mỗi nhóm có ngoại hình, tên vui, câu gọi món, câu hối, review và chuyện tám riêng (kho thoại ở `src/game/guests.ts`, thêm thoải mái).
+  - Mỗi ngày có một **đoàn khách nổi bật** (hiện ở màn chuẩn bị), nhóm đó ghé quán nhiều gấp 3.
+  - Mỗi nhóm kiên nhẫn khác nhau: người Anh xếp hàng rất giỏi, khách Đức đúng giờ từng phút, dân văn phòng thì đang chạy deadline.
+  - Hội **khách cá tính** trên phố (Jessica Tổ Quạ, Chú Johnny Ria Mép, Bà Mary Lô Cuốn, Tony Mào Gà, Đại Gia Bill Keo, Cô Selena Nón Rộng) ghé như khách thường, có mục riêng trong album.
 - **💬 Tám chuyện:** hơn 60 chủ đề, mỗi chủ đề có 3 kiểu trả lời: ngọt ngào · 😏 xéo sắc · cụt lủn. Kho thoại và review châm biếm nằm trong `src/game/chatter.ts`, thêm thoải mái.
 - **Khách quen:** Linda Na, Kenny Sang, Cô Ba Xôi Gấc, Huy Sơ Rum, Jenny Vy Vu, Tomy Tèo… Thân dần: Người lạ → Khách quen → Bạn thân (tip nhiều, kiên nhẫn hơn).
 - **Nhân viên:** thuê ở tab Nâng cấp. Bạn lo khách đứng đầu quầy, nhân viên tự pha cho khách xếp hàng phía sau và đơn app (khung “NV1/NV2” trên cảnh quán cho biết đang pha gì). Mỗi nhân viên làm quán đông thêm 15%.
@@ -94,7 +95,7 @@ Chỉnh độ khó / thêm thoại: sửa `src/game/data.ts` (giá, công thức
 
 ## Ghi công âm nhạc
 
-- Nhạc nền + nhạc boss (“Out of Time”): **Abstraction** – Music Loop Bundle (chiptune), Tallbeard Studios – **CC0** – https://tallbeard.itch.io/music-loop-bundle · https://abstractionmusic.com/
+- Nhạc nền + nhạc “Out of Time”: **Abstraction** – Music Loop Bundle (chiptune), Tallbeard Studios – **CC0** – https://tallbeard.itch.io/music-loop-bundle · https://abstractionmusic.com/
   File: `public/assets/music/` (OGG gốc + bản M4A cho Safari/iPhone cũ). Giấy phép: `public/assets/music/LICENSE-tallbeard.txt`.
 
 ## Dữ liệu người chơi (nhiều người chơi)
@@ -106,9 +107,9 @@ Chỉnh độ khó / thêm thoại: sửa `src/game/data.ts` (giá, công thức
 
 ## Chơi dài hạn (bản cập nhật lớn)
 
-- **Đua top phố:** tab *Đua top* – Dreamers Coffee cạnh tranh với 5 quán đối thủ trên Phố Dốc Mộng Mơ. Mỗi ngày tính *điểm phố* (ly bán, ly pha chuẩn, boss thắng, doanh thu, sao). Ngày 7, 14, 21… là **Ngày hội Barista** (điểm x2) và chốt bảng tuần, thưởng hạt vàng + tiền. Hạng càng cao càng đông khách; đối thủ mạnh dần mỗi tuần. Mỗi sáng có "tin phố" (đối thủ khuyến mãi, dính phốt…) ảnh hưởng lượng khách.
+- **Đua top phố:** tab *Đua top* – Dreamers Coffee cạnh tranh với 5 quán đối thủ trên Phố Dốc Mộng Mơ. Mỗi ngày tính *điểm phố* (ly bán, ly pha chuẩn, khách nước ngoài, doanh thu, sao). Ngày 7, 14, 21… là **Ngày hội Barista** (điểm x2) và chốt bảng tuần, thưởng hạt vàng + tiền. Hạng càng cao càng đông khách; đối thủ mạnh dần mỗi tuần. Mỗi sáng có "tin phố" (đối thủ khuyến mãi, dính phốt…) ảnh hưởng lượng khách.
 - **Nhiệm vụ ngày & thành tựu:** tab *Sổ tay* – 3 nhiệm vụ đổi mỗi ngày, gần 30 thành tựu dài hạn. Thưởng **hạt vàng**.
-- **Album khách:** sưu tầm khách quen, boss, khách vãng lai và **8 khách hiếm** (chỉ ghé theo thời tiết/giờ, ví dụ Bóng Ma Sương Mù chỉ hiện tối trời mưa).
+- **Album khách:** sưu tầm khách quen, khách cá tính, khách du lịch, khách vãng lai và **8 khách hiếm** (chỉ ghé theo thời tiết/giờ, ví dụ Bóng Ma Sương Mù chỉ hiện tối trời mưa).
 - **Công thức bí mật:** Menu › *Phòng thử món* – tự xếp thứ tự nguyên liệu để tìm 6 món ẩn (cà phê trứng, cà phê cốt dừa, Sương Mù Đà Lạt…). Gợi ý nhận từ khách hiếm, nhiệm vụ, thành tựu. Có thêm nguyên liệu cốt dừa, kem trứng, cacao.
 - **Thuê mặt bằng:** Nâng cấp › *Mặt bằng* – Quầy nhỏ → Quán gác gỗ đồi thông → Dreamers Flagship (bảng menu lớn, đèn thả, tường gạch men, tủ bánh, ghế bar). Khách đông hơn, tiền thuê cao hơn.
 - **Tiệm của Cáo:** dùng hạt vàng mua mũ, kính, khăn, áo cho Cáo và đồ trang trí quán (thấy ngay trong cảnh, +% khách).

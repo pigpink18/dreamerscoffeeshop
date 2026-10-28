@@ -2,12 +2,12 @@
 // Sổ tay: nhiệm vụ ngày, album khách, thành tựu, app DreamersFood
 import { ref, computed } from 'vue'
 import { save, ui } from '../game/store'
-import { REGULARS, BOSSES, FEMALE_NAMES, MALE_NAMES, randomLook } from '../game/data'
+import { REGULARS, CHARACTERS, FEMALE_NAMES, MALE_NAMES, randomLook } from '../game/data'
+import { INTL_NAMES } from '../game/guests'
 import { RARE, ACHIEVEMENTS, achCtx, albumCount, ALBUM_TOTAL } from '../game/meta'
 import AppView from './AppView.vue'
 import PixelIcon from './ui/PixelIcon.vue'
 import PersonPortrait from './ui/PersonPortrait.vue'
-import BossPortrait from './ui/BossPortrait.vue'
 
 const seg = ref<'quest' | 'album' | 'ach' | 'app'>('quest')
 const Q = computed(() => save.meta.quests)
@@ -18,10 +18,11 @@ const A = save.meta.album
 const fallback = randomLook()
 const groups = computed(() => rawGroups.value.map((g) => ({ ...g, seen: g.items.filter((x) => save.meta.album[x.key]).length })))
 const rawGroups = computed(() => [
-  { title: 'Khách quen', items: REGULARS.map((r) => ({ key: `reg:${r.id}`, name: r.name, look: r.look, boss: -1 })) },
-  { title: 'Khách hiếm', items: RARE.map((r) => ({ key: `rare:${r.id}`, name: r.name, look: r.look, boss: -1 })) },
-  { title: 'Boss khó tính', items: BOSSES.map((b, i) => ({ key: `boss:${i}`, name: b.name, look: b.look, boss: i })) },
-  { title: 'Khách vãng lai', items: [...FEMALE_NAMES, ...MALE_NAMES].map((n) => ({ key: `name:${n}`, name: n, look: save.meta.album[`name:${n}`]?.look ?? fallback, boss: -1 })) },
+  { title: 'Khách quen', items: REGULARS.map((r) => ({ key: `reg:${r.id}`, name: r.name, look: r.look })) },
+  { title: 'Khách hiếm', items: RARE.map((r) => ({ key: `rare:${r.id}`, name: r.name, look: r.look })) },
+  { title: 'Khách cá tính', items: CHARACTERS.map((b, i) => ({ key: `boss:${i}`, name: b.name, look: b.look })) },
+  { title: 'Khách du lịch', items: INTL_NAMES.map((n) => ({ key: `intl:${n.name}`, name: n.name, look: save.meta.album[`intl:${n.name}`]?.look ?? fallback })) },
+  { title: 'Khách vãng lai', items: [...FEMALE_NAMES, ...MALE_NAMES].map((n) => ({ key: `name:${n}`, name: n, look: save.meta.album[`name:${n}`]?.look ?? fallback })) },
 ])
 const rareHint = (key: string) => {
   const r = RARE.find((x) => `rare:${x.id}` === key)
@@ -73,8 +74,7 @@ void A
         <div class="section-title">{{ g.title }} · {{ g.seen }}/{{ g.items.length }}</div>
         <div class="album">
           <div v-for="it in g.items" :key="it.key" class="cell" :class="{ seen: save.meta.album[it.key] }">
-            <BossPortrait v-if="it.boss >= 0" :idx="it.boss" mood="grumpy" :scale="2" :class="{ shadow: !save.meta.album[it.key] }" />
-            <PersonPortrait v-else :look="it.look" :scale="2" :hidden="!save.meta.album[it.key]" />
+            <PersonPortrait :look="it.look" :scale="2" :hidden="!save.meta.album[it.key]" />
             <small>{{ save.meta.album[it.key] ? it.name : '???' }}</small>
             <em v-if="save.meta.album[it.key]">x{{ save.meta.album[it.key].n }}</em>
             <em v-else-if="it.key.startsWith('rare:')" class="hint">{{ rareHint(it.key) }}</em>
