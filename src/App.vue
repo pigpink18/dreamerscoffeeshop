@@ -12,6 +12,8 @@ import Toasts from './components/Toasts.vue'
 import BookView from './components/BookView.vue'
 import CompeteView from './components/CompeteView.vue'
 import IntroStory from './components/IntroStory.vue'
+import StoryScene from './components/StoryScene.vue'
+import { pendingChapter } from './game/story'
 
 const main = ref<HTMLElement | null>(null)
 // đổi tab → cuộn lên đầu (tránh mất thanh chọn mục ở trên cùng)
@@ -36,6 +38,9 @@ const views = { shop: ShopView, stock: StockView, menu: MenuView, compete: Compe
     <Toasts />
     <Transition name="sheet">
       <DayReport v-if="ui.report" />
+    </Transition>
+    <Transition name="sheet">
+      <StoryScene v-if="pendingChapter && !ui.showIntro" :key="pendingChapter.id" :chapter="pendingChapter" />
     </Transition>
     <Transition name="sheet">
       <IntroStory v-if="!save.introSeen || ui.showIntro" />

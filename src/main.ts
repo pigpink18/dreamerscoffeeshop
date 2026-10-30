@@ -3,8 +3,10 @@ import './style.css'
 import App from './App.vue'
 import { unlockAudio } from './game/audio'
 import { initMeta } from './game/meta'
+import { initStory } from './game/story'
 
 initMeta()
+initStory() // sau initMeta: bọc thêm vào các hook của meta
 createApp(App).mount('#app')
 
 // Trình duyệt chỉ cho phát âm thanh sau lần chạm đầu tiên

@@ -16,6 +16,7 @@ import SeatingScene from './SeatingScene.vue'
 import { ref } from 'vue'
 import { dirtySeats } from '../game/store'
 import WorkPanel from './WorkPanel.vue'
+import { currentChapter, finaleDay, storyDone, endingScore, ENDING_TITLE } from '../game/story'
 import PixelIcon from './ui/PixelIcon.vue'
 import DrinkIcon from './ui/DrinkIcon.vue'
 import PersonPortrait from './ui/PersonPortrait.vue'
@@ -78,6 +79,19 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
         <PixelIcon :name="WX[save.forecast] || 'sunny'" :size="3" />
         <div class="tiny fn">{{ forecast.name }}</div>
       </div>
+    </div>
+
+    <div v-if="currentChapter" class="card story-card">
+      <div class="tiny sk"><PixelIcon name="star" :size="2" /> {{ storyDone ? 'CỐT TRUYỆN ĐÃ XONG' : currentChapter.title.toUpperCase() }}</div>
+      <template v-if="!storyDone">
+        <b>{{ currentChapter.goal }}</b>
+        <div class="srow">
+          <span class="pxtag warn">Còn {{ Math.max(0, finaleDay - save.day) }} ngày tới chung kết</span>
+          <span class="small">Điểm hiện tại <b>{{ endingScore() }}</b> / 95</span>
+        </div>
+        <i class="pbar"><b :style="{ width: Math.min(100, (endingScore() / 95) * 100) + '%' }" /></i>
+      </template>
+      <b v-else>{{ ENDING_TITLE[save.story.ending ?? 'good'] }}</b>
     </div>
 
     <div class="card guest-card">
@@ -406,6 +420,10 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 .big-ic { font-size: 36px; }
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+.story-card { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; background: #fff3dc; }
+.story-card .sk { display: flex; align-items: center; gap: 5px; font-weight: 900; letter-spacing: 0.1em; color: #a16b36; }
+.story-card b { font-size: 14px; line-height: 1.35; }
+.story-card .srow { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .guest-card { display: flex; align-items: center; gap: 12px; margin-top: 14px; background: #1f3f3c; color: #fff; --paper-shade: #15302d; }
 .g-pts { display: flex; flex: none; }
 .g-pt { position: relative; background: #f3dcc2; box-shadow: 0 0 0 2px #d5a534, 0 0 0 4px #261c1b; flex: none; }

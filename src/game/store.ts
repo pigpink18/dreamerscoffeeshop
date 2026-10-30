@@ -46,6 +46,14 @@ export interface SaveData {
   createdAt: number
   meta: MetaSave // mặt bằng, đối thủ, nhiệm vụ, album, đồ cho Cáo…
   seating: Seating // khu khách ngồi: số bàn, loại bàn, nhân viên phục vụ
+  story: StorySave // cốt truyện chính (story.ts)
+}
+
+export interface StorySave {
+  start: number // cốt truyện bắt đầu tính từ ngày này (chương có at = n diễn ra ngày start + n)
+  seen: string[] // chương đã xem
+  flags: Record<string, number> // lựa chọn đã chọn + điểm "lòng phố" (support)
+  ending?: 'great' | 'good' | 'retry'
 }
 
 // ---------- KHU KHÁCH NGỒI ----------
@@ -224,6 +232,7 @@ function newSave(): SaveData {
     createdAt: Date.now(),
     meta: newMeta(),
     seating: { tables: 0, level: 0, waiter: 0 }, // khu ngồi bỏ hoang, phải dọn dẹp mới có bàn
+    story: { start: 1, seen: [], flags: {} },
   }
 }
 
@@ -252,6 +261,8 @@ function loadSave(): SaveData {
           playerId: data.playerId || base.playerId,
           meta: mergeMeta(base.meta, data.meta),
           seating: { ...base.seating, ...data.seating, tables: Math.min(6, data.seating?.tables ?? base.seating.tables) },
+          // bản lưu cũ chưa có cốt truyện: bắt đầu từ hôm nay (chương 1 hiện ngay)
+          story: data.story ? { ...base.story, ...data.story, flags: { ...data.story.flags } } : { start: Math.max(0, (data.day ?? 1) - 1), seen: [], flags: {} },
         }
       }
     }

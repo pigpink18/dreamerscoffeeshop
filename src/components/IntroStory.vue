@@ -231,14 +231,14 @@ function vignette(c: Ctx) {
     for (let i = 0; i < 4; i++) c.fillRect(sx > 0 ? x : x - (6 - i), sy > 0 ? y + i : y - i - 1, 6 - i, 1)
   }
 }
-/** bảng gỗ "CHƯƠNG n" trượt vào góc trên trái đầu mỗi cảnh */
+/** bảng gỗ "MỞ ĐẦU n" (phần mở đầu, khác các chương của cốt truyện chính) trượt vào góc trên trái đầu mỗi cảnh */
 function chapterPlate(c: Ctx, t: number) {
   if (t < 0.3 || t > 3.6) return
   const k = t < 0.6 ? ease((t - 0.3) / 0.3) : t > 3.2 ? 1 - ease((t - 3.2) / 0.4) : 1
   const x = Math.round(-40 + 44 * k), y = 4
   px(c, x, y, 36, 9, CZ.ink); px(c, x + 1, y + 1, 34, 7, CZ.w2); px(c, x + 1, y + 1, 34, 1, CZ.w4); px(c, x + 1, y + 7, 34, 1, CZ.w1)
   rivet(c, x + 1, y + 1); rivet(c, x + 33, y + 1)
-  label(c, `CHƯƠNG ${si.value + 1}`, x + 18, y + 4.8, CZ.cream, 5)
+  label(c, `MỞ ĐẦU ${si.value + 1}`, x + 18, y + 4.8, CZ.cream, 5)
 }
 
 // ---------- nhân vật ----------
