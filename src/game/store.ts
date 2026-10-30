@@ -1,11 +1,12 @@
 import { noEmoji } from './text'
 import { reactive, computed, watch } from 'vue'
 import {
-  INGREDIENTS, RECIPES, WEATHERS, CUSTOMER_FACES, UPGRADES, STEPS, LINES, REVIEWS, SHIPPERS, ORDER_NAMES, NEEDY, REGULARS, GENERIC_ORDERS, GENERIC_CHATS, BOND_LEVELS, bondLevel, COUNTER_REVIEWS, FAMILY_REVIEWS, randomLook, stepIngredient, GUEST_GROUPS, STARTER_RECIPES, UNLOCK_ORDER, funnyName,
+  INGREDIENTS, RECIPES, WEATHERS, CUSTOMER_FACES, UPGRADES, STEPS, LINES, REVIEWS, SHIPPERS, ORDER_NAMES, NEEDY, REGULARS, GENERIC_ORDERS, GENERIC_CHATS, BOND_LEVELS, bondLevel, COUNTER_REVIEWS, FAMILY_REVIEWS, randomLook, stepIngredient, GUEST_GROUPS, STARTER_RECIPES, UNLOCK_ORDER, funnyName, walkinPersona,
   DAY_LENGTH, OPEN_HOUR, CLOSE_HOUR, STAFF_WAGE, SHIPPER_WAGE, START_MONEY,
   ingredientById, recipeById, weatherById, moneyShort, recipeNeeds, pick,
   type IngredientId, type RecipeId, type UpgradeId, type WeatherId, type StepId, type ChatTopic, type Look,
 } from './data'
+import { voice, voiceTopic, type Gender, type Persona } from './voice'
 import { sfx, setDayFrac, setReportMode, preloadReport, audio } from './audio'
 import { hooks, type MetaDayResult } from './hooks'
 import { PREMISES, rareById, newMeta, RIVALS, type MetaSave } from './metaData'
@@ -100,6 +101,7 @@ export interface Customer {
   greeting: string // câu gọi món
   name?: string // tên vui của khách vãng lai
   look: Look // ngoại hình pixel
+  p?: Persona // xưng hô cố định của khách (voice.ts)
   chatted?: boolean
   chatBonus?: number // điểm thiện cảm từ tám chuyện (khách vãng lai)
 }
@@ -625,7 +627,7 @@ function tick(dt: number) {
   for (let i = ui.queue.length - 1; i >= 0; i--) {
     const c = ui.queue[i]
     c.patience -= dt
-    if (!c.line && c.needy === undefined && c.patience / c.maxPatience < 0.5) c.line = pick(groupById(c.group)?.impatient ?? LINES.impatient)
+    if (!c.line && c.needy === undefined && c.patience / c.maxPatience < 0.5) c.line = voice(pick(groupById(c.group)?.impatient ?? LINES.impatient), c.p)
     if (c.patience <= 0 && !isBrewing('cust', c.id)) {
       ui.queue.splice(i, 1)
       if (ui.talk?.custId === c.id) ui.talk = null
@@ -637,7 +639,7 @@ function tick(dt: number) {
       ui.stats.angry++
       changeRep(-2)
       float('😡 Bỏ đi', 'bad')
-      const line = pick(LINES.angry)
+      const line = voice(pick(LINES.angry), c.p)
       if (ui.queue.length === 0 || i === 0) bus.emit({ type: 'angry', id: c.id, line })
       else toast(`${c.face} ${line}`, 'say', 2800)
       sfx('angry')
@@ -731,8 +733,8 @@ function spawnCustomer() {
     const R = rareById[rareId]
     const recipe = chooseRecipe().id
     const maxP = 75 * (1 + 0.1 * save.upgrades.decor)
-    push({ id: nextId(), face: '✨', recipe, patience: maxP, maxPatience: maxP, rare: R.id, name: R.name, look: R.look,
-      greeting: R.greet.replace('{drink}', recipeById[recipe].name) })
+    push({ id: nextId(), face: '✨', recipe, patience: maxP, maxPatience: maxP, rare: R.id, name: R.name, look: R.look, p: R.p,
+      greeting: voice(R.greet, R.p).replace('{drink}', recipeById[recipe].name) })
     sfx('bell')
     return
   }
@@ -745,8 +747,8 @@ function spawnCustomer() {
     if (save.prices[recipe] / fairPrice(recipe) < 1.5) {
       const lvl = bondLevel(save.bonds[r.id] ?? 0)
       const maxP = 68 * (1 + 0.1 * save.upgrades.decor) * (1 + lvl * 0.15)
-      push({ id: nextId(), face: r.face, recipe, patience: maxP, maxPatience: maxP, regular: r.id, look: r.look,
-        greeting: r.greet[lvl].replace('{drink}', recipeById[recipe].name) })
+      push({ id: nextId(), face: r.face, recipe, patience: maxP, maxPatience: maxP, regular: r.id, look: r.look, p: r.p,
+        greeting: voice(r.greet[lvl], r.p).replace('{drink}', recipeById[recipe].name) })
       sfx('bell')
       return
     }
@@ -766,16 +768,21 @@ function spawnCustomer() {
   if (Math.random() < 0.6) {
     const G = pickGuestGroup()
     const P = G.people ? pick(G.people) : null
-    const look = P?.look ?? G.look()
+    // giới tính → tên → xưng hô → ngoại hình: luôn khớp nhau
+    const g: Gender = P?.p.g ?? (G.f.length && (!G.m.length || Math.random() < 0.5) ? 'f' : 'm')
+    const name = P?.name ?? pick(g === 'f' ? G.f : G.m)
+    const p = P?.p ?? G.persona(g, name)
+    const look = P?.look ?? G.look(g)
     const maxP = maxPatience * G.patience
-    push({ id: nextId(), face: pick(CUSTOMER_FACES), recipe: choice.id, patience: maxP, maxPatience: maxP, look, group: G.id,
-      name: P?.name ?? pick(G.names), album: P?.album, greeting: pick(P?.greet ?? G.greet).replace('{drink}', drink) })
+    push({ id: nextId(), face: pick(CUSTOMER_FACES), recipe: choice.id, patience: maxP, maxPatience: maxP, look, group: G.id, p,
+      name, album: P?.album, greeting: voice(pick(P?.greet ?? G.greet), p).replace('{drink}', drink) })
     sfx('bell')
     return
   }
-  const look = randomLook()
-  push({ id: nextId(), face: pick(CUSTOMER_FACES), recipe: choice.id, patience: maxPatience, maxPatience, look, name: funnyName(look),
-    greeting: pick(GENERIC_ORDERS).replace('{drink}', drink) })
+  const g: Gender = Math.random() < 0.5 ? 'f' : 'm'
+  const p = walkinPersona(g)
+  push({ id: nextId(), face: pick(CUSTOMER_FACES), recipe: choice.id, patience: maxPatience, maxPatience, look: randomLook(g), name: funnyName(g), p,
+    greeting: voice(pick(GENERIC_ORDERS), p).replace('{drink}', drink) })
   sfx('bell')
 }
 
@@ -857,7 +864,7 @@ function completeWalkIn(c: Customer, perfect: boolean, byStaff: boolean, mistake
     // khách du lịch review theo kiểu riêng của nhóm
     if (G && stars >= 4 && Math.random() < 0.75) text = pick(G.good)
     if (G && stars <= 3 && Math.random() < 0.75) text = pick(G.meh)
-    text = text.replace('{drink}', r.name.toLowerCase())
+    text = voice(text, c.p).replace('{drink}', r.name.toLowerCase())
     if (R && stars >= 4) text = R.thanks
     const name = c.regular ? REGULARS.find((x) => x.id === c.regular)!.name : c.name ?? pick(ORDER_NAMES)
     save.reviews.unshift({ id: nextId(), name, stars, text, recipe: c.recipe, day: save.day, src: 'quan' })
@@ -944,8 +951,10 @@ export function talkChat() {
   if (!t || !c || c.chatted) return
   const reg = c.regular ? REGULARS.find((r) => r.id === c.regular) : undefined
   const G = groupById(c.group)
-  const topics = reg ? reg.chats : G?.chats.length && Math.random() < 0.75 ? G.chats : GENERIC_CHATS
-  t.topic = pick(topics)
+  const person = G?.people?.find((x) => x.name === c.name)
+  const own = person?.chats.length ? person.chats : G?.chats ?? []
+  const topics = reg ? reg.chats : own.length && Math.random() < 0.75 ? own : GENERIC_CHATS
+  t.topic = voiceTopic(pick(topics), c.p)
   t.mode = 'chat'
   c.chatted = true
   c.patience = Math.max(1, c.patience - 2) // tám chuyện tốn thời gian

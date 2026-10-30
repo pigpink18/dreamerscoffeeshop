@@ -1,6 +1,7 @@
 // Dữ liệu cho phần chơi dài hạn: mặt bằng, quán đối thủ, nhiệm vụ, thành tựu, album, đồ cho Cáo, công thức bí mật.
 // File này KHÔNG import store để tránh vòng lặp import.
 import type { Look, RecipeId, WeatherId } from './data'
+import { xung, type Persona } from './voice'
 
 // ---------- Mặt bằng ----------
 export interface Premise {
@@ -80,16 +81,17 @@ export interface RareCustomer {
   beans: number
   tip: number
   hint?: RecipeId // tặng gợi ý công thức bí mật
+  p: Persona // xưng hô
 }
 export const RARE: RareCustomer[] = [
-  { id: 'cuHN', name: 'Ông Cụ Phố Cổ', look: { skin: '#e2b48c', hair: '#e8e4de', style: 'beret', shirt: '#5a6b8a', acc: ['glasses', 'beard'] }, greet: 'Cháu ơi, ở đây có cà phê kiểu Hà Nội không? Thôi cho ông ly {drink} vậy.', thanks: 'Ngon. Gợi ý cho cháu: trứng đánh bông với cà phê, khuấy đều… nhớ Hà Nội ghê!', from: 0, to: 0.35, chance: 0.05, beans: 6, tip: 20_000, hint: 'cafeTrung' },
-  { id: 'kim', name: 'Kim Chi Min', look: { skin: '#f6d9c4', hair: '#d9a0c8', style: 'bob', shirt: '#ffffff', accent: '#ff9aa8', acc: ['blush', 'hoops'] }, greet: 'Annyeong! Một {drink} nha, mình đang đi tour Đà Lạt 3 ngày 2 đêm!', thanks: 'Daebak! Ở Hàn không có ly nào ngon vậy đâu ✨', weather: ['cloudy', 'sunny'], chance: 0.04, beans: 5, tip: 30_000 },
-  { id: 'guitar', name: 'Tèo Guitar Đường Phố', look: { skin: '#d9a679', hair: '#2b1d16', style: 'messy', shirt: '#3a3a3a', acc: ['chain', 'earring'] }, greet: 'Cho anh ly {drink}, anh hát tặng quán một bài “Em ơi Đà Lạt”!', thanks: '♪ Đà Lạt ơi… quán này ngon quá trời ơi ♪', from: 0.7, to: 1, chance: 0.06, beans: 5, tip: 10_000 },
-  { id: 'phuot', name: 'Tuấn Phượt Thủ', look: { skin: '#c98d62', hair: '#3a2a20', style: 'helmet', shirt: '#e8873a', accent: '#d9534f', acc: ['shades', 'beard'] }, greet: 'Mới chạy 300 cây từ Sài Gòn lên, cho ly {drink} hồi sức với!', thanks: 'Đã! Gợi ý nè: cốt dừa + cà phê + đá đem xay, uống là quên đường về.', weather: ['rainy', 'cloudy'], chance: 0.05, beans: 6, tip: 15_000, hint: 'cafeDua' },
-  { id: 'coGiao', name: 'Cô Giáo Hiền Về Hưu', look: { skin: '#eac3a0', hair: '#9a9a9a', style: 'bun', shirt: '#a3c9a8', acc: ['glasses', 'scarf'] }, greet: 'Con cho cô ly {drink} ít ngọt thôi nhé, cô kiêng đường.', thanks: 'Con pha giỏi lắm. Hồi xưa cô hay pha cacao với sữa đặc khuấy rồi thêm đá cho học trò…', minDay: 3, chance: 0.05, beans: 6, tip: 10_000, hint: 'cacaoDa' },
-  { id: 'ma', name: 'Bóng Ma Sương Mù', look: { skin: '#e8eef4', hair: '#cfd8e0', style: 'long', shirt: '#dfe7ee', acc: ['blush'] }, greet: 'Ùuu… một ly {drink}… nóng… ùuu…', thanks: 'Ùuu… ngon quá… sương mù xin chỉ: cà phê, kem trứng, cacao, kem tươi… ùuu', weather: ['rainy'], from: 0.75, to: 1, chance: 0.08, beans: 12, tip: 0, hint: 'suongMu' },
-  { id: 'dau', name: 'Chú Năm Vườn Dâu', look: { skin: '#c98d62', hair: '#2b2b2b', style: 'nonla', shirt: '#6aa84f', acc: ['mustache'] }, greet: 'Chú mới hái dâu xong, cho ly {drink} giải khát con!', thanks: 'Mai chú mang dâu xuống biếu. Matcha mà lắc với cốt dừa cũng hợp lắm nghe!', weather: ['sunny', 'hot'], from: 0.1, to: 0.6, chance: 0.05, beans: 5, tip: 20_000, hint: 'matchaDua' },
-  { id: 'reviewer', name: 'Food Reviewer Triệu View', look: { skin: '#f3cba8', hair: '#f2c14e', style: 'slick', shirt: '#2e3f6e', acc: ['shades', 'chain'] }, greet: 'Xin chào cả nhà, hôm nay mình review quán này! Cho mình {drink} nhé.', thanks: 'Quán này 10 điểm không có nhưng! Clip lên xu hướng là quán đông nha.', minDay: 5, chance: 0.03, beans: 10, tip: 50_000 },
+  { id: 'cuHN', p: xung.ong(), name: 'Ông Cụ Phố Cổ', look: { skin: '#e2b48c', hair: '#e8e4de', style: 'beret', shirt: '#5a6b8a', acc: ['glasses', 'beard'] }, greet: 'Cháu ơi, ở đây có cà phê kiểu Hà Nội không? Thôi cho ông ly {drink} vậy.', thanks: 'Ngon. Gợi ý cho cháu: trứng đánh bông với cà phê, khuấy đều… nhớ Hà Nội ghê!', from: 0, to: 0.35, chance: 0.05, beans: 6, tip: 20_000, hint: 'cafeTrung' },
+  { id: 'kim', p: xung.minh('f'), name: 'Kim Chi Min', look: { skin: '#f6d9c4', hair: '#d9a0c8', style: 'bob', shirt: '#ffffff', accent: '#ff9aa8', acc: ['blush', 'hoops'] }, greet: 'Annyeong! Một {drink} nha, mình đang đi tour Đà Lạt 3 ngày 2 đêm!', thanks: 'Daebak! Ở Hàn không có ly nào ngon vậy đâu ✨', weather: ['cloudy', 'sunny'], chance: 0.04, beans: 5, tip: 30_000 },
+  { id: 'guitar', p: xung.anh(), name: 'Tèo Guitar Đường Phố', look: { skin: '#d9a679', hair: '#2b1d16', style: 'messy', shirt: '#3a3a3a', acc: ['chain', 'earring'] }, greet: 'Cho anh ly {drink}, anh hát tặng quán một bài “Em ơi Đà Lạt”!', thanks: '♪ Đà Lạt ơi… quán này ngon quá trời ơi ♪', from: 0.7, to: 1, chance: 0.06, beans: 5, tip: 10_000 },
+  { id: 'phuot', p: xung.anh(), name: 'Tuấn Phượt Thủ', look: { skin: '#c98d62', hair: '#3a2a20', style: 'helmet', shirt: '#e8873a', accent: '#d9534f', acc: ['shades', 'beard'] }, greet: 'Mới chạy 300 cây từ Sài Gòn lên, cho ly {drink} hồi sức với!', thanks: 'Đã! Gợi ý nè: cốt dừa + cà phê + đá đem xay, uống là quên đường về.', weather: ['rainy', 'cloudy'], chance: 0.05, beans: 6, tip: 15_000, hint: 'cafeDua' },
+  { id: 'coGiao', p: xung.co(), name: 'Cô Giáo Hiền Về Hưu', look: { skin: '#eac3a0', hair: '#9a9a9a', style: 'bun', shirt: '#a3c9a8', acc: ['glasses', 'scarf'] }, greet: 'Con cho cô ly {drink} ít ngọt thôi nhé, cô kiêng đường.', thanks: 'Con pha giỏi lắm. Hồi xưa cô hay pha cacao với sữa đặc khuấy rồi thêm đá cho học trò…', minDay: 3, chance: 0.05, beans: 6, tip: 10_000, hint: 'cacaoDa' },
+  { id: 'ma', p: xung.custom('f', 'ta', 'người', 'người', 'tôi'), name: 'Bóng Ma Sương Mù', look: { skin: '#e8eef4', hair: '#cfd8e0', style: 'long', shirt: '#dfe7ee', acc: ['blush'] }, greet: 'Ùuu… một ly {drink}… nóng… ùuu…', thanks: 'Ùuu… ngon quá… sương mù xin chỉ: cà phê, kem trứng, cacao, kem tươi… ùuu', weather: ['rainy'], from: 0.75, to: 1, chance: 0.08, beans: 12, tip: 0, hint: 'suongMu' },
+  { id: 'dau', p: xung.chu(), name: 'Chú Năm Vườn Dâu', look: { skin: '#c98d62', hair: '#2b2b2b', style: 'nonla', shirt: '#6aa84f', acc: ['mustache'] }, greet: 'Chú mới hái dâu xong, cho ly {drink} giải khát con!', thanks: 'Mai chú mang dâu xuống biếu. Matcha mà lắc với cốt dừa cũng hợp lắm nghe!', weather: ['sunny', 'hot'], from: 0.1, to: 0.6, chance: 0.05, beans: 5, tip: 20_000, hint: 'matchaDua' },
+  { id: 'reviewer', p: xung.minh('m'), name: 'Food Reviewer Triệu View', look: { skin: '#f3cba8', hair: '#f2c14e', style: 'slick', shirt: '#2e3f6e', acc: ['shades', 'chain'] }, greet: 'Xin chào cả nhà, hôm nay mình review quán này! Cho mình {drink} nhé.', thanks: 'Quán này 10 điểm không có nhưng! Clip lên xu hướng là quán đông nha.', minDay: 5, chance: 0.03, beans: 10, tip: 50_000 },
 ]
 export const rareById = Object.fromEntries(RARE.map((r) => [r.id, r])) as Record<string, RareCustomer>
 
