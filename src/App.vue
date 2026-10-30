@@ -15,7 +15,12 @@ import IntroStory from './components/IntroStory.vue'
 
 const main = ref<HTMLElement | null>(null)
 // đổi tab → cuộn lên đầu (tránh mất thanh chọn mục ở trên cùng)
-watch(() => [ui.tab, ui.phase], () => nextTick(() => main.value?.scrollTo({ top: 0 })))
+// Kéo về đầu NGAY TRƯỚC khi đổi giao diện (lúc vùng còn cuộn được): nếu để khoá overflow rồi mới cuộn,
+// Safari iPhone giữ vùng chạm ở vị trí cũ → bấm nút phải bấm lệch / không ăn.
+watch(() => [ui.tab, ui.phase], () => {
+  if (main.value) main.value.scrollTop = 0
+  nextTick(() => { if (main.value) main.value.scrollTop = 0 })
+}, { flush: 'pre' })
 const views = { shop: ShopView, stock: StockView, menu: MenuView, compete: CompeteView, app: BookView, upgrade: UpgradeView }
 </script>
 
@@ -54,6 +59,7 @@ const views = { shop: ShopView, stock: StockView, menu: MenuView, compete: Compe
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  overflow-anchor: none;
   padding: 12px 14px 24px;
 }
 /* đang bán: màn hình cố định, không cuộn – cảnh quán tự co cho vừa */
