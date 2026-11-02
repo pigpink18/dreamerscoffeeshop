@@ -7,11 +7,12 @@ export type ActionId = 'chiet' | 'lac' | 'xay' | 'khuay'
 export type StepId = Exclude<IngredientId, 'cafe'> | ActionId
 export type RecipeId = 'denDa' | 'suaDa' | 'bacXiu' | 'latte' | 'americano' | 'traDao' | 'matchaLatte' | 'cafeMuoi' | 'traDaoKem' | 'matchaKemMuoi' | 'matchaXay'
   | 'cafeDua' | 'cafeTrung' | 'cacaoDa' | 'matchaDua' | 'cacaoKemMuoi' | 'suongMu'
+  | 'latteNoel' | 'cacaoNoel'
 export type UpgradeId = 'staff' | 'machine' | 'decor' | 'sign' | 'freezer' | 'shipper' | 'green' | 'farmer'
 export type WeatherId = 'sunny' | 'hot' | 'cloudy' | 'rainy'
 
 export type HairStyle = 'short' | 'long' | 'bun' | 'messy' | 'bob' | 'shoulder' | 'spiky' | 'nonla' | 'helmet' | 'hardhat' | 'cap' | 'beret' | 'slick' | 'afro' | 'combover' | 'mohawk' | 'curlers' | 'sunhat'
-export type Acc = 'glasses' | 'tie' | 'collar' | 'hoodie' | 'beard' | 'blush' | 'earring' | 'shades' | 'chain' | 'unibrow' | 'mustache' | 'lipstick' | 'catglasses' | 'bottleglasses' | 'nosering' | 'hoops' | 'scarf' | 'tattoobrow' | 'goldtooth'
+export type Acc = 'santa' | 'glasses' | 'tie' | 'collar' | 'hoodie' | 'beard' | 'blush' | 'earring' | 'shades' | 'chain' | 'unibrow' | 'mustache' | 'lipstick' | 'catglasses' | 'bottleglasses' | 'nosering' | 'hoops' | 'scarf' | 'tattoobrow' | 'goldtooth'
 /** Ngoại hình nhân vật pixel */
 export interface Look { skin: string; hair: string; style: HairStyle; shirt: string; accent?: string; acc?: Acc[] }
 
@@ -35,6 +36,7 @@ export interface Recipe {
   coffee: boolean // có dùng cà phê (ảnh hưởng nâng cấp nông dân)
   family: 'coffee' | 'matcha' | 'tea'
   secret?: boolean // công thức bí mật: tự mò ra ở Phòng thử món
+  season?: 'xmas' // món theo mùa: tự có trong menu khi đang mùa, hết mùa tự gỡ (season.ts)
 }
 
 export interface Upgrade {
@@ -117,6 +119,9 @@ export const RECIPES: Recipe[] = [
   { id: 'cacaoDa', name: 'Ca cao sữa đá', icon: '🍫', steps: ['ly', 'cacao', 'suaDac', 'khuay', 'da'], fairPrice: 35_000, unlockCost: 0, popularity: 1.3, hotBonus: 0.6, coffee: false, family: 'tea', secret: true },
   { id: 'matchaDua', name: 'Matcha cốt dừa', icon: '🍵', steps: ['ly', 'da', 'matcha', 'dua', 'lac'], fairPrice: 49_000, unlockCost: 0, popularity: 1.4, hotBonus: 0.8, coffee: false, family: 'matcha', secret: true },
   { id: 'cacaoKemMuoi', name: 'Cacao kem muối', icon: '🍫', steps: ['ly', 'da', 'cacao', 'suaTuoi', 'lac', 'kem'], fairPrice: 49_000, unlockCost: 0, popularity: 1.3, hotBonus: 0.5, coffee: false, family: 'tea', secret: true },
+  // món Giáng Sinh: có sẵn trong mùa Noel, khách gọi nhiều, hết mùa tự gỡ khỏi menu
+  { id: 'latteNoel', name: 'Latte quế Noel', icon: '🎄', steps: ['ly', 'chiet', 'suaTuoi', 'syrup', 'kemTuoi'], fairPrice: 45_000, unlockCost: 0, popularity: 1.8, hotBonus: 0, coffee: true, family: 'coffee', season: 'xmas' },
+  { id: 'cacaoNoel', name: 'Cacao nóng Giáng Sinh', icon: '🎅', steps: ['ly', 'cacao', 'suaTuoi', 'khuay', 'kemTuoi'], fairPrice: 42_000, unlockCost: 0, popularity: 1.8, hotBonus: 0, coffee: false, family: 'tea', season: 'xmas' },
   { id: 'suongMu', name: 'Sương Mù Đà Lạt', icon: '🌫️', steps: ['ly', 'chiet', 'trung', 'cacao', 'kemTuoi'], fairPrice: 65_000, unlockCost: 0, popularity: 1.8, hotBonus: 0, coffee: true, family: 'coffee', secret: true },
 ]
 /** Món có sẵn từ đầu & thứ tự món mới được tặng sau mỗi ngày bán */

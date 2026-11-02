@@ -68,7 +68,7 @@ const views = { shop: ShopView, stock: StockView, menu: MenuView, compete: Compe
   padding: 12px 14px 24px;
 }
 /* đang bán: màn hình cố định, không cuộn – cảnh quán tự co cho vừa */
-.content.locked { overflow: hidden; display: flex; flex-direction: column; padding-top: 8px; padding-bottom: 8px; }
+.content.locked { overflow: hidden; display: flex; flex-direction: column; padding: 8px 6px; } /* đang bán: lề 2 bên hẹp để cảnh quán to hơn */
 .sheet-enter-active, .sheet-leave-active { transition: opacity 0.25s; }
 .sheet-enter-from, .sheet-leave-to { opacity: 0; }
 </style>

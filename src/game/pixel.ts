@@ -437,7 +437,23 @@ export function drawPerson(c: Ctx, L: Look, x: number, y: number, mood: Mood, bl
       px(c, x + 4, y + 9, 1, 4, '#b99a52'); px(c, x + 11, y + 9, 1, 4, '#b99a52')
       break
   }
+  if (acc.includes('santa') && !HAT_STYLES.includes(L.style)) drawSantaHat(c, x, y) // mùa Noel
 }
+/** Mũ Noel đội lên đầu nhân vật drawPerson (x, y = góc trên trái của nhân vật) */
+export function drawSantaHat(c: Ctx, x: number, y: number) {
+  // chóp mũ đỏ gập sang phải
+  box(c, x + 2, y - 2, 12, 5, '#d8333a')
+  box(c, x + 4, y - 5, 8, 4, '#d8333a')
+  box(c, x + 9, y - 7, 6, 3, '#d8333a')
+  px(c, x + 3, y - 1, 10, 1, '#ef5a5f'); px(c, x + 5, y - 4, 5, 1, '#ef5a5f')
+  // quả bông
+  box(c, x + 14, y - 8, 4, 4, '#ffffff', '#b9b2a6')
+  // vành lông trắng
+  box(c, x + 1, y + 2, 14, 3, '#fbf6ec', '#b9b2a6')
+  px(c, x + 3, y + 3, 1, 1, '#ffffff'); px(c, x + 8, y + 3, 1, 1, '#ffffff'); px(c, x + 12, y + 3, 1, 1, '#ffffff')
+}
+/** kiểu tóc đã có mũ/nón to – không đội thêm mũ Noel */
+export const HAT_STYLES: Look['style'][] = ['afro', 'mohawk', 'sunhat', 'nonla', 'helmet', 'hardhat', 'cap', 'beret', 'curlers']
 
 // ---------- Cảnh quán ----------
 export const SCENE_W = 128

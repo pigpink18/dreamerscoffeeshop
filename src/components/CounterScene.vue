@@ -3,7 +3,7 @@ import { sceneW } from '../game/sceneSize'
 // Cảnh quầy pha chế pixel art: khách bước tới quầy, thiết bị, ly nước, hoạt ảnh.
 import { ref, computed, onMounted, onBeforeUnmount, onActivated, onDeactivated, watch } from 'vue'
 import {
-  ui, save, bus, openTalk, talkChat, talkReply, brewFromTalk, startBrew, canMake, stepMs, DAY_LENGTH, staffServeTime, skipPresent,
+  ui, save, bus, openTalk, talkChat, talkReply, brewFromTalk, startBrew, canMake, stepMs, DAY_LENGTH, staffServeTime, skipPresent, tutOn, comboRate,
   type Customer, type GameEvent,
 } from '../game/store'
 import { drawSign, SIGN_W } from '../game/sign'
@@ -11,12 +11,16 @@ import TypeText from './TypeText.vue'
 import { noEmoji } from '../game/emoji'
 import PixelIcon from './ui/PixelIcon.vue'
 import { tick } from '../game/audio'
+import { coinsFly, sparkle, flash, popText, type Pt } from '../game/fx'
+import { moneyShort } from '../game/data'
 import { recipeById, REGULARS, NEEDY, BOND_LEVELS, bondLevel, STEPS, GUEST_GROUPS, type StepId } from '../game/data'
 import {
   SCENE_W, SCENE_H, LAYOUT, COUNTER_Y, images, loadImages, drawRoom, drawCounter, drawCup, drawPerson, iconUrl,
   emptyCup, px, espressoKey, drawPlant, drawLights, drawBunting, drawOpenSign, drawPoster, drawCat, drawFridge, drawSack, drawGreen, drawScooter, drawBarista, drawCorgi,
   type CupLook, type Mood,
 } from '../game/pixel'
+import { isXmasSeason, drawXmasTree } from '../game/xmas'
+import { drawCeiling, drawFloor, drawFloorProps } from '../game/depth'
 import { drawRoomMid, drawRoomBig, drawCounterMid, drawCounterBig, drawStools, drawDecorItems, drawSouvenirShelf } from '../game/rooms'
 import { rareById, GOODS } from '../game/metaData'
 const goodName = (id: string) => GOODS.find((g) => g.id === id)?.name ?? id
@@ -103,8 +107,42 @@ watch(patSecs, (n, o) => { if (patLevel.value === 'low' && n < o && n > 0 && !ui
 const ticker = computed(() => (ui.toasts.length ? ui.toasts[ui.toasts.length - 1] : null))
 const waiting = computed(() => Math.max(0, ui.queue.length - (actorView.value && cur.value ? 1 : 0)))
 
+/** đổi toạ độ trong cảnh pixel (128x92) sang toạ độ màn hình – để bắn hiệu ứng đúng chỗ */
+function scenePt(sx: number, sy: number): Pt {
+  const r = cv.value?.getBoundingClientRect()
+  if (!r) return { x: innerWidth / 2, y: innerHeight / 3 }
+  return { x: r.left + (sx / SCENE_W) * r.width, y: r.top + ((sy + geo.top) / geo.H) * r.height }
+}
+const custPt = () => scenePt((actor?.x ?? LAYOUT.customerX) + 8, LAYOUT.customerY + 12)
+// ---- combo + giờ cao điểm ----
+const comboKey = ref(0) // đổi key để huy hiệu combo nảy lại mỗi lần tăng
+const rushBanner = ref<null | { text: string; sub: string; kind: 'start' | 'win' }>(null)
+let rushTimer = 0
+function showRush(text: string, sub: string, kind: 'start' | 'win') {
+  rushBanner.value = { text, sub, kind }
+  clearTimeout(rushTimer)
+  rushTimer = window.setTimeout(() => (rushBanner.value = null), 2400)
+}
+
 function onEvent(e: GameEvent) {
   const now = performance.now()
+  if (e.type === 'combo') {
+    comboKey.value++
+    const at = scenePt(SCENE_W - 22, 14)
+    if (e.n % 5 === 0) { popText(`COMBO x${e.n}!`, scenePt(SCENE_W / 2, 30)); flash(); sparkle(at, 20) } else sparkle(at, 8)
+    return
+  }
+  if (e.type === 'comboBreak') { popText(`VỠ COMBO x${e.n}`, scenePt(SCENE_W / 2, 34), 'red'); return }
+  if (e.type === 'rush') {
+    if (e.on) showRush('GIỜ CAO ĐIỂM!', 'Khách tới dồn dập · đừng để ai bỏ về để nhận thưởng', 'start')
+    else if (e.ok) { showRush('VƯỢT CAO ĐIỂM!', `Không ai bỏ về · thưởng +${moneyShort(e.bonus ?? 0)}`, 'win'); flash('rgba(160, 255, 200, 0.35)'); coinsFly(scenePt(SCENE_W / 2, 40), 8) }
+    return
+  }
+  if (e.type === 'served' && actor && actor.id === e.id) {
+    const at = custPt()
+    if (!e.needy) coinsFly(at, e.stars >= 5 ? 5 : e.stars >= 4 ? 3 : 2)
+    if (e.stars >= 5 || e.needy) sparkle(at, e.needy ? 12 : 16, e.needy ? ['#ff9aa8', '#ff6b81', '#ffffff'] : undefined)
+  }
   if (e.type === 'step') {
     actStep = e.step
     actStart = now
@@ -129,6 +167,7 @@ watch(() => ui.present, (p) => {
     const b = p.cup
     lastCup = { cup: true, layers: [...b.layers], ice: b.ice, mixed: b.mixed, foam: b.foam, whip: b.whip, blended: b.blended, chunks: b.chunks, straw: true, lid: true, full: true }
     requestAnimationFrame(drawPresent)
+    if (b.mistakes === 0) setTimeout(() => sparkle(scenePt(SCENE_W / 2, SCENE_H / 2), 18), 120) // pha chuẩn: lấp lánh quanh ly
   }
 })
 
@@ -192,12 +231,22 @@ function frame(now: number) {
   raf = requestAnimationFrame(frame)
 }
 
+/** Cây thông Noel đứng trước quầy (phía khách), góc dưới – tránh bóng thoại của khách ở góc trên trái.
+ *  Mặt bằng 1 có kệ quà lưu niệm bên phải nên đặt cây bên trái. Vẽ sau cùng nên ngọn cây che nhẹ chân máy xay/máy pha. */
+const XMAS_SPOT: [number, number][] = [[101, 52], [0, 52], [101, 52]]
+
 function draw(now: number) {
   const c = ctx
   if (!c) return
   const t = now / 1000
   c.setTransform(scale, 0, 0, scale, 0, 0)
   c.imageSmoothingEnabled = false
+  // không gian thêm: trần phía trên + sàn trước quầy (depth.ts), rồi dịch cảnh gốc xuống dưới trần
+  const P0 = save.meta.premise
+  const floorH = geo.H - geo.top - SCENE_H
+  drawCeiling(c, geo.top, P0, now / 1000, isXmasSeason())
+  drawFloor(c, geo.top + SCENE_H, floorH, P0)
+  c.setTransform(scale, 0, 0, scale, 0, geo.top * scale)
   const dayFrac = ui.phase === 'open' ? ui.time / DAY_LENGTH : 0.15
   const U = save.upgrades
   const P = save.meta.premise
@@ -246,12 +295,14 @@ function draw(now: number) {
   else { drawCounter(c); drawSign(c, (SCENE_W - SIGN_W) / 2, COUNTER_Y + 6, t, night) }
   // đồ trên mặt quầy / thân quầy
   if (U.decor >= 1) drawPlant(c, 67, COUNTER_Y - 13)
-  if (U.decor >= 3 && P === 0) drawPlant(c, 112, COUNTER_Y + 12, true)
+  const xmas = isXmasSeason()
+  if (U.decor >= 3 && P === 0 && !xmas) drawPlant(c, 112, COUNTER_Y + 12, true) // mùa Noel: cây thông đứng chỗ này
   if (U.decor >= 4) drawCat(c, 96, COUNTER_Y - 7, t)
   if (U.farmer && P !== 2) drawSack(c, 22, COUNTER_Y + 13)
   if (U.green && P === 0) drawGreen(c, 101, COUNTER_Y + 10)
   // Cáo – corgi đồng sáng lập: ngủ khi quán đóng, đứng vẫy đuôi khi có khách vui
-  drawCorgi(c, P === 2 ? 78 : 2, SCENE_H - 18, t, ui.phase !== 'open' ? 'lie' : actor && (actor.mood === 'happy' || actor.mood === 'love') ? 'stand' : 'sit', !!actor && actor.mood !== 'angry', save.meta.wear)
+  const corgi = () => drawCorgi(c, P === 2 ? 78 : 2, SCENE_H - 18, t, ui.phase !== 'open' ? 'lie' : actor && (actor.mood === 'happy' || actor.mood === 'love') ? 'stand' : 'sit', !!actor && actor.mood !== 'angry', xmas && !save.meta.wear.neck ? { ...save.meta.wear, neck: 'scarf' } : save.meta.wear)
+  corgi()
   if (staffN >= 3) { px(c, 2, COUNTER_Y - 6, 9, 5, '#fffaf2'); px(c, 3, COUNTER_Y - 5, 7, 3, '#6f4e37') }
 
   // máy espresso + ly shot
@@ -318,15 +369,29 @@ function draw(now: number) {
   } else if (ui.phase === 'open' && !ui.present) {
     drawCup(c, emptyCup(), LAYOUT.cup.x, LAYOUT.cup.y)
   }
+  // đồ trên sàn + cây thông: có sàn thì cây đứng hẳn trên sàn góc phải, không thì đứng trước quầy
+  const treeOnFloor = xmas && floorH >= 20
+  drawFloorProps(c, SCENE_H, floorH, t, treeOnFloor)
+  if (treeOnFloor) drawXmasTree(c, 101, SCENE_H + Math.min(floorH - 3, 26) - 40, t, 'lg')
+  else if (xmas) {
+    const [tx, ty] = XMAS_SPOT[P] ?? XMAS_SPOT[0]
+    drawXmasTree(c, tx, ty, t, 'lg')
+    if (P === 1) corgi() // cây đứng chỗ Cáo nằm → vẽ lại Cáo ngồi trước gốc cây
+  }
 }
 
-const SCENE_PREF_W = 460 // độ rộng mong muốn của .scene-wrap (px)
+const SCENE_PREF_W = 488 // độ rộng tối đa của khung cảnh (px)
+/** Khung cảnh cố định tỉ lệ 488 : 256 (dẹt ngang): máy tính 488×256, điện thoại tự co theo bề ngang, không méo.
+ *  Cảnh gốc cao hơn tỉ lệ này nên phần tường trang trí phía trên được cắt bớt (geo.top âm). */
+const ASPECT = 256 / 488
+const geo = { top: 0, H: SCENE_H } // top: chiều cao trần thêm (âm = cắt tường) · H: chiều cao cả canvas (điểm ảnh cảnh)
+const geoTick = ref(0) // đổi khi khung đổi → toạ độ các lớp phủ cập nhật
 
-// Kích thước cảnh được KHOÁ sau khi đo: chỉ đo lại khi đổi chiều rộng màn hình / xoay máy / mở lại tab,
-// không co giãn theo nội dung bên dưới (pha chế, kệ hàng, thanh địa chỉ Safari ẩn/hiện…).
-let locked: { vw: number; vh: number; w: number } | null = null
+// Kích thước cảnh được KHOÁ sau khi đo: chỉ đo lại khi đổi màn hình hoặc khoảng trống đổi nhiều,
+// không co giãn theo nội dung nhỏ bên dưới (dòng hướng dẫn, thanh địa chỉ Safari ẩn/hiện…).
+let locked: { vw: number; vh: number; bh: number; w: number; top: number; H: number } | null = null
 
-function measure(): number {
+function measure(): { w: number; top: number; H: number } {
   const el = wrap.value!
   const box = el.parentElement
   const pw = box?.clientWidth || el.clientWidth
@@ -343,27 +408,34 @@ function measure(): number {
     }
     ph = page.clientHeight - others - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - parseFloat(cs.marginTop) - parseFloat(cs.marginBottom) - 8
   }
-  // Rộng tối đa SCENE_PREF_W px; nếu khung thấp/hẹp hơn thì co lại cho vừa (không bị cắt)
-  return Math.min(SCENE_PREF_W, pw, ph > 60 ? (ph * SCENE_W) / SCENE_H : pw)
+  let w = Math.min(SCENE_PREF_W, pw)
+  if (ph > 60 && w * ASPECT > ph) w = ph / ASPECT // màn quá thấp: thu nhỏ cả khung (giữ tỉ lệ)
+  const H = Math.round(SCENE_W * ASPECT) // chiều cao cảnh (điểm ảnh) theo tỉ lệ khung
+  return { w, top: H - SCENE_H, H }
 }
 
 function resize(force: boolean | Event = false) {
   const el = wrap.value, canvas = cv.value
   if (!el || !canvas) return
   const vw = window.innerWidth, vh = window.innerHeight
-  const big = !locked || vw !== locked.vw || Math.abs(vh - locked.vh) > 120
-  if (force === true || big) locked = { vw, vh, w: measure() }
-  const w = locked!.w
+  // đo lại khi đổi màn hình, hoặc khi khoảng trống cho cảnh đổi nhiều (khay thêm hàng nguyên liệu, kệ bánh…)
+  const bh = el.parentElement?.clientHeight ?? 0
+  // (không đo lại khi đang pha / đang trao ly – tránh cảnh xê dịch ngay lúc đang bấm)
+  const busy = !!ui.brew || !!ui.present
+  const big = !locked || vw !== locked.vw || Math.abs(vh - locked.vh) > 120 || (!busy && Math.abs(bh - locked.bh) > 40)
+  if (force === true || big) locked = { vw, vh, bh, ...measure() }
+  const { w, top, H } = locked!
   sceneW.value = w
+  geo.top = top; geo.H = H; geoTick.value++
   const dpr = window.devicePixelRatio || 1
   // vẽ ở độ phân giải nguyên (sắc nét) rồi co vừa khít khung bằng CSS
   scale = Math.max(1, Math.ceil((w * dpr) / SCENE_W))
   // chỉ gán lại khi kích thước đổi thật – gán canvas.width sẽ xoá & cấp phát lại canvas (nặng, gây lag nút)
-  if (canvas.width !== SCENE_W * scale) { canvas.width = SCENE_W * scale; canvas.height = SCENE_H * scale }
-  const cw = `${Math.floor(w)}px`, ch = `${Math.floor((w * SCENE_H) / SCENE_W)}px`
-  if (canvas.style.width !== cw) canvas.style.width = cw
-  if (canvas.style.height !== ch) canvas.style.height = ch
-  if (el.style.width !== cw) el.style.width = cw
+  if (canvas.width !== SCENE_W * scale || canvas.height !== H * scale) { canvas.width = SCENE_W * scale; canvas.height = H * scale }
+  const set = (st: CSSStyleDeclaration, key: 'width' | 'height', v: string) => { if (st[key] !== v) st[key] = v }
+  set(canvas.style, 'width', `${Math.floor(w)}px`)
+  set(canvas.style, 'height', `${Math.round(w * ASPECT)}px`) // đúng tỉ lệ 488:256
+  set(el.style, 'width', `${Math.floor(w)}px`)
   ctx = canvas.getContext('2d')
 }
 
@@ -392,7 +464,13 @@ onBeforeUnmount(() => {
 })
 
 const pctX = (x: number) => `${(x / SCENE_W) * 100}%`
-const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
+const pctY = (y: number) => (geoTick.value, `${((y + geo.top) / geo.H) * 100}%`)
+/** Bóng thoại nằm phía trên (sát mép trên vùng tường, ngay dưới trần) như bản gốc;
+ *  luôn chừa 14px cho nhãn tên nên không bị cắt ở mép trên, quá dài thì phần lời thoại tự cuộn */
+const bubbleStyle = computed(() => {
+  const top = `max(14px, ${pctY(6)})`
+  return { top, maxHeight: `calc(100% - ${top} - 8px)` }
+})
 </script>
 
 <template>
@@ -410,6 +488,15 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
       <span v-if="patLevel === 'low'" class="pbang">!</span>
     </div>
 
+    <!-- Combo: chuỗi ly pha chuẩn liên tiếp (góc trên phải) -->
+    <div v-if="ui.phase === 'open' && ui.combo >= 2" :key="comboKey" class="combo" :class="{ hot: ui.combo >= 5, fire: ui.combo >= 10 }">
+      <span class="cx">COMBO</span><b>x{{ ui.combo }}</b><small>+{{ Math.round(comboRate(ui.combo) * 100) }}%</small>
+    </div>
+    <div v-if="ui.phase === 'open' && ui.rush" class="rush-chip">CAO ĐIỂM</div>
+    <Transition name="rush">
+      <div v-if="rushBanner" class="rush-banner" :class="rushBanner.kind"><b>{{ rushBanner.text }}</b><small>{{ rushBanner.sub }}</small></div>
+    </Transition>
+
     <!-- Dòng thông báo nhỏ ở đáy cảnh (thay hộp thông báo xanh to che nút) -->
     <Transition name="tick"><div v-if="ticker" :key="ticker.id" class="ticker" :class="ticker.kind">{{ ticker.text }}</div></Transition>
 
@@ -423,13 +510,13 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
 
     <!-- Bong bóng thoại -->
     <Transition name="pop" mode="out-in">
-      <div v-if="review" key="rv" class="bubble review">
+      <div v-if="review" key="rv" class="bubble review" :style="bubbleStyle">
         <div class="stars"><PixelIcon v-for="i in 5" :key="i" :name="i <= review.stars ? 'star' : 'starOff'" :size="2" /></div>
         <div class="txt"><TypeText :text="`“${review.text}”`" :pitch="640" :speed="26" /></div>
         <div class="money" v-if="!review.needy">+{{ (review.price / 1000).toFixed(0) }}k<span v-if="review.tip"> · tip {{ (review.tip / 1000).toFixed(0) }}k</span></div>
       </div>
-      <div v-else-if="angry" key="an" class="bubble angry"><div class="txt"><TypeText :text="`“${angry}”`" :pitch="340" :speed="24" /></div></div>
-      <div v-else-if="cur && actorView?.state === 'idle'" :key="'c' + cur.id + (talkHere?.mode ?? '') + (brewingHere ? 'b' : '')" class="bubble" @click="typer?.skip()">
+      <div v-else-if="angry" key="an" class="bubble angry" :style="bubbleStyle"><div class="txt"><TypeText :text="`“${angry}”`" :pitch="340" :speed="24" /></div></div>
+      <div v-else-if="cur && actorView?.state === 'idle'" :style="bubbleStyle" :key="'c' + cur.id + (talkHere?.mode ?? '') + (brewingHere ? 'b' : '')" class="bubble" @click="typer?.skip()">
         <div class="who" :class="whoKind">{{ who }}</div>
         <div class="txt" :class="{ hurry: cur.line && cur.patience / cur.maxPatience < 0.5 && !talkHere }"><TypeText ref="typer" :text="bubbleText" :pitch="voice" :instant="lineInstant" @done="onTyped" /></div>
         <div v-if="cur.addon" class="addon" :class="{ done: cur.addonDone }"><img :src="iconUrl(cur.addon)" alt="" /><span>{{ cur.addonDone ? 'Đã trao' : 'Kèm' }}: <b>{{ goodName(cur.addon) }}</b></span></div>
@@ -437,18 +524,18 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
         <div v-else-if="talkHere?.mode === 'chat'" class="choices">
           <button v-for="(r, i) in talkHere.topic!.replies" :key="i" :class="{ sassy: r.sassy }" @click="talkReply(i)"><PixelIcon :name="r.sassy ? 'megaphone' : 'chat'" :size="2" /> <span v-if="r.sassy" class="sass">XÉO SẮC</span> {{ noEmoji(r.text) }}</button>
         </div>
-        <div v-else-if="!ui.present" class="choices">
-          <button class="main" :class="{ dis: !canMake(cur.recipe) }" @click="talkHere ? brewFromTalk() : startBrew('cust', cur.id)">
+        <div v-else-if="!ui.present" class="choices row">
+          <button class="main" :class="{ dis: !canMake(cur.recipe), guide: tutOn && !ui.brew }" @click="talkHere ? brewFromTalk() : startBrew('cust', cur.id)">
             <PixelIcon name="cup" :size="2" /> {{ cur.needy !== undefined ? 'Dạ có, con pha liền!' : `Nhận order: ${recipeById[cur.recipe].name}` }}
           </button>
-           <button v-if="!cur.chatted && cur.needy === undefined" @click="talkHere ? talkChat() : (openTalk(cur.id), talkChat())"><PixelIcon name="chat" :size="2" /> Tám chuyện xíu</button>
+           <button v-if="!cur.chatted && cur.needy === undefined" @click="talkHere ? talkChat() : (openTalk(cur.id), talkChat())"><PixelIcon name="chat" :size="2" /> Tám</button>
         </div>
       </div>
     </Transition>
 
     <!-- Ly thành phẩm -->
     <Transition name="present">
-      <div v-if="ui.present" class="present" @click="skipPresent">
+      <div v-if="ui.present" class="present" :class="{ guide: tutOn }" @click="skipPresent">
         <div class="rays" />
         <canvas ref="presentCv" width="200" height="260" class="pixel big-cup" />
         <div class="pname"><PixelIcon name="star" :size="2" /> {{ ui.present.target === 'cust' ? recipeById[ui.present.recipe].name : ui.present.name }} <PixelIcon name="star" :size="2" /></div>
@@ -457,7 +544,7 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
     </Transition>
 
     <TransitionGroup name="float" tag="div" class="floats">
-      <div v-for="f in ui.floats" :key="f.id" class="float" :class="f.kind" :style="{ left: f.x + '%', top: 30 + f.y + 'px' }">{{ f.text }}</div>
+      <div v-for="f in ui.floats" :key="f.id" class="float" :class="f.kind" :style="{ left: f.x + '%', top: `calc(${pctY(0)} + ${30 + f.y}px)` }">{{ f.text }}</div>
     </TransitionGroup>
   </div>
 </template>
@@ -471,8 +558,9 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
   background: #f4e1c6;
   box-shadow: var(--px-border), 0 7px 0 rgba(59, 42, 32, 0.3);
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
 }
+.scene-wrap > canvas { flex: none; }
 .scene-wrap.shake { animation: shake 0.3s; }
 @keyframes shake { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
 .pixel { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
@@ -519,6 +607,38 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
 .addon span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .addon.done { background: #e1f3ea; box-shadow: 0 0 0 2px #2f9e6b; animation: none; }
 @keyframes addonPulse { 50% { box-shadow: 0 0 0 2px #e0524a; } }
+.combo {
+  position: absolute; right: 5px; top: 5px; z-index: 4; pointer-events: none;
+  display: flex; align-items: baseline; gap: 3px; padding: 2px 6px 3px;
+  background: #3b2a20; color: #ffe27a; box-shadow: 0 0 0 2px #ffd23f, 0 3px 0 2px rgba(0, 0, 0, 0.3);
+  animation: comboPop 0.32s cubic-bezier(.3, 1.6, .5, 1);
+}
+.combo .cx { font-size: 9px; font-weight: 900; letter-spacing: 1px; color: #ffd8a0; }
+.combo b { font-size: 17px; font-weight: 900; line-height: 1; }
+.combo small { font-size: 9px; font-weight: 800; color: #9ff0be; }
+.combo.hot { background: #7a3410; box-shadow: 0 0 0 2px #ff9a3c, 0 0 12px 2px rgba(255, 154, 60, 0.6); }
+.combo.fire { background: #8e1b2c; box-shadow: 0 0 0 2px #ff5f52, 0 0 16px 4px rgba(255, 95, 82, 0.7); animation: comboPop 0.32s cubic-bezier(.3, 1.6, .5, 1), comboGlow 0.6s 0.32s ease-in-out infinite alternate; }
+@keyframes comboPop { from { transform: scale(1.7) rotate(-6deg); } }
+@keyframes comboGlow { to { filter: brightness(1.25); } }
+.rush-chip {
+  position: absolute; right: 5px; top: 30px; z-index: 4; pointer-events: none;
+  font-size: 9px; font-weight: 900; letter-spacing: 1px; color: #fff; background: #d8333a; padding: 2px 5px;
+  box-shadow: 0 0 0 2px #3b2a20; animation: rushBlink 0.7s steps(2) infinite;
+}
+@keyframes rushBlink { 50% { background: #ff6b4a; } }
+.rush-banner {
+  position: absolute; left: 0; right: 0; bottom: 22px; z-index: 6; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; padding: 6px 8px 7px;
+  background: repeating-linear-gradient(-45deg, #d8333a 0 10px, #b8262c 10px 20px);
+  box-shadow: 0 3px 0 #3b2a20, 0 -3px 0 #3b2a20;
+}
+.rush-banner.win { background: repeating-linear-gradient(-45deg, #2f9e6b 0 10px, #23845a 10px 20px); }
+.rush-banner b { font-size: 22px; font-weight: 900; letter-spacing: 2px; color: #fff3b0; text-shadow: 0 2px 0 #3b2a20, 2px 0 0 #3b2a20, -2px 0 0 #3b2a20; }
+.rush-banner small { font-size: 11px; font-weight: 800; color: #fff; }
+.rush-enter-active { animation: rushIn 0.35s cubic-bezier(.2, 1.4, .5, 1); }
+.rush-leave-active { transition: opacity 0.3s, transform 0.3s; }
+.rush-leave-to { opacity: 0; transform: translateX(40%); }
+@keyframes rushIn { from { transform: translateX(-110%) skewX(-12deg); } }
 .hud { position: absolute; right: 6px; bottom: 22px; display: flex; gap: 4px; pointer-events: none; z-index: 3; }
 .hchip, .hstaff { display: flex; align-items: center; gap: 3px; background: rgba(59, 42, 32, 0.9); color: #ffe8b8; font-size: 11px; font-weight: 900; padding: 2px 5px 3px; box-shadow: 0 0 0 2px #3b2a20; }
 .hstaff i { display: block; width: 16px; height: 4px; background: #5a4334; }
@@ -529,11 +649,11 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
 .bubble {
   --bd: #3b2a20; --paper: #fffaf0; --shade: #f1dfc4; --tag: #8a5a3c;
   position: absolute;
-  left: 4%;
-  top: 9%;
-  width: 54%;
+  left: 3%;
+  width: 60%;
+  display: flex; flex-direction: column;
   background: var(--paper);
-  padding: 9px 10px 8px;
+  padding: 10px 9px 8px;
   font-size: 13px;
   line-height: 1.35;
   color: #3b2a20;
@@ -560,7 +680,8 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
 .who.reg { --tag: #2f9e6b; }
 .who.rare { --tag: #7a4fd0; }
 .who.intl { --tag: #2e6fb0; }
-.txt { font-weight: 700; margin-top: 2px; min-height: 1.35em; cursor: pointer; }
+.txt { flex: 0 1 auto; font-weight: 700; margin-top: 2px; min-height: 1.35em; overflow-y: auto; cursor: pointer; }
+.bubble > :not(.txt) { flex: none; }
 .txt.hurry { color: #c0392b; }
 .skip-hint {
   margin-top: 5px; text-align: right; font-size: 10px; font-weight: 800; color: #b09276; cursor: pointer;
@@ -573,6 +694,9 @@ const pctY = (y: number) => `${(y / SCENE_H) * 100}%`
   background: #fff3dc; padding: 3px 7px; border: 2px dashed #d8b98d;
 }
 .choices { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; animation: choicesIn 0.22s ease-out; }
+.choices.row { flex-direction: row; align-items: stretch; gap: 7px; }
+.choices.row button { flex: none; padding: 6px 8px; }
+.choices.row button.main { flex: 1 1 auto; min-width: 0; line-height: 1.2; }
 @keyframes choicesIn { from { opacity: 0; transform: translateY(4px); } }
 .choices button {
   display: flex; align-items: center; gap: 6px;

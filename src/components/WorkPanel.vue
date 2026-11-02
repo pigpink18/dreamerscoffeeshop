@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Khay nguyên liệu + nút thao tác (chiết xuất, lắc, xay, khuấy, đổ bỏ)
 import { ref, computed } from 'vue'
-import { ui, save, brewStep, cancelBrew, startBrew, canMake, giveAddon } from '../game/store'
+import { ui, save, brewStep, cancelBrew, startBrew, canMake, giveAddon, tutOn } from '../game/store'
 import { GOODS, goodUnlocked } from '../game/metaData'
 import { recipeById, STEPS, type StepId, type IngredientId } from '../game/data'
 import { iconUrl, IMG_URL } from '../game/pixel'
@@ -47,6 +47,15 @@ const stockOf = (s: StepId) => (s === 'chiet' ? save.stock.cafe : STEPS[s].kind 
 const newOrders = computed(() => ui.orders.filter((o) => o.state === 'new'))
 const busyShipper = computed(() => ui.shippers.filter((s) => s.orderId !== null).length)
 
+/** hướng dẫn ly đầu tiên: nút cần bấm tiếp theo */
+const guideId = computed(() => (tutOn.value && ui.brew && !ui.brew.busy ? curStep.value : null))
+const tutText = computed(() => {
+  if (!tutOn.value) return ''
+  if (ui.present) return 'Chạm vào ly để trao cho khách!'
+  if (!ui.brew) return 'Khách đang chờ: bấm nút vàng “Nhận order” trên bóng thoại'
+  return curStep.value ? `Bấm nút đang sáng: ${STEPS[curStep.value].label} (làm đúng thứ tự từng bước)` : ''
+})
+
 function act(id: StepId | 'trash') {
   if (id === 'trash') cancelBrew()
   else brewStep(id)
@@ -77,6 +86,7 @@ function pickOrder(id: number) {
         </div>
       </template>
       <span v-else class="muted hint">Nhận order trên quầy để bắt đầu pha</span>
+      <div v-if="tutText" class="tut"><b>HƯỚNG DẪN</b> {{ tutText }}</div>
       <button v-if="save.upgrades.shipper" class="app-btn" :class="{ hot: newOrders.length }" @click="showOrders = !showOrders">
         <PixelIcon name="phone" :size="2" /> {{ newOrders.length }}<small v-if="busyShipper"> · <PixelIcon name="scooter" :size="2" />{{ busyShipper }}</small>
       </button>
@@ -95,7 +105,7 @@ function pickOrder(id: number) {
     </div>
 
     <div class="tray">
-      <button v-for="it in items" :key="it.id" class="item" :class="{ out: (stockOf(it.id) ?? 1) < 1 }" @pointerdown.prevent="brewStep(it.id)">
+      <button v-for="it in items" :key="it.id" class="item" :class="{ out: (stockOf(it.id) ?? 1) < 1, guide: guideId === it.id }" @pointerdown.prevent="brewStep(it.id)">
         <img :src="iconUrl(it.id)" class="pix ic" alt="" />
         <span class="lbl">{{ STEPS[it.id].label }}</span>
         <span class="qty">{{ stockOf(it.id) }}</span>
@@ -110,7 +120,7 @@ function pickOrder(id: number) {
     </div>
 
     <div class="actions">
-      <button v-for="a in ACTIONS" :key="a.id" class="action" :class="{ trash: a.id === 'trash' }" @pointerdown.prevent="act(a.id)">
+      <button v-for="a in ACTIONS" :key="a.id" class="action" :class="{ trash: a.id === 'trash', guide: guideId === a.id }" @pointerdown.prevent="act(a.id)">
         <img :src="a.img" class="pix aic" alt="" />
         <span>{{ a.label }}</span>
         <small v-if="a.id === 'chiet'">còn {{ save.stock.cafe }}</small>
@@ -133,7 +143,7 @@ function pickOrder(id: number) {
 .good:active { transform: translateY(2px); }
 .pix { image-rendering: pixelated; image-rendering: crisp-edges; }
 /* chiều cao cố định dù đang pha hay không → khung cảnh quán phía trên không bị to/nhỏ */
-.recipe { display: flex; flex-wrap: wrap; align-items: center; align-content: center; gap: 6px 8px;}
+.recipe { display: flex; flex-wrap: wrap; align-items: center; align-content: center; gap: 6px 8px; min-height: 50px; } /* giữ chỗ cố định cho dòng công thức: nhận order không làm khay/cảnh nhảy lên xuống */
 
 .rhead { display: flex; flex: 1 1 0; align-items: baseline; gap: 8px; min-width: 0; }
 .rname { font-weight: 900; font-size: 13px; white-space: nowrap; }
@@ -203,4 +213,16 @@ function pickOrder(id: number) {
   .lbl, .action small { display: none; }
   .item { min-height: 34px; }
 }
+/* màn thấp (iPhone SE, mini…): khay gọn lại để khung cảnh quán đủ chỗ, vẫn rộng bằng khay */
+@media (max-height: 720px) {
+  .tray { gap: 4px; padding: 4px; margin-top: 5px; }
+  .item { min-height: 38px; }
+  .ic { width: 24px; height: 24px; }
+  .shelf { margin-top: 5px; padding: 2px 6px; }
+  .actions { margin-top: 6px; gap: 4px; }
+  .aic { width: 22px; height: 22px; }
+}
+.tut { flex-basis: 100%; margin-top: 4px; padding: 4px 7px; font-size: 12px; font-weight: 700; color: #3b2a20; background: #ffe9a8; box-shadow: 0 0 0 2px #d99a2b; animation: tutIn 0.3s ease-out; }
+.tut b { font-size: 10px; letter-spacing: 1px; color: #fff; background: #d8333a; padding: 1px 4px; margin-right: 4px; }
+@keyframes tutIn { from { transform: translateY(-4px); opacity: 0; } }
 </style>

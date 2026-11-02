@@ -149,3 +149,31 @@ body {
 /* Ẩn thanh cuộn ở mọi vùng cuộn (vẫn vuốt cuộn được) – cho cảm giác app game */
 * { scrollbar-width: none; }
 *::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+/* ---------- Hiệu ứng thưởng (src/game/fx.ts) ---------- */
+#fx-layer { position: fixed; inset: 0; pointer-events: none; z-index: 200; overflow: hidden; }
+.fx-coin {
+  position: absolute; width: 12px; height: 12px;
+  background: #ffd23f;
+  box-shadow: inset -2px -2px 0 #d99a2b, inset 2px 2px 0 #fff3a8, 0 0 0 2px #6a4413;
+  image-rendering: pixelated;
+}
+.fx-coin::after { content: ''; position: absolute; left: 5px; top: 3px; width: 2px; height: 6px; background: #b8781c; }
+.fx-spark { position: absolute; width: 5px; height: 5px; box-shadow: 0 0 6px rgba(255, 240, 180, 0.9); }
+.fx-flash { position: absolute; inset: 0; }
+.fx-pop {
+  position: absolute; white-space: nowrap;
+  font-size: 22px; font-weight: 900; letter-spacing: 1px;
+  color: #ffe27a; text-shadow: 0 2px 0 #6a3d14, 2px 0 0 #6a3d14, -2px 0 0 #6a3d14, 0 -2px 0 #6a3d14, 0 4px 0 rgba(0, 0, 0, 0.35);
+}
+.fx-pop.red { color: #ffb0a6; text-shadow: 0 2px 0 #7d1a14, 2px 0 0 #7d1a14, -2px 0 0 #7d1a14, 0 -2px 0 #7d1a14; }
+.fx-pop.green { color: #b8ffd0; text-shadow: 0 2px 0 #1f5c3a, 2px 0 0 #1f5c3a, -2px 0 0 #1f5c3a, 0 -2px 0 #1f5c3a; }
+
+/* nút hướng dẫn: viền vàng nhấp nháy + mũi tên chỉ xuống */
+.guide { position: relative; z-index: 2; outline: 3px solid #ffd23f; outline-offset: 2px; animation: guidePulse 0.9s ease-in-out infinite; }
+.guide::before {
+  content: '▼'; position: absolute; left: 50%; top: -18px; transform: translateX(-50%);
+  color: #ffd23f; font-size: 14px; text-shadow: 0 2px 0 #6a3d14; animation: guideArrow 0.6s ease-in-out infinite alternate; pointer-events: none;
+}
+@keyframes guidePulse { 50% { outline-color: #fff6c8; outline-offset: 4px; filter: brightness(1.12); } }
+@keyframes guideArrow { to { transform: translate(-50%, -4px); } }

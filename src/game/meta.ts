@@ -132,12 +132,13 @@ function questText(q: Quest): string {
     case 'calm': return 'Không để quá 1 khách bỏ về'
     case 'tips': return `Nhận ${k(q.target)} tiền tip`
     case 'goods': return `Bán kèm ${q.target} món bánh / lưu niệm`
+    case 'combo': return `Đạt COMBO x${q.target} (pha chuẩn liên tiếp)`
   }
 }
 function makeQuests(): Quest[] {
   const L = Math.min(1, (save.day - 1) / 20)
   const prem = PREMISES[M().premise].customerMul
-  const kinds: QuestKind[] = ['serve', 'perfect', 'revenue', 'recipe', 'chat', 'boss', 'calm', 'tips']
+  const kinds: QuestKind[] = ['serve', 'perfect', 'revenue', 'recipe', 'chat', 'boss', 'calm', 'tips', 'combo']
   if (save.upgrades.shipper) kinds.push('app')
   if (M().premise >= 1) kinds.push('goods', 'goods')
   const chosen: QuestKind[] = []
@@ -152,6 +153,7 @@ function makeQuests(): Quest[] {
     if (kind === 'boss') { q.target = 3 + Math.round(L * 5); q.beans = 5 } // 'boss' = khách nước ngoài (giữ id cũ)
     if (kind === 'app') { q.target = Math.round(3 + L * 6); q.beans = 4 }
     if (kind === 'calm') { q.target = 1; q.beans = 6 }
+    if (kind === 'combo') { q.target = 3 + Math.round(L * 5); q.beans = 5 }
     if (kind === 'goods') { q.target = Math.round(3 + L * 9); q.beans = 5 }
     if (kind === 'tips') { q.target = Math.round((20_000 + L * 150_000) / 10_000) * 10_000; q.beans = 4 }
     q.text = questText(q)
@@ -324,6 +326,7 @@ export function initMeta() {
     bumpQuest('recipe', 1, i.recipe)
     setQuest('revenue', ui.stats.revenue)
     setQuest('tips', ui.stats.tips)
+    setQuest('combo', ui.stats.comboBest ?? 0)
     if (i.albumKey?.startsWith('rare:')) {
       const R = rareById[i.albumKey.slice(5)]
       if (R?.hint) {

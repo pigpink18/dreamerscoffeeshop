@@ -7,7 +7,9 @@ import {
   type IngredientId, type RecipeId, type UpgradeId, type WeatherId, type StepId, type ChatTopic, type Look,
 } from './data'
 import { voice, voiceTopic, type Gender, type Persona } from './voice'
-import { sfx, setDayFrac, setReportMode, preloadReport, audio } from './audio'
+import { sfx, comboSfx, setDayFrac, setReportMode, preloadReport, audio } from './audio'
+import { isXmasSeason } from './season'
+import { HAT_STYLES } from './pixel'
 import { hooks, type MetaDayResult } from './hooks'
 import { PREMISES, rareById, newMeta, RIVALS, type MetaSave } from './metaData'
 
@@ -48,6 +50,10 @@ export interface SaveData {
   meta: MetaSave // mặt bằng, đối thủ, nhiệm vụ, album, đồ cho Cáo…
   seating: Seating // khu khách ngồi: số bàn, loại bàn, nhân viên phục vụ
   story: StorySave // cốt truyện chính (story.ts)
+  debt: number // tiền đang nợ (vay mẹ / Bà Tư khi hết tiền) – trả dần 30% lợi nhuận mỗi ngày
+  loans: number // số lần đã vay
+  tutDone: boolean // đã qua màn hướng dẫn ly đầu tiên
+  events: Record<string, boolean> // sự kiện theo mùa đã mở (để chỉ tặng quà 1 lần)
 }
 
 export interface StorySave {
@@ -159,6 +165,9 @@ export type GameEvent =
   | { type: 'angry'; id: number; line: string }
   | { type: 'orderPacked'; name: string }
   | { type: 'seatClean'; seat: number; tip: number; byWaiter: boolean }
+  | { type: 'combo'; n: number; bonus: number }
+  | { type: 'comboBreak'; n: number }
+  | { type: 'rush'; on: boolean; ok?: boolean; bonus?: number; lost?: number }
 const listeners = new Set<(e: GameEvent) => void>()
 export const bus = {
   on(fn: (e: GameEvent) => void) { listeners.add(fn); return () => { listeners.delete(fn) } },
@@ -186,7 +195,14 @@ export interface DayStats {
   noSeat?: number // khách muốn ngồi nhưng hết bàn
   cleaned?: number // bàn đã dọn
   seatTips?: number // tiền boa ở khu ngồi
+  comboBest?: number // chuỗi pha chuẩn dài nhất trong ngày
+  comboBonus?: number // tiền thưởng combo
+  rushWon?: number // số giờ cao điểm vượt qua không mất khách
+  rushBonus?: number // tiền thưởng giờ cao điểm
 }
+
+/** Người cho vay khi quán hết tiền: mẹ (không lấy lãi, 2 lần đầu) → Bà Tư chủ nhà (lãi 10%) */
+export interface LoanOffer { who: 'me' | 'tu'; amount: number; owe: number }
 
 export interface DayReport extends DayStats {
   wages: number
@@ -195,6 +211,8 @@ export interface DayReport extends DayStats {
   profit: number
   repEnd: number
   bankrupt: boolean
+  loan?: LoanOffer | null // hết tiền: được vay để mở cửa tiếp (không còn phá sản mất trắng)
+  debtPaid?: number // tiền nợ đã trả hôm nay
   meta?: MetaDayResult | null
 }
 
@@ -235,6 +253,10 @@ function newSave(): SaveData {
     meta: newMeta(),
     seating: { tables: 0, level: 0, waiter: 0 }, // khu ngồi bỏ hoang, phải dọn dẹp mới có bàn
     story: { start: 1, seen: [], flags: {} },
+    debt: 0,
+    loans: 0,
+    tutDone: false,
+    events: {},
   }
 }
 
@@ -264,6 +286,9 @@ function loadSave(): SaveData {
           meta: mergeMeta(base.meta, data.meta),
           seating: { ...base.seating, ...data.seating, tables: Math.min(6, data.seating?.tables ?? base.seating.tables) },
           // bản lưu cũ chưa có cốt truyện: bắt đầu từ hôm nay (chương 1 hiện ngay)
+          // bản lưu cũ đã bán được rồi: bỏ qua hướng dẫn
+          tutDone: data.tutDone ?? ((data.totals?.served ?? 0) > 0 || (data.day ?? 1) > 1),
+          events: { ...data.events },
           story: data.story ? { ...base.story, ...data.story, flags: { ...data.story.flags } } : { start: Math.max(0, (data.day ?? 1) - 1), seen: [], flags: {} },
         }
       }
@@ -315,6 +340,8 @@ export const ui = reactive({
   report: null as DayReport | null,
   toasts: [] as { id: number; text: string; kind: 'info' | 'bad' | 'good' | 'say' | 'rap' | 'heart' }[],
   floats: [] as { id: number; text: string; kind: 'good' | 'bad'; x: number; y: number }[],
+  combo: 0, // chuỗi ly pha chuẩn liên tiếp (tự tay pha)
+  rush: null as null | { done: number; lost: number }, // đang giờ cao điểm: mốc số khách lúc bắt đầu
   resumed: false, // vừa khôi phục ca bán dở từ lần mở trước
   showIntro: false, // xem lại truyện mở đầu
 })
@@ -331,7 +358,7 @@ export function persist() {
 // Lưu chung save + trạng thái ngày bán trong 1 khoá để luôn khớp nhau. Ghi mỗi 2 giây khi đang bán
 // và ngay khi người chơi rời app / đóng tab / tải lại trang. Mở lại sẽ vào đúng chỗ cũ (đang tạm dừng).
 const SESSION_KEY = 'coffee-tycoon-session-v1'
-const SESSION_UI = ['phase', 'tab', 'view', 'time', 'speed', 'queue', 'orders', 'shippers', 'staffProgress', 'brew', 'talk', 'stats', 'report', 'present', 'seats', 'waiters'] as const
+const SESSION_UI = ['phase', 'tab', 'view', 'time', 'speed', 'queue', 'orders', 'shippers', 'staffProgress', 'brew', 'talk', 'stats', 'report', 'present', 'seats', 'waiters', 'combo', 'rush'] as const
 export function saveSession() {
   try {
     if (ui.phase !== 'open' && ui.phase !== 'report') { localStorage.removeItem(SESSION_KEY); return }
@@ -376,6 +403,45 @@ function float(text: string, kind: 'good' | 'bad') {
 }
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v))
+
+// ---------- COMBO: tự tay pha chuẩn liên tiếp → thưởng thêm % giá ly ----------
+/** % thưởng theo độ dài chuỗi: x2 = 6% … x11 trở lên = 60% */
+export const comboRate = (n: number) => (n < 2 ? 0 : Math.min(0.6, 0.06 * (n - 1)))
+function comboUp(price: number): number {
+  ui.combo++
+  ui.stats.comboBest = Math.max(ui.stats.comboBest ?? 0, ui.combo)
+  const bonus = Math.round((price * comboRate(ui.combo)) / 1000) * 1000
+  if (ui.combo >= 2) { comboSfx(ui.combo); bus.emit({ type: 'combo', n: ui.combo, bonus }) }
+  return bonus
+}
+function breakCombo() {
+  if (ui.combo >= 3) { sfx('comboBreak'); bus.emit({ type: 'comboBreak', n: ui.combo }) }
+  ui.combo = 0
+}
+
+// ---------- HƯỚNG DẪN ly đầu tiên: khách đầu tiên đứng chờ mãi, các nút cần bấm phát sáng ----------
+export const tutOn = computed(() => !save.tutDone && ui.phase === 'open')
+function finishTutorial() {
+  if (save.tutDone) return
+  save.tutDone = true
+  toast('Tuyệt! Ly đầu tiên hoàn hảo. Pha chuẩn liên tiếp sẽ ăn COMBO thưởng thêm tiền đó!', 'good', 4200)
+}
+
+// ---------- SỰ KIỆN THEO MÙA (season.ts) ----------
+const XMAS_RECIPES = RECIPES.filter((r) => r.season === 'xmas').map((r) => r.id)
+/** Bật món Noel trong mùa (tặng nguyên liệu 1 lần), hết mùa gỡ khỏi menu */
+export function syncSeason() {
+  if (isXmasSeason()) {
+    for (const id of XMAS_RECIPES) if (!save.unlocked.includes(id)) save.unlocked.push(id)
+    if (!save.events.xmas2026) {
+      save.events.xmas2026 = true
+      for (const ing of ['cacao', 'kemTuoi', 'suaTuoi', 'syrup'] as IngredientId[]) save.stock[ing] += ingredientById[ing].packSize
+    }
+  } else if (save.unlocked.some((id) => XMAS_RECIPES.includes(id))) {
+    save.unlocked = save.unlocked.filter((id) => !XMAS_RECIPES.includes(id))
+  }
+}
+syncSeason()
 
 // ---------- Tính toán ----------
 export const weather = computed(() => weatherById[save.weather])
@@ -555,6 +621,9 @@ export function openShop() {
   ui.seats = Array.from({ length: save.seating.tables * SEATS_PER_TABLE }, newSeat)
   ui.waiters = Array.from({ length: save.seating.waiter }, (_, i) => ({ seat: null, t: 0, x: 100 - i * 14 }))
   ui.page = 0
+  ui.combo = 0
+  ui.rush = null
+  syncSeason()
   ui.stats = { ...emptyStats(save.reputation), spent: ui.stats.spent }
   hooks.dayStart?.()
   preloadReport()
@@ -613,19 +682,56 @@ export function resumeSession() {
 
 const isBrewing = (target: 'cust' | 'order', id: number) => ui.brew?.target === target && ui.brew.id === id
 
+// ---------- GIỜ CAO ĐIỂM: khách dồn dập; qua được mà không ai bỏ về → thưởng tiền + uy tín ----------
+const RUSH_ON = 1.22, RUSH_OFF = 1.05
+const doneCount = () => ui.stats.served + ui.stats.delivered
+const lostCount = () => ui.stats.angry + ui.stats.cancelled
+function tickRush(raw: number) {
+  if (!ui.rush && raw > RUSH_ON && ui.time < DAY_LENGTH * 0.95) {
+    ui.rush = { done: doneCount(), lost: lostCount() }
+    sfx('rush')
+    bus.emit({ type: 'rush', on: true })
+  } else if (ui.rush && raw < RUSH_OFF) endRush()
+}
+function endRush() {
+  const r = ui.rush
+  if (!r) return
+  ui.rush = null
+  const done = doneCount() - r.done, lost = lostCount() - r.lost
+  if (lost === 0 && done >= 2) {
+    const bonus = 20_000 + done * 8_000
+    save.money += bonus
+    ui.stats.revenue += bonus
+    ui.stats.rushBonus = (ui.stats.rushBonus ?? 0) + bonus
+    ui.stats.rushWon = (ui.stats.rushWon ?? 0) + 1
+    changeRep(1.5)
+    sfx('heart')
+    bus.emit({ type: 'rush', on: false, ok: true, bonus })
+  } else bus.emit({ type: 'rush', on: false, ok: false, lost })
+}
+
 function tick(dt: number) {
   ui.time += dt
   setDayFrac(ui.time / DAY_LENGTH)
-  const curve = rushCurve(ui.time / DAY_LENGTH) / CURVE_AVG
+  const raw = rushCurve(ui.time / DAY_LENGTH)
+  const curve = raw / CURVE_AVG
+  const tut = tutOn.value
 
-  // Khách mới đến quán
-  if (Math.random() < (expectedCustomers() / DAY_LENGTH) * curve * dt) spawnCustomer()
-  // Đơn mới trên app
-  if (Math.random() < (expectedOrders() / DAY_LENGTH) * curve * dt) spawnOrder()
+  if (tut) {
+    // hướng dẫn: chỉ 1 khách, tới ngay, đứng chờ không giận
+    if (!ui.queue.length && ui.time > 1.2) spawnCustomer()
+  } else {
+    // Khách mới đến quán
+    if (Math.random() < (expectedCustomers() / DAY_LENGTH) * curve * dt) spawnCustomer()
+    // Đơn mới trên app
+    if (Math.random() < (expectedOrders() / DAY_LENGTH) * curve * dt) spawnOrder()
+    if (save.day >= 2) tickRush(raw) // ngày đầu cho người mới làm quen, chưa có giờ cao điểm
+  }
 
   // Khách mất kiên nhẫn
   for (let i = ui.queue.length - 1; i >= 0; i--) {
     const c = ui.queue[i]
+    if (tut) continue
     c.patience -= dt
     if (!c.line && c.needy === undefined && c.patience / c.maxPatience < 0.5) c.line = voice(pick(groupById(c.group)?.impatient ?? LINES.impatient), c.p)
     if (c.patience <= 0 && !isBrewing('cust', c.id)) {
@@ -637,6 +743,7 @@ function tick(dt: number) {
         continue
       }
       ui.stats.angry++
+      breakCombo()
       changeRep(-2)
       float('😡 Bỏ đi', 'bad')
       const line = voice(pick(LINES.angry), c.p)
@@ -653,6 +760,7 @@ function tick(dt: number) {
     if (o.timeLeft <= 0 && o.state !== 'delivering' && !isBrewing('order', o.id)) {
       ui.orders.splice(i, 1)
       ui.stats.cancelled++
+      breakCombo()
       changeRep(-0.5)
       const rv = addReview(o, 1)
       toast(`📱 ${o.name} huỷ đơn: “${rv.text}”`, 'bad', 2800)
@@ -720,7 +828,12 @@ function chooseRecipe() {
 
 function spawnCustomer() {
   // khách có thể muốn mua kèm bánh / đồ lưu niệm (bạn bấm ở kệ hàng để trao)
-  const push = (c: Customer) => { const a = hooks.pickAddon?.(); if (a) c.addon = a; ui.queue.push(c) }
+  const push = (c: Customer) => {
+    const a = hooks.pickAddon?.(); if (a) c.addon = a
+    // mùa Noel: ~40% khách đội mũ Noel (copy ngoại hình, không sửa ngoại hình gốc của nhân vật)
+    if (isXmasSeason() && Math.random() < 0.4 && !HAT_STYLES.includes(c.look.style)) c.look = { ...c.look, acc: [...(c.look.acc ?? []), 'santa'] }
+    ui.queue.push(c)
+  }
   if (ui.queue.length >= queueCapacity.value) {
     ui.stats.full++
     changeRep(-0.2)
@@ -810,6 +923,7 @@ function completeWalkIn(c: Customer, perfect: boolean, byStaff: boolean, mistake
   ui.queue.splice(idx, 1)
   ui.stats.served++
   trackImpact(c.recipe)
+  if (!byStaff) finishTutorial()
 
   if (c.needy !== undefined) {
     save.suspended = Math.max(0, save.suspended - 1)
@@ -834,13 +948,17 @@ function completeWalkIn(c: Customer, perfect: boolean, byStaff: boolean, mistake
   if ((c.chatBonus ?? 0) >= 5) tip += 2_000
   const R = c.rare ? rareById[c.rare] : null
   if (R) tip += R.tip
-  save.money += price + tip
-  ui.stats.revenue += price + tip
+  // combo: chỉ tính ly tự tay pha (nhân viên pha không giữ chuỗi)
+  let combo = 0
+  if (!byStaff) { if (perfect) combo = comboUp(price); else breakCombo() }
+  save.money += price + tip + combo
+  ui.stats.revenue += price + tip + combo
   ui.stats.tips += tip
+  ui.stats.comboBonus = (ui.stats.comboBonus ?? 0) + combo
   const fast = c.patience / c.maxPatience > 0.6
   const cheap = price / fairPrice(c.recipe) < 0.85
   changeRep((fast ? 0.5 : 0.2) + (cheap ? 0.2 : 0) + (tip ? 0.3 : 0))
-  float(`${byStaff ? '🧑‍🍳 ' : ''}+${moneyShort(price)}${tip ? ` 💝${moneyShort(tip)}` : ''}`, 'good')
+  float(`${byStaff ? '🧑‍🍳 ' : ''}+${moneyShort(price)}${tip ? ` 💝${moneyShort(tip)}` : ''}${combo ? ` ⚡${moneyShort(combo)}` : ''}`, 'good')
   sfx('coin')
   seatCustomer(c, perfect && !byStaff)
   // món mua kèm: nhân viên tự lấy giúp; bạn tự phục vụ thì phải bấm ở kệ hàng (quên là mất đơn kèm)
@@ -901,6 +1019,8 @@ function orderReady(o: Order, perfect: boolean, byStaff: boolean) {
   o.state = 'ready'
   o.perfect = perfect
   if (!byStaff) {
+    const combo = perfect ? comboUp(save.prices[o.recipe]) : (breakCombo(), 0)
+    if (combo) { save.money += combo; ui.stats.revenue += combo; ui.stats.comboBonus = (ui.stats.comboBonus ?? 0) + combo }
     sfx('done')
     toast(ui.shippers.some((s) => s.orderId === null) ? `📦 Đơn của ${o.name} xong, shipper tới lấy!` : `📦 Đơn của ${o.name} xong, chờ shipper rảnh`, 'good', 1800)
   }
@@ -1021,6 +1141,7 @@ export function brewStep(step: StepId) {
   if (step !== expected) {
     b.mistakes++
     b.shake++
+    breakCombo() // sai 1 bước là vỡ chuỗi combo
     sfx('wrong')
     vibrate([25, 30, 25])
     bus.emit({ type: 'wrong' })
@@ -1243,6 +1364,8 @@ function endDay() {
   // cuối ngày: tiền boa còn trên bàn bẩn chưa dọn thì mất
   ui.seats = []
   ui.waiters = []
+  ui.rush = null
+  ui.combo = 0
   // Xong 1 ngày → mở khoá món mới
   const nr = unlockNextRecipe()
   if (nr) ui.stats.newRecipe = nr
@@ -1254,7 +1377,15 @@ function endDay() {
   const s = ui.stats
   const profit = s.revenue - s.spent - w - rent
   const meta = hooks.dayEnd?.(s) ?? null
-  ui.report = { ...s, wages: w, rent, meltedIce, profit, repEnd: save.reputation, bankrupt: save.money < 0, meta }
+  // trả nợ dần: 30% lợi nhuận ngày (tối thiểu 50k nếu đủ tiền)
+  let debtPaid = 0
+  if (save.debt > 0 && profit > 0 && save.money > 0) {
+    debtPaid = Math.min(save.debt, save.money, Math.max(50_000, Math.round((profit * 0.3) / 1000) * 1000))
+    save.money -= debtPaid
+    save.debt -= debtPaid
+  }
+  const bankrupt = save.money < 0
+  ui.report = { ...s, wages: w, rent, meltedIce, profit, repEnd: save.reputation, bankrupt, loan: bankrupt ? loanOffer() : null, debtPaid, meta }
   save.totals.revenue += s.revenue
   save.totals.served += s.served + s.delivered
   save.totals.bestProfit = Math.max(save.totals.bestProfit, profit)
@@ -1266,8 +1397,20 @@ function endDay() {
   vibrate([20, 60, 20])
 }
 
+function loanOffer(): LoanOffer {
+  const who = save.loans < 2 ? 'me' : 'tu'
+  const amount = Math.ceil((-save.money + 500_000) / 100_000) * 100_000 // đủ trả âm + 500k vốn nhập hàng
+  return { who, amount, owe: who === 'me' ? amount : Math.round((amount * 1.1) / 1000) * 1000 }
+}
+
 export function nextDay() {
-  if (ui.report?.bankrupt) { resetGame(); return }
+  const loan = ui.report?.bankrupt ? ui.report.loan : null
+  if (loan) {
+    save.money += loan.amount
+    save.debt += loan.owe
+    save.loans++
+    toast(loan.who === 'me' ? `Mẹ chuyển khoản ${moneyShort(loan.amount)}: “Cố lên con, mẹ tin con.”` : `Bà Tư cho vay ${moneyShort(loan.amount)}: “Lãi 10% thôi, nhớ trả đó nghe.”`, 'heart', 4200)
+  }
   save.day++
   save.weather = save.forecast
   save.forecast = randomWeather()

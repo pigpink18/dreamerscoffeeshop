@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { save, ui, clock } from '../game/store'
-import { money } from '../game/data'
-import { ref } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { save, ui, clock, resetGame } from '../game/store'
+import { money, moneyShort } from '../game/data'
+import { fxPrefs } from '../game/fx'
 import { audio, unlockAudio, TRACK_LIST, type TrackChoice } from '../game/audio'
 import PixelIcon from './ui/PixelIcon.vue'
 import PixelNum from './ui/PixelNum.vue'
@@ -12,9 +12,46 @@ function toggle(k: 'music' | 'sfx') { unlockAudio(); audio[k] = !audio[k] }
 const menu = ref(false)
 const BUILD = __BUILD__
 function choose(id: TrackChoice) { unlockAudio(); audio.track = id; audio.music = true; menu.value = false }
-const playingName = () => (audio.playing === 'boss' ? 'Kịch tính (boss)' : audio.playing === 'bossSoft' ? 'Hồi hộp nhẹ (boss)' : audio.playing === 'report' ? 'Mappy (tổng kết ngày)' : TRACK_LIST.find((t) => t.id === audio.playing)?.name ?? '')
+const playingName = () => (audio.playing === 'report' ? 'Mappy (tổng kết ngày)' : TRACK_LIST.find((t) => t.id === audio.playing)?.name ?? '')
 
-const moneyText = computed(() => money(save.money).replace(/\s/g, ''))
+// ---- số tiền chạy dần tới giá trị mới + ô tiền nảy khi đồng xu bay tới ----
+const shownMoney = ref(save.money)
+let mraf = 0
+watch(() => save.money, (to) => {
+  cancelAnimationFrame(mraf)
+  const from = shownMoney.value, t0 = performance.now(), dur = Math.min(700, 250 + Math.abs(to - from) / 400)
+  const step = (now: number) => {
+    const p = Math.min(1, (now - t0) / dur)
+    shownMoney.value = p >= 1 ? to : Math.round((from + (to - from) * (1 - Math.pow(1 - p, 3))) / 1000) * 1000
+    if (p < 1) mraf = requestAnimationFrame(step)
+  }
+  mraf = requestAnimationFrame(step)
+})
+const bump = ref(0)
+let bumpT = 0
+const onCoin = () => { bump.value++; clearTimeout(bumpT); bumpT = window.setTimeout(() => (bump.value = 0), 160) }
+// chạm ra ngoài menu Nhạc / Cài đặt → tự đóng (không để menu che nút tạm dừng, x1…)
+function outside(e: PointerEvent) {
+  if (!menu.value && !settings.value) return
+  const el = e.target as Element | null
+  if (el?.closest('.music-menu, .snd')) return
+  menu.value = false
+  settings.value = false
+}
+onMounted(() => { window.addEventListener('fx:coin', onCoin); document.addEventListener('pointerdown', outside, true) })
+onBeforeUnmount(() => { window.removeEventListener('fx:coin', onCoin); document.removeEventListener('pointerdown', outside, true); cancelAnimationFrame(mraf) })
+const moneyText = computed(() => money(shownMoney.value).replace(/\s/g, ''))
+
+// ---- Cài đặt ----
+const settings = ref(false)
+const confirmReset = ref(false)
+function onReset() {
+  if (!confirmReset.value) { confirmReset.value = true; setTimeout(() => (confirmReset.value = false), 3000); return }
+  confirmReset.value = false
+  settings.value = false
+  resetGame()
+}
+function replayIntro() { settings.value = false; ui.showIntro = true }
 const wxIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloudy', rainy: 'rainy' } as Record<string, string>)[save.weather] || 'sunny')
 const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, bước 0.5
 </script>
@@ -24,7 +61,8 @@ const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, 
     <div class="brandrow">
       <button class="brand" title="Xem lại truyện mở đầu" @click="ui.phase !== 'open' && (ui.showIntro = true)"><img :src="logoUrl" class="blogo" alt="" /> DREAMERS COFFEE <small class="owner">· {{ save.player }} & Cáo</small></button>
       <div class="snd">
-        <button :class="{ off: !audio.music }" @click="unlockAudio(); menu = !menu" aria-label="Nhạc"><PixelIcon name="music" :size="2" /></button>
+        <button @click="settings = !settings; menu = false" aria-label="Cài đặt"><PixelIcon name="gear" :size="2" /></button>
+        <button :class="{ off: !audio.music }" @click="unlockAudio(); menu = !menu; settings = false" aria-label="Nhạc"><PixelIcon name="music" :size="2" /></button>
         <button :class="{ off: !audio.sfx }" @click="toggle('sfx')" aria-label="Âm thanh"><PixelIcon :name="audio.sfx ? 'speaker' : 'speakerOff'" :size="2" /></button>
       </div>
     </div>
@@ -48,7 +86,26 @@ const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, 
         <div class="note">Nhạc quán: bossa nova sáng tác riêng cho Dreamers Coffee · Bản cập nhật: {{ BUILD }}</div>
       </div>
     </Transition>
-    <div class="money">
+    <Transition name="drop">
+      <div v-if="settings" class="music-menu" @click.stop>
+        <div class="mm-head"><b>CÀI ĐẶT</b><button class="sw" @click="settings = false">ĐÓNG</button></div>
+        <div class="srow"><span>Nhạc nền</span><button class="sw" :class="{ on: audio.music }" @click="toggle('music')">{{ audio.music ? 'BẬT' : 'TẮT' }}</button></div>
+        <div class="srow"><span>Âm thanh hiệu ứng</span><button class="sw" :class="{ on: audio.sfx }" @click="toggle('sfx')">{{ audio.sfx ? 'BẬT' : 'TẮT' }}</button></div>
+        <div class="srow"><span>Hiệu ứng màn hình<small>tiền bay, lấp lánh, chớp sáng</small></span><button class="sw" :class="{ on: fxPrefs.on }" @click="fxPrefs.on = !fxPrefs.on">{{ fxPrefs.on ? 'BẬT' : 'TẮT' }}</button></div>
+        <label class="vol">
+          <PixelIcon :name="audio.volume > 0 ? 'speaker' : 'speakerOff'" :size="2" />
+          <input type="range" min="0" max="1" step="0.05" v-model.number="audio.volume" aria-label="Âm lượng" />
+          <b>{{ Math.round(audio.volume * 100) }}</b>
+        </label>
+        <div v-if="save.debt > 0" class="srow debt"><span>Đang nợ<small>tự trả 30% lợi nhuận mỗi ngày</small></span><b>{{ moneyShort(save.debt) }}</b></div>
+        <button class="btn sm ghost wide" :disabled="ui.phase === 'open'" @click="replayIntro">XEM LẠI TRUYỆN MỞ ĐẦU</button>
+        <button class="btn sm ghost wide" :class="{ danger: confirmReset }" :disabled="ui.phase === 'open'" @click="onReset">
+          {{ confirmReset ? 'CHẠM LẦN NỮA ĐỂ XOÁ DỮ LIỆU' : 'CHƠI LẠI TỪ ĐẦU' }}
+        </button>
+        <div class="note">Dreamers Coffee · Bản cập nhật: {{ BUILD }}</div>
+      </div>
+    </Transition>
+    <div class="money" :class="{ bump: bump > 0 }">
       <span v-if="ui.phase !== 'open'" class="label">TIỀN QUÁN</span>
       <PixelNum :text="moneyText" :size="ui.phase === 'open' ? 3 : 4" :color="save.money < 0 ? '#ff9a8c' : '#ffd77a'" shadow="#2a1a10" :light="save.money < 0 ? '#ffc4bb' : '#fff1a8'" />
     </div>
@@ -95,7 +152,13 @@ const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, 
 .topbar.compact { padding-bottom: 8px; }
 .topbar.compact .brandrow { margin-bottom: 4px; }
 .topbar.compact .chip { padding: 3px 8px 4px; font-size: 12px; }
-.money { display: flex; flex-direction: column; gap: 4px; }
+.money { display: flex; flex-direction: column; gap: 4px; transition: transform 0.12s; transform-origin: left center; }
+.money.bump { transform: scale(1.08) translateY(-1px); filter: brightness(1.2); }
+.srow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 2px; font-size: 13px; font-weight: 800; }
+.srow span { display: flex; flex-direction: column; }
+.srow small { font-size: 10px; font-weight: 600; color: var(--muted); }
+.srow.debt b { color: #c0392b; }
+.wide { width: 100%; margin-top: 6px; }
 .label { font-size: 10px; font-weight: 900; letter-spacing: 0.16em; color: #e6c79c; }
 .chips { display: flex; gap: 6px; }
 .chip {

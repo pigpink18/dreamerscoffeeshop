@@ -26,7 +26,7 @@ const stars = computed(() => {
   if (s === 2 && happyRatio.value >= 0.85 && r.value.profit > 0) s++
   return s
 })
-const verdict = computed(() => (r.value.bankrupt ? 'PHÁ SẢN RỒI…' : ['NGÀY KHÓ KHĂN', 'TẠM ỔN', 'LÀM TỐT LẮM!', 'NGÀY TUYỆT VỜI!'][stars.value]))
+const verdict = computed(() => (r.value.bankrupt ? 'HẾT TIỀN RỒI…' : ['NGÀY KHÓ KHĂN', 'TẠM ỔN', 'LÀM TỐT LẮM!', 'NGÀY TUYỆT VỜI!'][stars.value]))
 
 // ---- số lợi nhuận chạy từ 0 lên ----
 const shown = ref(0)
@@ -79,6 +79,8 @@ const weatherIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloud
         <div class="ttl">SỔ THU CHI</div>
         <div class="row"><PixelIcon name="coin" /><span class="lb">Doanh thu</span><b class="good">+{{ money(r.revenue) }}</b></div>
         <div v-if="r.goodsRev" class="row sub"><PixelIcon name="gift" :size="2" /><span class="lb">gồm bán kèm {{ r.goodsSold }} món bánh / lưu niệm</span><span>{{ money(r.goodsRev) }}</span></div>
+        <div v-if="r.comboBonus" class="row sub"><PixelIcon name="star" :size="2" /><span class="lb">gồm thưởng COMBO (chuỗi dài nhất x{{ r.comboBest }})</span><span>{{ money(r.comboBonus) }}</span></div>
+        <div v-if="r.rushBonus" class="row sub"><PixelIcon name="trophy" :size="2" /><span class="lb">gồm thưởng vượt {{ r.rushWon }} giờ cao điểm</span><span>{{ money(r.rushBonus) }}</span></div>
         <div v-if="r.tips" class="row sub"><PixelIcon name="heart" :size="2" /><span class="lb">gồm tiền tip</span><span>{{ money(r.tips) }}</span></div>
         <div v-if="r.seated || r.noSeat" class="row sub"><PixelIcon name="crowd" :size="2" /><span class="lb">Khu ngồi: {{ r.seated || 0 }} khách ngồi<template v-if="r.noSeat"> · {{ r.noSeat }} khách hết chỗ</template></span><span>{{ money(r.seatTips || 0) }}</span></div>
         <div class="row"><PixelIcon name="crate" /><span class="lb">Nhập hàng</span><b>{{ r.spent ? "-" + money(r.spent) : money(0) }}</b></div>
@@ -87,6 +89,7 @@ const weatherIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloud
         <div v-if="r.meta && r.meta.spoiled" class="row sub"><PixelIcon name="cross" :size="2" /><span class="lb">Bánh tồn phải bỏ</span><span>{{ r.meta.spoiled }} cái</span></div>
         <div v-if="r.meltedIce" class="row sub"><PixelIcon name="ice" :size="2" /><span class="lb">Đá bị tan</span><span>{{ r.meltedIce }} phần</span></div>
         <div class="total"><span>CÒN LẠI</span><b :class="r.profit >= 0 ? 'good' : 'bad'">{{ fmt(r.profit) }}</b></div>
+        <div v-if="r.debtPaid" class="row sub debt"><PixelIcon name="house" :size="2" /><span class="lb">Đã trả nợ · còn nợ {{ money(save.debt) }}</span><span>-{{ money(r.debtPaid) }}</span></div>
       </div>
 
       <!-- chỉ số khách -->
@@ -95,6 +98,11 @@ const weatherIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloud
         <div class="tile" :class="{ bad: r.angry }"><i class="ic"><PixelIcon name="clock" /></i><b>{{ r.angry }}</b><span>Chờ lâu bỏ đi</span></div>
         <div class="tile" :class="{ bad: r.tooExpensive }"><i class="ic"><PixelIcon name="tag" /></i><b>{{ r.tooExpensive }}</b><span>Chê đắt</span></div>
         <div class="tile" :class="{ bad: r.full }"><i class="ic"><PixelIcon name="crowd" /></i><b>{{ r.full }}</b><span>Quán đông</span></div>
+      </div>
+      <div v-if="r.comboBest || r.rushWon" class="stats three">
+        <div class="tile" :class="{ good: (r.comboBest ?? 0) >= 5 }"><i class="ic"><PixelIcon name="star" /></i><b>x{{ r.comboBest || 0 }}</b><span>Combo dài nhất</span></div>
+        <div class="tile" :class="{ good: r.rushWon }"><i class="ic"><PixelIcon name="trophy" /></i><b>{{ r.rushWon || 0 }}</b><span>Cao điểm vượt qua</span></div>
+        <div class="tile"><i class="ic"><PixelIcon name="coin" /></i><b>{{ moneyShort((r.comboBonus || 0) + (r.rushBonus || 0)) }}</b><span>Tiền thưởng</span></div>
       </div>
       <div v-if="r.delivered || r.cancelled" class="stats three">
         <div class="tile good"><i class="ic"><PixelIcon name="scooter" /></i><b>{{ r.delivered }}</b><span>Đơn app đã giao</span></div>
@@ -167,10 +175,16 @@ const weatherIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloud
         </div>
       </div>
 
-      <div v-if="r.bankrupt" class="panel warn">Quán đã hết tiền và phá sản. Thử lại với chiến lược khác nhé!</div>
+      <!-- hết tiền: không phá sản mất trắng – mẹ / Bà Tư cho vay để mở cửa tiếp -->
+      <div v-if="r.bankrupt && r.loan" class="panel loan">
+        <div class="tag-ribbon"><PixelIcon name="heart" :size="2" /> {{ r.loan.who === 'me' ? 'TIN NHẮN CỦA MẸ' : 'BÀ TƯ GÕ CỬA' }}</div>
+        <p v-if="r.loan.who === 'me'">“Mẹ nghe nói quán kẹt tiền. Mẹ chuyển con <b>{{ money(r.loan.amount) }}</b>, khi nào khá thì trả mẹ. Đừng bỏ cuộc nha con.”</p>
+        <p v-else>“Mẹ cháu giúp hai lần rồi đó. Lần này bà cho vay <b>{{ money(r.loan.amount) }}</b>, lãi 10% – trả <b>{{ money(r.loan.owe) }}</b>. Bà tin cái dốc này còn cần quán cháu.”</p>
+        <small>Nợ được tự trừ 30% lợi nhuận mỗi ngày có lời. Thử tăng giá nhẹ, nhập hàng vừa đủ và đừng để khách chờ lâu!</small>
+      </div>
 
       <button class="go" :class="{ retry: r.bankrupt }" @click="nextDay">
-        <template v-if="r.bankrupt">CHƠI LẠI</template>
+        <template v-if="r.bankrupt">NHẬN TIỀN · MỞ CỬA NGÀY {{ save.day + 1 }}</template>
         <template v-else>
           <span>SANG NGÀY {{ save.day + 1 }}</span>
           <span class="wx"><PixelIcon :name="weatherIcon" :size="3" />{{ forecast.name }}</span>
@@ -359,4 +373,8 @@ const weatherIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloud
 .go:active { transform: translateY(6px); box-shadow: -3px 0 0 0 var(--ink), 3px 0 0 0 var(--ink), 0 -3px 0 0 var(--ink), 0 3px 0 0 var(--ink), inset 0 -3px 0 0 #d99a2b, 0 3px 0 0 #6f4630; }
 .go .wx { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: 0.04em; font-weight: 800; color: #6f4630; }
 .go.retry { background: #ff8a7a; box-shadow: -3px 0 0 0 var(--ink), 3px 0 0 0 var(--ink), 0 -3px 0 0 var(--ink), 0 3px 0 0 var(--ink), inset 0 -6px 0 0 #d9534f, inset 0 3px 0 0 #ffd0c8, 0 9px 0 0 #6f4630; }
+.panel.loan { background: #fff4e2; }
+.panel.loan p { margin: 6px 0; font-size: 13px; line-height: 1.45; font-style: italic; }
+.panel.loan small { display: block; font-size: 11px; color: var(--muted); }
+.row.debt span { color: #c0392b; }
 </style>

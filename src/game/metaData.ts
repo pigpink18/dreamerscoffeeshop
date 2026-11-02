@@ -132,7 +132,7 @@ export const DECOR_ITEMS: DecorItem[] = [
 ]
 
 // ---------- Nhiệm vụ hằng ngày ----------
-export type QuestKind = 'serve' | 'perfect' | 'revenue' | 'recipe' | 'chat' | 'boss' | 'app' | 'calm' | 'tips' | 'goods'
+export type QuestKind = 'serve' | 'perfect' | 'revenue' | 'recipe' | 'chat' | 'boss' | 'app' | 'calm' | 'tips' | 'goods' | 'combo'
 export interface Quest { kind: QuestKind; target: number; progress: number; recipe?: RecipeId; beans: number; done: boolean; text: string }
 
 // ---------- Thành tựu ----------

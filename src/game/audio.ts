@@ -1,5 +1,6 @@
 // Âm thanh: hiệu ứng tự tổng hợp bằng Web Audio + nhạc nền CC0 (Abstraction / Tallbeard Studios)
 import { reactive, watch } from 'vue'
+import { isXmasSeason } from './season'
 
 const KEY = 'dreamers-audio'
 // Nhạc nền trong quán: 5 vòng bossa nova nhẹ nhàng sáng tác riêng cho game (tools/bossa.py), phát luân phiên.
@@ -27,11 +28,14 @@ export const MUSIC_FILES: Record<TrackId, string> = {
   report: 'mappy', // nhạc màn tổng kết cuối ngày (file do chủ game thêm)
 }
 /** Thứ tự phát luân phiên */
-const PLAYLIST: TrackId[] = ['lastXmas', 'feliz', 'somMai', 'muaPhun', 'hemNho', 'chieuHien', 'lyDenDa']
+const ALL_TRACKS: TrackId[] = ['lastXmas', 'feliz', 'somMai', 'muaPhun', 'hemNho', 'chieuHien', 'lyDenDa']
+/** nhạc Giáng Sinh chỉ phát trong mùa Noel (season.ts) */
+const XMAS_TRACKS: TrackId[] = ['lastXmas', 'feliz']
+const PLAYLIST: TrackId[] = isXmasSeason() ? ALL_TRACKS : ALL_TRACKS.filter((t) => !XMAS_TRACKS.includes(t))
 /** Mỗi bài lặp mấy vòng (~1 phút/vòng) rồi chuyển bài kế tiếp */
 const LOOPS_PER_TRACK = 2
-export const TRACK_LIST: { id: TrackChoice; name: string; icon: string; desc: string }[] = [
-  { id: 'auto', name: 'Phát luân phiên', icon: '', desc: '7 bài bossa nova lần lượt, mở đầu bằng 2 bài Giáng sinh' },
+const ALL_TRACK_LIST: { id: TrackChoice; name: string; icon: string; desc: string }[] = [
+  { id: 'auto', name: 'Phát luân phiên', icon: '', desc: isXmasSeason() ? '7 bài bossa nova lần lượt, mở đầu bằng 2 bài Giáng sinh' : '5 bài bossa nova lần lượt' },
   { id: 'lastXmas', name: 'Last Christmas (bossa)', icon: '', desc: 'Bossa pop Giáng sinh' },
   { id: 'feliz', name: 'Feliz Navidad (bossa)', icon: '', desc: 'Bossa Giáng sinh vui tươi' },
   { id: 'somMai', name: 'Sớm mai', icon: '', desc: 'Bossa sáng sớm, sáo nhẹ' },
@@ -40,6 +44,7 @@ export const TRACK_LIST: { id: TrackChoice; name: string; icon: string; desc: st
   { id: 'chieuHien', name: 'Chiều hiên', icon: '', desc: 'Thong thả buổi chiều' },
   { id: 'lyDenDa', name: 'Ly đen đá', icon: '', desc: 'Giọng thứ, hơi hoài niệm' },
 ]
+export const TRACK_LIST = ALL_TRACK_LIST.filter((t) => t.id === 'auto' || PLAYLIST.includes(t.id))
 export const audio = reactive({ music: true, sfx: true, volume: 0.7, unlocked: false, track: 'auto' as TrackChoice, playing: '' as TrackId | '', bossMusic: 'off' as BossMusic }) // không đổi nhạc & không kêu báo khi boss tới
 try {
   const s = JSON.parse(localStorage.getItem(KEY) || 'null')
@@ -139,7 +144,7 @@ function noise(t: number, dur: number, opts: { type?: BiquadFilterType; freq?: n
 }
 
 // ---------- Hiệu ứng âm thanh ----------
-export type Sfx = 'boss' | 'bossWin' | 'bossLose' | 'tap' | 'cup' | 'ice' | 'pour' | 'drip' | 'squeeze' | 'stir' | 'plop' | 'shake' | 'blend' | 'coin' | 'wrong' | 'horn' | 'angry' | 'bell' | 'done' | 'heart' | 'dayEnd' | 'buy'
+export type Sfx = 'boss' | 'bossWin' | 'bossLose' | 'tap' | 'cup' | 'ice' | 'pour' | 'drip' | 'squeeze' | 'stir' | 'plop' | 'shake' | 'blend' | 'coin' | 'wrong' | 'horn' | 'angry' | 'bell' | 'done' | 'heart' | 'dayEnd' | 'buy' | 'comboBreak' | 'rush' | 'whoosh'
 
 /** Tiếng "bíp" nhỏ khi chữ hiện ra từng chữ (như khách đang nói). pitch: giọng cao/thấp theo khách */
 export function talkBlip(pitch = 520) {
@@ -153,6 +158,15 @@ export function tick(urgent = false) {
   if (!audio.sfx || !ctx || ctx.state !== 'running') return
   const t = ctx.currentTime + 0.005
   tone(urgent ? 1500 : 1200, t, 0.03, { vol: urgent ? 0.06 : 0.04, type: 'square', filter: 2500 })
+}
+
+/** Tiếng combo: arpeggio cao dần theo độ dài chuỗi (x2, x3… nghe "lên level") */
+export function comboSfx(n: number) {
+  if (!audio.sfx || !ctx || ctx.state !== 'running') return
+  const t = ctx.currentTime + 0.01
+  const base = 523.25 * Math.pow(2, Math.min(n - 2, 12) / 12)
+  ;[1, 1.26, 1.5, 2].forEach((m, i) => tone(base * m, t + i * 0.045, 0.18, { vol: 0.1, type: 'square', filter: 3200 }))
+  if (n % 5 === 0) [2.52, 3].forEach((m, i) => tone(base * m, t + 0.2 + i * 0.06, 0.3, { vol: 0.09, type: 'triangle' }))
 }
 
 export function sfx(name: Sfx) {
@@ -210,6 +224,12 @@ export function sfx(name: Sfx) {
     case 'bell': tone(1568, t, 0.5, { vol: 0.08 }); tone(2093, t + 0.1, 0.6, { vol: 0.06 }); break
     case 'done': [784, 988, 1175].forEach((f, i) => tone(f, t + i * 0.07, 0.25, { vol: 0.13, type: 'triangle' })); break
     case 'heart': [659, 784, 1047, 1319].forEach((f, i) => tone(f, t + i * 0.1, 0.5, { vol: 0.1 })); break
+    case 'comboBreak': [660, 494, 370, 277].forEach((f, i) => tone(f, t + i * 0.06, 0.16, { vol: 0.12, type: 'square', filter: 1800 })); noise(t, 0.25, { type: 'highpass', freq: 2500, vol: 0.2 }); break
+    case 'rush': // còi báo giờ cao điểm: 2 hồi lên giọng + trống dồn
+      [0, 0.28].forEach((d) => { tone(587, t + d, 0.12, { vol: 0.12, type: 'square', filter: 2400 }); tone(880, t + d + 0.12, 0.14, { vol: 0.12, type: 'square', filter: 2400 }) })
+      for (let i = 0; i < 4; i++) noise(t + 0.6 + i * 0.09, 0.06, { type: 'lowpass', freq: 220, vol: 0.5 })
+      break
+    case 'whoosh': noise(t, 0.25, { type: 'bandpass', freq: 600, to: 2400, q: 1.2, vol: 0.25, attack: 0.04 }); break
     case 'dayEnd': [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, t + i * 0.12, 0.3, { vol: 0.12, type: 'triangle' })); break
   }
 }
@@ -263,7 +283,7 @@ function bossTrack(): TrackId | null { return audio.bossMusic === 'drama' ? 'bos
 function pickWanted(): TrackId {
   if (reportMode) return 'report'
   if (bossMode && bossTrack()) return bossTrack()!
-  if (audio.track !== 'auto') return audio.track
+  if (audio.track !== 'auto' && PLAYLIST.includes(audio.track)) return audio.track // hết mùa Noel: bài Noel đã chọn → về phát luân phiên
   // luân phiên: giữ bài đang phát đủ LOOPS_PER_TRACK vòng rồi sang bài kế tiếp trong danh sách
   if (current && PLAYLIST.includes(current.id)) {
     const loops = (ctx!.currentTime - current.started) / current.dur

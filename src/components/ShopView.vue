@@ -20,6 +20,11 @@ import { currentChapter, finaleDay, storyDone, endingScore, ENDING_TITLE } from 
 import PixelIcon from './ui/PixelIcon.vue'
 import DrinkIcon from './ui/DrinkIcon.vue'
 import PersonPortrait from './ui/PersonPortrait.vue'
+import { isXmasSeason, XMAS_END } from '../game/season'
+
+// sự kiện Giáng Sinh: còn bao nhiêu ngày (đồng hồ thật)
+const xmas = isXmasSeason()
+const xmasDays = Math.max(0, Math.ceil((XMAS_END - Date.now()) / 86_400_000))
 
 // đoàn khách nổi bật hôm nay: 3 gương mặt tiêu biểu của nhóm
 const guestFaces = computed(() => Array.from({ length: 3 }, () => featuredGroup.value.look()))
@@ -79,6 +84,18 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
         <PixelIcon :name="WX[save.forecast] || 'sunny'" :size="3" />
         <div class="tiny fn">{{ forecast.name }}</div>
       </div>
+    </div>
+
+    <div v-if="xmas" class="card xmas-card">
+      <div class="tiny sk">SỰ KIỆN GIÁNG SINH · còn {{ xmasDays }} ngày</div>
+      <div class="xm-row">
+        <DrinkIcon id="latteNoel" :scale="2" /><DrinkIcon id="cacaoNoel" :scale="2" />
+        <div class="grow small">Món mới <b>Latte quế Noel</b> &amp; <b>Cacao nóng Giáng Sinh</b> đã lên menu, khách gọi nhiều hơn. Khách đội mũ Noel, Cáo quàng khăn đỏ. Hết sự kiện vào ngày 3/1.</div>
+      </div>
+    </div>
+
+    <div v-if="save.debt > 0" class="card debt-card">
+      <PixelIcon name="house" :size="2" /><span class="grow small">Đang nợ <b>{{ moneyShort(save.debt) }}</b> · tự trả 30% lợi nhuận mỗi ngày có lời</span>
     </div>
 
     <div v-if="currentChapter" class="card story-card">
@@ -420,6 +437,12 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 .big-ic { font-size: 36px; }
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+.xmas-card { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; background: linear-gradient(#fff, #fff) padding-box, repeating-linear-gradient(45deg, #d8333a 0 8px, #fbf6ec 8px 16px, #2f6b4a 16px 24px, #fbf6ec 24px 32px) border-box; border: 4px solid transparent; }
+.xmas-card .sk { font-weight: 900; letter-spacing: 0.1em; color: #b8262c; }
+.xm-row { display: flex; align-items: center; gap: 6px; }
+.xm-row .small { line-height: 1.4; }
+.debt-card { margin-top: 10px; display: flex; align-items: center; gap: 8px; background: #fde7e2; }
+.debt-card b { color: #c0392b; }
 .story-card { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; background: #fff3dc; }
 .story-card .sk { display: flex; align-items: center; gap: 5px; font-weight: 900; letter-spacing: 0.1em; color: #a16b36; }
 .story-card b { font-size: 14px; line-height: 1.35; }

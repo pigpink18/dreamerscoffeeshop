@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { save, buyUpgrade, resetGame, UPGRADES } from '../game/store'
-import { money, moneyShort, START_MONEY } from '../game/data'
+import { save, buyUpgrade, UPGRADES } from '../game/store'
+import { moneyShort } from '../game/data'
 import PixelIcon from './ui/PixelIcon.vue'
 import PremisePanel from './meta/PremisePanel.vue'
 import CaoShop from './meta/CaoShop.vue'
@@ -11,16 +11,6 @@ const seg = ref<'up' | 'seat' | 'prem' | 'cao'>('up')
 
 const UICON: Record<string, string> = { staff: 'staff', machine: 'gear', shipper: 'scooter', decor: 'plant', sign: 'megaphone', freezer: 'snow', green: 'plant', farmer: 'bean' }
 
-const confirmReset = ref(false)
-function onReset() {
-  if (!confirmReset.value) {
-    confirmReset.value = true
-    setTimeout(() => (confirmReset.value = false), 3000)
-    return
-  }
-  confirmReset.value = false
-  resetGame()
-}
 </script>
 
 <template>
@@ -71,12 +61,7 @@ function onReset() {
       <div class="tile"><PixelIcon name="trophy" /><b>{{ moneyShort(save.totals.bestProfit) }}</b><span>Lời cao nhất/ngày</span></div>
     </div>
 
-    <div class="reset">
-      <button class="btn sm ghost" :class="{ danger: confirmReset }" @click="onReset">
-        {{ confirmReset ? 'CHẠM LẦN NỮA ĐỂ XOÁ DỮ LIỆU' : 'CHƠI LẠI TỪ ĐẦU' }}
-      </button>
-      <div class="muted tiny">Tiền khởi nghiệp: {{ money(START_MONEY) }}</div>
-    </div>
+    <p class="muted tiny center">Chơi lại từ đầu: bấm nút bánh răng (Cài đặt) ở góc trên.</p>
     </template>
   </div>
 </template>
@@ -100,6 +85,7 @@ function onReset() {
 .tile { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; background: var(--paper); padding: 10px 12px 12px; box-shadow: var(--px-border-2), inset 0 -5px 0 #e9dcc8, 0 5px 0 rgba(59, 42, 32, 0.2); }
 .stats b { font-size: 20px; font-weight: 900; margin-top: 2px; }
 .stats span { font-size: 12px; color: var(--muted); }
+.center { text-align: center; margin-top: 18px; }
 .reset { text-align: center; margin-top: 24px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .danger { background: var(--bad) !important; color: #fff !important; }
 .tiny { font-size: 11px; }
