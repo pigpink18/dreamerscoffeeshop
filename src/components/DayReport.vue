@@ -81,6 +81,7 @@ const weatherIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloud
         <div v-if="r.goodsRev" class="row sub"><PixelIcon name="gift" :size="2" /><span class="lb">gồm bán kèm {{ r.goodsSold }} món bánh / lưu niệm</span><span>{{ money(r.goodsRev) }}</span></div>
         <div v-if="r.comboBonus" class="row sub"><PixelIcon name="star" :size="2" /><span class="lb">gồm thưởng COMBO (chuỗi dài nhất x{{ r.comboBest }})</span><span>{{ money(r.comboBonus) }}</span></div>
         <div v-if="r.rushBonus" class="row sub"><PixelIcon name="trophy" :size="2" /><span class="lb">gồm thưởng vượt {{ r.rushWon }} giờ cao điểm</span><span>{{ money(r.rushBonus) }}</span></div>
+        <div v-if="r.foodSold || r.foodLost" class="row sub"><PixelIcon name="house" :size="2" /><span class="lb">gồm khu bếp: {{ r.foodSold || 0 }} món<template v-if="r.foodLost"> · {{ r.foodLost }} món bị huỷ</template></span><span>{{ money(r.foodRev || 0) }}</span></div>
         <div v-if="r.tips" class="row sub"><PixelIcon name="heart" :size="2" /><span class="lb">gồm tiền tip</span><span>{{ money(r.tips) }}</span></div>
         <div v-if="r.seated || r.noSeat" class="row sub"><PixelIcon name="crowd" :size="2" /><span class="lb">Khu ngồi: {{ r.seated || 0 }} khách ngồi<template v-if="r.noSeat"> · {{ r.noSeat }} khách hết chỗ</template></span><span>{{ money(r.seatTips || 0) }}</span></div>
         <div class="row"><PixelIcon name="crate" /><span class="lb">Nhập hàng</span><b>{{ r.spent ? "-" + money(r.spent) : money(0) }}</b></div>

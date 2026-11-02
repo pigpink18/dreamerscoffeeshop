@@ -36,4 +36,7 @@ export const hooks: {
   rareSpawn?: (dayFrac: number) => string | null // id khách hiếm
   pickAddon?: () => string | null // khách muốn mua kèm món gì (bánh / lưu niệm) – null nếu không
   sellAddon?: (id: string) => { name: string; price: number } | null // trao món kèm: trừ kho, trả về giá
+  foodFor?: (name: string) => string | null // khu bếp: khách gọi kèm món bếp? (tạo phiếu đơn, trả id món)
+  kitchenTick?: (dt: number) => void
+  kitchenReset?: () => void
 } = {}

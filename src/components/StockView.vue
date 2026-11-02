@@ -5,6 +5,7 @@ import { recipeById, recipeNeeds, moneyShort, type IngredientId } from '../game/
 import { iconUrl } from '../game/pixel'
 import { knownIngredients, GOODS, goodUnlocked, goodsStock, buyGoods } from '../game/meta'
 import PixelIcon from './ui/PixelIcon.vue'
+import { FOOD_INGS, foodStock, buyFoodPack, kitchenOpen, unlockKitchen, KITCHEN_COST } from '../game/kitchen'
 
 const groups = computed(() => [
   { kind: 'souvenir', title: 'Đồ gốm & lưu niệm', lock: 'Thuê Quán gác gỗ đồi thông (Nâng cấp › Mặt bằng) để mở kệ lưu niệm', note: 'Khách mua kèm khi gọi nước. Không hư, để lâu được.' },
@@ -42,6 +43,26 @@ const sorted = computed(() => INGREDIENTS.filter((i) => !SECRET_ING.has(i.id) ||
       </div>
     </div>
     <p class="muted note">Mẹo: đá tan hết vào cuối ngày nếu chưa có tủ đông, nên chỉ nhập vừa đủ.</p>
+
+    <div class="section-title">Nguyên liệu bếp</div>
+    <div v-if="!kitchenOpen()" class="card locked">
+      <PixelIcon name="lock" :size="3" /><span class="muted small grow">Mở khu bếp để bán bánh mì chảo, mì trộn cay, waffle (khi đang bán: vuốt sang trang thứ 3).</span>
+      <button class="btn sm accent" :disabled="save.money < KITCHEN_COST" @click="unlockKitchen">MỞ · {{ moneyShort(KITCHEN_COST) }}</button>
+    </div>
+    <div v-else class="list">
+      <div v-for="i in FOOD_INGS" :key="i.id" class="card ing">
+        <span class="slot"><img :src="iconUrl(i.id)" class="pix ic" alt="" /></span>
+        <div class="grow">
+          <div class="name">{{ i.name }}</div>
+          <div class="muted small">Gói {{ i.packSize }} phần · {{ moneyShort(i.packPrice) }}</div>
+        </div>
+        <div class="qty" :class="{ low: foodStock(i.id) < 4 }"><small>KHO</small>{{ foodStock(i.id) }}</div>
+        <div class="btns">
+          <button class="btn sm accent" :disabled="save.money < i.packPrice" @click="buyFoodPack(i.id)">+1</button>
+          <button class="btn sm ghost" :disabled="save.money < i.packPrice * 3" @click="buyFoodPack(i.id, 3)">+3</button>
+        </div>
+      </div>
+    </div>
 
     <template v-for="g in groups" :key="g.kind">
       <div class="section-title">{{ g.title }}</div>

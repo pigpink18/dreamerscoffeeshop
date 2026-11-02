@@ -4,9 +4,11 @@ import App from './App.vue'
 import { unlockAudio } from './game/audio'
 import { initMeta } from './game/meta'
 import { initStory } from './game/story'
+import { initKitchen } from './game/kitchen'
 
 initMeta()
 initStory() // sau initMeta: bọc thêm vào các hook của meta
+initKitchen()
 createApp(App).mount('#app')
 
 // Trình duyệt chỉ cho phát âm thanh sau lần chạm đầu tiên

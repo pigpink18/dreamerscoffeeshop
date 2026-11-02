@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // Khay nguyên liệu + nút thao tác (chiết xuất, lắc, xay, khuấy, đổ bỏ)
 import { ref, computed } from 'vue'
-import { ui, save, brewStep, cancelBrew, startBrew, canMake, giveAddon, tutOn } from '../game/store'
+import { ui, save, brewStep, cancelBrew, startBrew, canMake, giveAddon, tutOn, staffAll, staffServeTime } from '../game/store'
+import { kitchen, kitchenOpen } from '../game/kitchen'
 import { GOODS, goodUnlocked } from '../game/metaData'
 import { recipeById, STEPS, type StepId, type IngredientId } from '../game/data'
 import { iconUrl, IMG_URL } from '../game/pixel'
@@ -67,7 +68,27 @@ function pickOrder(id: number) {
 </script>
 
 <template>
-  <div class="panel">
+  <!-- có nhân viên pha chế: họ lo hết quầy nước, bạn chỉ xem & vào bếp -->
+  <div v-if="staffAll" class="panel staff-panel">
+    <div class="sp-head"><PixelIcon name="staff" :size="3" /><div class="grow"><b>Nhân viên đang lo quầy pha chế</b><small>Nhận đơn, pha nước và đơn app đều do nhân viên làm. Bạn rảnh tay vào bếp nấu món.</small></div></div>
+    <div class="sp-list">
+      <div v-for="(p, i) in ui.staffProgress" :key="i" class="sp-row">
+        <span class="nm">Pha chế {{ i + 1 }}</span>
+        <span class="job">{{ ui.staffJob[i] ?? 'Đang rảnh' }}</span>
+        <i class="bar"><em :style="{ width: ui.staffJob[i] ? Math.min(100, (p / staffServeTime) * 100) + '%' : '0%' }" /></i>
+      </div>
+    </div>
+    <div v-if="shelf.length" class="shelf">
+      <span class="sh-lbl">KỆ</span>
+      <button v-for="g in shelf" :key="g.id" class="good" :class="{ want: wanted === g.id, out: (save.meta.goods[g.id] ?? 0) < 1 }" @pointerdown.prevent="giveAddon(g.id)">
+        <img :src="iconUrl(g.id)" class="pix" alt="" /><span class="gq">{{ save.meta.goods[g.id] ?? 0 }}</span>
+      </button>
+    </div>
+    <button class="btn go-kitchen" @click="ui.page = 2">
+      <PixelIcon name="house" :size="2" /> {{ kitchenOpen() ? `VÀO BẾP${kitchen.tickets.length ? ` · ${kitchen.tickets.length} phiếu chờ` : ''}` : 'MỞ KHU BẾP' }} ›
+    </button>
+  </div>
+  <div v-else class="panel">
     <!-- Công thức đang pha -->
     <div class="recipe">
       <template v-if="recipe && ui.brew">
@@ -222,6 +243,17 @@ function pickOrder(id: number) {
   .actions { margin-top: 6px; gap: 4px; }
   .aic { width: 22px; height: 22px; }
 }
+.staff-panel { display: flex; flex-direction: column; gap: 8px; }
+.sp-head { display: flex; align-items: center; gap: 8px; background: #e3f4ea; padding: 8px; box-shadow: var(--px-border-2); }
+.sp-head b { display: block; font-size: 13px; }
+.sp-head small { display: block; font-size: 11px; color: #4b5d52; line-height: 1.35; }
+.sp-list { display: flex; flex-direction: column; gap: 4px; }
+.sp-row { display: grid; grid-template-columns: auto 1fr 70px; align-items: center; gap: 8px; font-size: 12px; background: #fffaf2; padding: 5px 8px; box-shadow: var(--px-border-2); }
+.sp-row .nm { font-weight: 900; }
+.sp-row .job { color: #6f4e37; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-row .bar { height: 6px; background: #e6d6c2; box-shadow: 0 0 0 1px #3b2a20; }
+.sp-row .bar em { display: block; height: 100%; background: #2f9e6b; }
+.go-kitchen { width: 100%; justify-content: center; background: #f2c14e; font-weight: 900; padding: 12px; box-shadow: var(--px-border-2), inset 0 -4px 0 #d99a2b, 0 4px 0 rgba(59, 42, 32, 0.5); }
 .tut { flex-basis: 100%; margin-top: 4px; padding: 4px 7px; font-size: 12px; font-weight: 700; color: #3b2a20; background: #ffe9a8; box-shadow: 0 0 0 2px #d99a2b; animation: tutIn 0.3s ease-out; }
 .tut b { font-size: 10px; letter-spacing: 1px; color: #fff; background: #d8333a; padding: 1px 4px; margin-right: 4px; }
 @keyframes tutIn { from { transform: translateY(-4px); opacity: 0; } }

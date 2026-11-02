@@ -1,4 +1,5 @@
 // Icon nguyên liệu & hàng bán kèm 16x16 vẽ pixel có đổ bóng / ánh sáng (đẹp hơn bộ 12x12 cũ).
+import { DRAW16_FOOD } from './icons16food'
 type C = CanvasRenderingContext2D
 const K = '#3b2a20' // viền
 
@@ -177,3 +178,6 @@ export const DRAW16: Record<string, (c: C) => void> = {
     p(c, 4, 4, 1, 1, '#3b2318'); p(c, 9, 3, 1, 1, '#3b2318')
   },
 }
+
+// icon khu bếp (bánh mì chảo, mì trộn cay, waffle…)
+Object.assign(DRAW16, DRAW16_FOOD)

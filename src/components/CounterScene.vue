@@ -3,7 +3,7 @@ import { sceneW } from '../game/sceneSize'
 // Cảnh quầy pha chế pixel art: khách bước tới quầy, thiết bị, ly nước, hoạt ảnh.
 import { ref, computed, onMounted, onBeforeUnmount, onActivated, onDeactivated, watch } from 'vue'
 import {
-  ui, save, bus, openTalk, talkChat, talkReply, brewFromTalk, startBrew, canMake, stepMs, DAY_LENGTH, staffServeTime, skipPresent, tutOn, comboRate,
+  ui, save, bus, openTalk, talkChat, talkReply, brewFromTalk, startBrew, canMake, stepMs, DAY_LENGTH, staffServeTime, skipPresent, tutOn, comboRate, staffAll,
   type Customer, type GameEvent,
 } from '../game/store'
 import { drawSign, SIGN_W } from '../game/sign'
@@ -20,7 +20,8 @@ import {
   type CupLook, type Mood,
 } from '../game/pixel'
 import { isXmasSeason, drawXmasTree } from '../game/xmas'
-import { drawCeiling, drawFloor, drawFloorProps } from '../game/depth'
+import { drawCeiling, drawFloor, drawFloorProps, drawSideWalls, drawCounterWings } from '../game/depth'
+import { foodById, type FoodId } from '../game/kitchen'
 import { drawRoomMid, drawRoomBig, drawCounterMid, drawCounterBig, drawStools, drawDecorItems, drawSouvenirShelf } from '../game/rooms'
 import { rareById, GOODS } from '../game/metaData'
 const goodName = (id: string) => GOODS.find((g) => g.id === id)?.name ?? id
@@ -111,7 +112,7 @@ const waiting = computed(() => Math.max(0, ui.queue.length - (actorView.value &&
 function scenePt(sx: number, sy: number): Pt {
   const r = cv.value?.getBoundingClientRect()
   if (!r) return { x: innerWidth / 2, y: innerHeight / 3 }
-  return { x: r.left + (sx / SCENE_W) * r.width, y: r.top + ((sy + geo.top) / geo.H) * r.height }
+  return { x: r.left + ((sx + OX) / CW) * r.width, y: r.top + ((sy + geo.top) / geo.H) * r.height }
 }
 const custPt = () => scenePt((actor?.x ?? LAYOUT.customerX) + 8, LAYOUT.customerY + 12)
 // ---- combo + giờ cao điểm ----
@@ -193,7 +194,7 @@ function cupLook(): CupLook | null {
 function updateActor(now: number, dt: number) {
   const f = front.value
   if (!actor && f && ui.phase === 'open') {
-    actor = { id: f.id, cust: f, x: SCENE_W + 8, target: LAYOUT.customerX, state: 'enter', mood: 'neutral', holding: null, holdUntil: 0 }
+    actor = { id: f.id, cust: f, x: SCENE_W + OX + 2, target: LAYOUT.customerX, state: 'enter', mood: 'neutral', holding: null, holdUntil: 0 }
     review.value = null
     angry.value = null
   }
@@ -201,7 +202,7 @@ function updateActor(now: number, dt: number) {
   const stillHere = ui.queue.some((c) => c.id === actor!.id)
   if (actor.state !== 'leave') {
     const shouldLeave = (actor.holdUntil && now > actor.holdUntil) || (!stillHere && !actor.holdUntil) || ui.phase !== 'open'
-    if (shouldLeave) { actor.state = 'leave'; actor.target = SCENE_W + 12 }
+    if (shouldLeave) { actor.state = 'leave'; actor.target = SCENE_W + OX + 6 }
   }
   const speed = 95
   if (actor.x !== actor.target) {
@@ -211,7 +212,7 @@ function updateActor(now: number, dt: number) {
     actor.state = 'idle'
     if (ui.phase === 'open' && !ui.brew && !ui.present && stillHere) openTalk(actor.id)
   }
-  if (actor.state === 'leave' && actor.x >= SCENE_W + 10) {
+  if (actor.state === 'leave' && actor.x >= SCENE_W + OX + 4) {
     actor = null
     actorView.value = null
     review.value = null
@@ -246,7 +247,8 @@ function draw(now: number) {
   const floorH = geo.H - geo.top - SCENE_H
   drawCeiling(c, geo.top, P0, now / 1000, isXmasSeason())
   drawFloor(c, geo.top + SCENE_H, floorH, P0)
-  c.setTransform(scale, 0, 0, scale, 0, geo.top * scale)
+  drawSideWalls(c, OX, P0, ui.phase === 'open' ? ui.time / DAY_LENGTH : 0.15) // tường hông 2 bên (phối cảnh)
+  c.setTransform(scale, 0, 0, scale, OX * scale, geo.top * scale) // cảnh gốc nằm giữa
   const dayFrac = ui.phase === 'open' ? ui.time / DAY_LENGTH : 0.15
   const U = save.upgrades
   const P = save.meta.premise
@@ -293,6 +295,10 @@ function draw(now: number) {
   if (P === 2) { drawCounterBig(c, t, save.meta.goods); drawSign(c, 4, COUNTER_Y + 6, t, night); drawStools(c) }
   else if (P === 1) { drawCounterMid(c); drawSign(c, (SCENE_W - SIGN_W) / 2 - 6, COUNTER_Y + 6, t, night); drawSouvenirShelf(c, save.meta.goods) }
   else { drawCounter(c); drawSign(c, (SCENE_W - SIGN_W) / 2, COUNTER_Y + 6, t, night) }
+  // quầy kéo dài sang 2 tường hông (vẽ sau khách để che chân khách đang đi vào từ cửa hông)
+  c.setTransform(scale, 0, 0, scale, 0, geo.top * scale)
+  drawCounterWings(c, OX, CW, P)
+  c.setTransform(scale, 0, 0, scale, OX * scale, geo.top * scale)
   // đồ trên mặt quầy / thân quầy
   if (U.decor >= 1) drawPlant(c, 67, COUNTER_Y - 13)
   const xmas = isXmasSeason()
@@ -381,9 +387,10 @@ function draw(now: number) {
 }
 
 const SCENE_PREF_W = 488 // độ rộng tối đa của khung cảnh (px)
-/** Khung cảnh cố định tỉ lệ 488 : 256 (dẹt ngang): máy tính 488×256, điện thoại tự co theo bề ngang, không méo.
- *  Cảnh gốc cao hơn tỉ lệ này nên phần tường trang trí phía trên được cắt bớt (geo.top âm). */
-const ASPECT = 256 / 488
+/** Khung dẹt ngang ~488 : 256 nhưng KHÔNG cắt / phóng to cảnh: cảnh gốc 128x92 giữ nguyên ở giữa (tường sau),
+ *  2 bên thêm tường hông nhìn theo phối cảnh + quầy kéo dài (depth.ts) → cân xứng, có chiều sâu. */
+const OX = 24 // bề rộng mỗi tường hông (điểm ảnh cảnh)
+const CW = SCENE_W + 2 * OX // 176 → tỉ lệ 176:92 ≈ 488:255
 const geo = { top: 0, H: SCENE_H } // top: chiều cao trần thêm (âm = cắt tường) · H: chiều cao cả canvas (điểm ảnh cảnh)
 const geoTick = ref(0) // đổi khi khung đổi → toạ độ các lớp phủ cập nhật
 
@@ -409,9 +416,8 @@ function measure(): { w: number; top: number; H: number } {
     ph = page.clientHeight - others - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - parseFloat(cs.marginTop) - parseFloat(cs.marginBottom) - 8
   }
   let w = Math.min(SCENE_PREF_W, pw)
-  if (ph > 60 && w * ASPECT > ph) w = ph / ASPECT // màn quá thấp: thu nhỏ cả khung (giữ tỉ lệ)
-  const H = Math.round(SCENE_W * ASPECT) // chiều cao cảnh (điểm ảnh) theo tỉ lệ khung
-  return { w, top: H - SCENE_H, H }
+  if (ph > 60 && (w * SCENE_H) / CW > ph) w = (ph * CW) / SCENE_H // màn quá thấp: thu nhỏ cả khung (giữ tỉ lệ)
+  return { w, top: 0, H: SCENE_H }
 }
 
 function resize(force: boolean | Event = false) {
@@ -429,12 +435,12 @@ function resize(force: boolean | Event = false) {
   geo.top = top; geo.H = H; geoTick.value++
   const dpr = window.devicePixelRatio || 1
   // vẽ ở độ phân giải nguyên (sắc nét) rồi co vừa khít khung bằng CSS
-  scale = Math.max(1, Math.ceil((w * dpr) / SCENE_W))
+  scale = Math.max(1, Math.ceil((w * dpr) / CW))
   // chỉ gán lại khi kích thước đổi thật – gán canvas.width sẽ xoá & cấp phát lại canvas (nặng, gây lag nút)
-  if (canvas.width !== SCENE_W * scale || canvas.height !== H * scale) { canvas.width = SCENE_W * scale; canvas.height = H * scale }
+  if (canvas.width !== CW * scale || canvas.height !== H * scale) { canvas.width = CW * scale; canvas.height = H * scale }
   const set = (st: CSSStyleDeclaration, key: 'width' | 'height', v: string) => { if (st[key] !== v) st[key] = v }
   set(canvas.style, 'width', `${Math.floor(w)}px`)
-  set(canvas.style, 'height', `${Math.round(w * ASPECT)}px`) // đúng tỉ lệ 488:256
+  set(canvas.style, 'height', `${Math.round((w * H) / CW)}px`) // đúng tỉ lệ, không méo
   set(el.style, 'width', `${Math.floor(w)}px`)
   ctx = canvas.getContext('2d')
 }
@@ -463,13 +469,13 @@ onBeforeUnmount(() => {
   off?.()
 })
 
-const pctX = (x: number) => `${(x / SCENE_W) * 100}%`
+const pctX = (x: number) => `${((x + OX) / CW) * 100}%`
 const pctY = (y: number) => (geoTick.value, `${((y + geo.top) / geo.H) * 100}%`)
 /** Bóng thoại nằm phía trên (sát mép trên vùng tường, ngay dưới trần) như bản gốc;
  *  luôn chừa 14px cho nhãn tên nên không bị cắt ở mép trên, quá dài thì phần lời thoại tự cuộn */
 const bubbleStyle = computed(() => {
   const top = `max(14px, ${pctY(6)})`
-  return { top, maxHeight: `calc(100% - ${top} - 8px)` }
+  return { top, maxHeight: `calc(100% - ${top} - 8px)`, left: pctX(-20), width: `${(96 / CW) * 100}%` } // từ tường hông trái tới sát đầu khách
 })
 </script>
 
@@ -520,9 +526,14 @@ const bubbleStyle = computed(() => {
         <div class="who" :class="whoKind">{{ who }}</div>
         <div class="txt" :class="{ hurry: cur.line && cur.patience / cur.maxPatience < 0.5 && !talkHere }"><TypeText ref="typer" :text="bubbleText" :pitch="voice" :instant="lineInstant" @done="onTyped" /></div>
         <div v-if="cur.addon" class="addon" :class="{ done: cur.addonDone }"><img :src="iconUrl(cur.addon)" alt="" /><span>{{ cur.addonDone ? 'Đã trao' : 'Kèm' }}: <b>{{ goodName(cur.addon) }}</b></span></div>
+        <div v-if="cur.food" class="addon food"><img :src="iconUrl(cur.food)" alt="" /><span>Món bếp: <b>{{ foodById[cur.food as FoodId]?.name }}</b></span></div>
         <div v-if="brewingHere" class="order"><PixelIcon name="menu" :size="2" /> {{ recipeById[cur.recipe].name }}</div>
         <div v-else-if="talkHere?.mode === 'chat'" class="choices">
           <button v-for="(r, i) in talkHere.topic!.replies" :key="i" :class="{ sassy: r.sassy }" @click="talkReply(i)"><PixelIcon :name="r.sassy ? 'megaphone' : 'chat'" :size="2" /> <span v-if="r.sassy" class="sass">XÉO SẮC</span> {{ noEmoji(r.text) }}</button>
+        </div>
+        <div v-else-if="staffAll && !ui.present" class="choices row">
+          <span class="staff-note"><PixelIcon name="staff" :size="2" /> Nhân viên đang pha: {{ recipeById[cur.recipe].name }}</span>
+          <button v-if="!cur.chatted && cur.needy === undefined" @click="talkHere ? talkChat() : (openTalk(cur.id), talkChat())"><PixelIcon name="chat" :size="2" /> Tám</button>
         </div>
         <div v-else-if="!ui.present" class="choices row">
           <button class="main" :class="{ dis: !canMake(cur.recipe), guide: tutOn && !ui.brew }" @click="talkHere ? brewFromTalk() : startBrew('cust', cur.id)">
@@ -694,6 +705,8 @@ const bubbleStyle = computed(() => {
   background: #fff3dc; padding: 3px 7px; border: 2px dashed #d8b98d;
 }
 .choices { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; animation: choicesIn 0.22s ease-out; }
+.staff-note { flex: 1 1 auto; display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; color: #2f6b4a; background: #e3f4ea; padding: 5px 7px; box-shadow: 0 0 0 2px #2f9e6b; }
+.addon.food { background: #fff0e0; }
 .choices.row { flex-direction: row; align-items: stretch; gap: 7px; }
 .choices.row button { flex: none; padding: 6px 8px; }
 .choices.row button.main { flex: 1 1 auto; min-width: 0; line-height: 1.2; }

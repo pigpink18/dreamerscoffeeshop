@@ -173,3 +173,81 @@ function mixHex(a: string, b: string, f: number) {
   return `rgb(${ch(16)},${ch(8)},${ch(0)})`
 }
 
+
+// ---------- TƯỜNG HÔNG 2 BÊN (khung dẹt ngang: giữ nguyên cảnh gốc ở giữa, không cắt / không phóng to) ----------
+// Cảnh gốc 128x92 là bức tường sau; 2 bên là tường hông nhìn chéo theo phối cảnh (càng gần người xem càng tối,
+// các đường nẹp toả ra), quầy kéo dài sang 2 bên. Toạ độ: x ∈ [0, ox) bên trái, [ox+128, cw) bên phải.
+const WALLS = [
+  { wall: '#f0dcb4', stripe: '#e6cb9c', dado: CZ.t1, dadoHi: CZ.t0, trim: CZ.w1 },
+  { wall: CZ.w4, stripe: CZ.w2, dado: CZ.r1, dadoHi: CZ.r2, trim: CZ.w1 },
+  { wall: '#f1d9cc', stripe: '#e4c4b4', dado: '#6fb8ae', dadoHi: '#3f8279', trim: CZ.w1 },
+]
+const HZ = 38 // đường chân trời (mắt người xem)
+/** y của 1 đường ngang trên tường sau (yBack) khi kéo ra tường hông, theo độ gần d ∈ [0..1] (1 = sát người xem) */
+const persp = (yBack: number, d: number) => HZ + (yBack - HZ) * (1 + 0.45 * d)
+
+export function drawSideWalls(c: Ctx, ox: number, premise: number, dayFrac: number) {
+  const W = WALLS[premise] ?? WALLS[0]
+  for (const side of [0, 1] as const) {
+    for (let i = 0; i < ox; i++) {
+      const x = side === 0 ? ox - 1 - i : ox + SCENE_W + i // i = khoảng cách từ góc tường
+      const d = (i + 1) / ox
+      const yTrim = Math.round(persp(3, d)), yDado = Math.round(persp(44, d))
+      px(c, x, 0, 1, 62, W.wall)
+      if (i % 5 === 2) px(c, x, 0, 1, yDado, W.stripe)
+      px(c, x, Math.max(0, yTrim - 3), 1, 3, W.trim) // gờ trần
+      px(c, x, yDado, 1, 2, CZ.w3); px(c, x, yDado + 2, 1, 1, CZ.w1) // nẹp chân tường
+      px(c, x, yDado + 3, 1, 62 - yDado - 3, W.dado)
+      if (i % 7 === 3) px(c, x, yDado + 5, 1, 62 - yDado - 5, W.dadoHi)
+      // càng gần người xem càng tối (tường hông khuất sáng)
+      c.fillStyle = `rgba(38, 28, 27, ${(0.06 + 0.16 * d).toFixed(3)})`
+      c.fillRect(x, 0, 1, 62)
+    }
+    // góc tường (mép giao tường sau)
+    const cx = side === 0 ? ox - 1 : ox + SCENE_W
+    px(c, cx, 0, 1, 62, 'rgba(38, 28, 27, 0.35)')
+  }
+  // tường trái: cửa kính ra vào (nhìn thấy trời ngoài)
+  sideRect(ox, 0, 4, 18, 10, 60, (x, y0, y1, u) => {
+    const sky = dayFrac > 0.85 ? '#2d3561' : '#bfe3f0'
+    px(c, x, y0, 1, y1 - y0, u < 0.08 || u > 0.92 ? CZ.w1 : sky)
+    px(c, x, y0, 1, 2, CZ.w1)
+    if (u > 0.08 && u < 0.92) { px(c, x, Math.round(y0 + (y1 - y0) * 0.55), 1, 1, CZ.w1); if (u > 0.3 && u < 0.4) px(c, x, y0 + 3, 1, Math.round((y1 - y0) * 0.4), 'rgba(255,255,255,0.45)') }
+  })
+  // tường phải: tranh + kệ treo có ly
+  sideRect(ox, 1, 6, 18, 12, 26, (x, y0, y1, u) => {
+    px(c, x, y0, 1, y1 - y0, u < 0.1 || u > 0.9 ? CZ.w1 : '#8fc9e8')
+    if (u >= 0.1 && u <= 0.9) px(c, x, Math.round(y0 + (y1 - y0) * 0.6), 1, Math.ceil((y1 - y0) * 0.3), '#3f7a5c')
+  })
+  sideRect(ox, 1, 4, 20, 31, 33, (x, y0) => { px(c, x, y0, 1, 2, CZ.w3); px(c, x, y0 + 2, 1, 1, CZ.w1) })
+  sideRect(ox, 1, 6, 18, 25, 31, (x, y0, y1, u) => { if ((u * 4) % 1 < 0.55) px(c, x, y0 + 1, 1, y1 - y0 - 1, ['#fbf6ec', '#f2c14e', '#e8506a', '#7fb34d'][Math.floor(u * 4) % 4]) })
+}
+/** vẽ 1 hình chữ nhật dán trên tường hông (i0..i1 = khoảng cách từ góc tường, yTop/yBot đo trên tường sau) */
+function sideRect(ox: number, side: 0 | 1, i0: number, i1: number, yTop: number, yBot: number, col: (x: number, y0: number, y1: number, u: number) => void) {
+  for (let i = i0; i < Math.min(i1, ox); i++) {
+    const d = (i + 1) / ox
+    const x = side === 0 ? ox - 1 - i : ox + SCENE_W + i
+    col(x, Math.round(persp(yTop, d)), Math.round(persp(yBot, d)), (i - i0) / Math.max(1, i1 - i0 - 1))
+  }
+}
+
+/** quầy kéo dài sang 2 tường hông (cùng chất liệu với quầy của mặt bằng) */
+export function drawCounterWings(c: Ctx, ox: number, cw: number, premise: number) {
+  const Y = 62
+  const top = premise === 2 ? [CZ.r0, CZ.r2] : premise === 1 ? [CZ.w1, CZ.w3] : [CZ.w3, CZ.w5]
+  const body = premise === 2 ? CZ.r2 : premise === 1 ? CZ.w1 : CZ.w2
+  for (const [x0, w] of [[0, ox], [ox + SCENE_W, cw - ox - SCENE_W]]) {
+    px(c, x0, Y - 1, w, 1, CZ.ink)
+    px(c, x0, Y, w, 4, top[0]); px(c, x0, Y, w, 1, top[1])
+    px(c, x0, Y + 4, w, 1, CZ.w1); px(c, x0, Y + 5, w, 1, CZ.ink)
+    px(c, x0, Y + 6, w, 92 - Y - 6, body)
+    px(c, x0, Y + 6, w, 2, 'rgba(38,28,27,0.3)')
+    // ô panel lõm
+    const pw = w - 6
+    if (pw > 6) {
+      px(c, x0 + 3, Y + 10, pw, 92 - Y - 14, CZ.ink)
+      px(c, x0 + 4, Y + 11, pw - 2, 92 - Y - 16, premise === 0 ? CZ.t1 : premise === 1 ? CZ.w2 : CZ.r1)
+    }
+    px(c, x0, 90, w, 2, CZ.w1)
+  }
+}

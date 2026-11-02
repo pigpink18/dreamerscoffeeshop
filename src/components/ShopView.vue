@@ -16,6 +16,8 @@ import SeatingScene from './SeatingScene.vue'
 import { ref } from 'vue'
 import { dirtySeats } from '../game/store'
 import WorkPanel from './WorkPanel.vue'
+import KitchenView from './KitchenView.vue'
+import { kitchen } from '../game/kitchen'
 import { currentChapter, finaleDay, storyDone, endingScore, ENDING_TITLE } from '../game/story'
 import PixelIcon from './ui/PixelIcon.vue'
 import DrinkIcon from './ui/DrinkIcon.vue'
@@ -46,7 +48,7 @@ function swMove(e: PointerEvent) {
   if (horiz === null && Math.abs(dx) + Math.abs(dy) > 10) horiz = Math.abs(dx) > Math.abs(dy) * 1.2
   if (!horiz) return
   // kéo theo ngón tay (có lực cản ở 2 đầu)
-  const edge = (ui.page === 0 && dx > 0) || (ui.page === 1 && dx < 0)
+  const edge = (ui.page === 0 && dx > 0) || (ui.page === PAGES - 1 && dx < 0)
   drag.value = edge ? dx * 0.25 : dx
 }
 function swUp(e: PointerEvent) {
@@ -54,11 +56,13 @@ function swUp(e: PointerEvent) {
   tracking = false
   const dx = e.clientX - sx
   if (horiz && Math.abs(dx) > 50) {
-    if (dx < 0 && ui.page === 0) ui.page = 1
-    else if (dx > 0 && ui.page === 1) ui.page = 0
+    if (dx < 0 && ui.page < PAGES - 1) ui.page++
+    else if (dx > 0 && ui.page > 0) ui.page--
   }
   drag.value = 0
 }
+/** 3 trang khi đang bán: quầy pha chế · khu khách ngồi · bếp */
+const PAGES = 3
 function swCancel() { tracking = false; drag.value = 0 }
 
 const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensive + ui.stats.cancelled)
@@ -194,7 +198,7 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 
     <!-- Vuốt ngang: trang 1 = quầy pha chế · trang 2 = khu khách ngồi -->
     <div class="pager" @pointerdown="swDown" @pointermove="swMove" @pointerup="swUp" @pointercancel="swCancel">
-      <div class="track" :class="{ dragging: drag !== 0 }" :style="{ transform: `translateX(calc(${-ui.page * 50}% + ${drag}px))` }">
+      <div class="track" :class="{ dragging: drag !== 0 }" :style="{ transform: `translateX(calc(${(-ui.page * 100) / PAGES}% + ${drag}px))` }">
         <div class="page">
           <div class="scene-box"><CounterScene /></div>
           <WorkPanel />
@@ -202,11 +206,15 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
         <div class="page seat-page">
           <SeatingScene />
         </div>
+        <div class="page kitchen-page">
+          <KitchenView />
+        </div>
       </div>
     </div>
     <div class="dots">
       <i :class="{ on: ui.page === 0 }" />
-      <i :class="{ on: ui.page === 1, warn: dirtySeats > 0 && ui.page === 0 }" />
+      <i :class="{ on: ui.page === 1, warn: dirtySeats > 0 && ui.page !== 1 }" />
+      <i :class="{ on: ui.page === 2, warn: kitchen.tickets.length > 0 && !kitchen.cook && ui.page !== 2 }" />
     </div>
 
     <Transition name="fade">
@@ -272,9 +280,9 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 .open { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .open > * { flex: none; }
 .open > .pager { flex: 1 1 0; min-height: 0; overflow: hidden; position: relative; touch-action: pan-y; }
-.track { display: flex; width: 200%; height: 100%; transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); will-change: transform; }
+.track { display: flex; width: 300%; height: 100%; transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); will-change: transform; }
 .track.dragging { transition: none; }
-.page { width: 50%; height: 100%; min-height: 0; display: flex; flex-direction: column; }
+.page { width: 33.3334%; height: 100%; min-height: 0; display: flex; flex-direction: column; }
 .page > * { flex: none; }
 .page > .scene-box { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; padding: 2px 0 8px; } /* cảnh khoá kích thước, nằm giữa; khay pha chế luôn ở dưới cho dễ bấm */
 .seat-page { padding: 10px 3px 12px; }

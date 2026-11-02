@@ -10,6 +10,7 @@ import { voice, voiceTopic, type Gender, type Persona } from './voice'
 import { sfx, comboSfx, setDayFrac, setReportMode, preloadReport, audio } from './audio'
 import { isXmasSeason } from './season'
 import { HAT_STYLES } from './pixel'
+import type { FoodIng } from './kitchen'
 import { hooks, type MetaDayResult } from './hooks'
 import { PREMISES, rareById, newMeta, RIVALS, type MetaSave } from './metaData'
 
@@ -54,6 +55,7 @@ export interface SaveData {
   loans: number // số lần đã vay
   tutDone: boolean // đã qua màn hướng dẫn ly đầu tiên
   events: Record<string, boolean> // sự kiện theo mùa đã mở (để chỉ tặng quà 1 lần)
+  kitchen: { open: boolean; stock: Partial<Record<FoodIng, number>> } // khu bếp (kitchen.ts)
 }
 
 export interface StorySave {
@@ -110,6 +112,7 @@ export interface Customer {
   p?: Persona // xưng hô cố định của khách (voice.ts)
   chatted?: boolean
   chatBonus?: number // điểm thiện cảm từ tám chuyện (khách vãng lai)
+  food?: string // món bếp gọi kèm (kitchen.ts) – đã có phiếu đơn trong bếp
 }
 
 export interface Talk {
@@ -199,6 +202,9 @@ export interface DayStats {
   comboBonus?: number // tiền thưởng combo
   rushWon?: number // số giờ cao điểm vượt qua không mất khách
   rushBonus?: number // tiền thưởng giờ cao điểm
+  foodRev?: number // doanh thu khu bếp (gồm tip + combo)
+  foodSold?: number
+  foodLost?: number // phiếu bếp bị huỷ vì chờ lâu
 }
 
 /** Người cho vay khi quán hết tiền: mẹ (không lấy lãi, 2 lần đầu) → Bà Tư chủ nhà (lãi 10%) */
@@ -257,6 +263,7 @@ function newSave(): SaveData {
     loans: 0,
     tutDone: false,
     events: {},
+    kitchen: { open: false, stock: {} },
   }
 }
 
@@ -289,6 +296,7 @@ function loadSave(): SaveData {
           // bản lưu cũ đã bán được rồi: bỏ qua hướng dẫn
           tutDone: data.tutDone ?? ((data.totals?.served ?? 0) > 0 || (data.day ?? 1) > 1),
           events: { ...data.events },
+          kitchen: { open: !!data.kitchen?.open, stock: { ...data.kitchen?.stock } },
           story: data.story ? { ...base.story, ...data.story, flags: { ...data.story.flags } } : { start: Math.max(0, (data.day ?? 1) - 1), seen: [], flags: {} },
         }
       }
@@ -393,7 +401,7 @@ export function toast(text: string, kind: 'info' | 'bad' | 'good' | 'say' | 'rap
   }, ms)
 }
 
-function float(text: string, kind: 'good' | 'bad') {
+export function float(text: string, kind: 'good' | 'bad') {
   const id = nextId()
   ui.floats.push({ id, text: noEmoji(text), kind, x: 15 + Math.random() * 70, y: 8 + Math.random() * 30 })
   setTimeout(() => {
@@ -407,14 +415,14 @@ const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v))
 // ---------- COMBO: tự tay pha chuẩn liên tiếp → thưởng thêm % giá ly ----------
 /** % thưởng theo độ dài chuỗi: x2 = 6% … x11 trở lên = 60% */
 export const comboRate = (n: number) => (n < 2 ? 0 : Math.min(0.6, 0.06 * (n - 1)))
-function comboUp(price: number): number {
+export function comboUp(price: number): number {
   ui.combo++
   ui.stats.comboBest = Math.max(ui.stats.comboBest ?? 0, ui.combo)
   const bonus = Math.round((price * comboRate(ui.combo)) / 1000) * 1000
   if (ui.combo >= 2) { comboSfx(ui.combo); bus.emit({ type: 'combo', n: ui.combo, bonus }) }
   return bonus
 }
-function breakCombo() {
+export function breakCombo() {
   if (ui.combo >= 3) { sfx('comboBreak'); bus.emit({ type: 'comboBreak', n: ui.combo }) }
   ui.combo = 0
 }
@@ -449,6 +457,8 @@ export const forecast = computed(() => weatherById[save.forecast])
 export const premise = computed(() => PREMISES[save.meta.premise] ?? PREMISES[0])
 export const rentToday = computed(() => premise.value.rent)
 export const queueCapacity = computed(() => 4 + save.upgrades.decor + premise.value.slots)
+/** có ≥1 nhân viên pha chế → nhân viên nhận & pha mọi đơn nước, bạn không nhận đơn nữa */
+export const staffAll = computed(() => save.upgrades.staff >= 1)
 export const staffServeTime = computed(() => 5 / (1 + 0.4 * save.upgrades.machine))
 export const wages = computed(() => save.upgrades.staff * STAFF_WAGE + save.upgrades.shipper * SHIPPER_WAGE + save.seating.waiter * WAITER_WAGE)
 export const maxTables = computed(() => MAX_TABLES[save.meta.premise] ?? 4)
@@ -623,6 +633,7 @@ export function openShop() {
   ui.page = 0
   ui.combo = 0
   ui.rush = null
+  hooks.kitchenReset?.()
   syncSeason()
   ui.stats = { ...emptyStats(save.reputation), spent: ui.stats.spent }
   hooks.dayStart?.()
@@ -770,7 +781,8 @@ function tick(dt: number) {
 
   // Nhân viên tự phục vụ: ưu tiên khách tại quán, sau đó đơn app
   // mỗi nhân viên nhận 1 việc khác nhau (không pha trùng khách)
-  const custs = ui.queue.filter((c, i) => i > 0 && !isBrewing('cust', c.id) && canMake(c.recipe))
+  // có nhân viên pha chế: họ lo hết quầy nước (cả khách đứng đầu) – bạn rảnh tay vào bếp
+  const custs = ui.queue.filter((c, i) => (i > 0 || staffAll.value) && !isBrewing('cust', c.id) && canMake(c.recipe))
   const ords = ui.orders.filter((o) => o.state === 'new' && !isBrewing('order', o.id) && canMake(o.recipe))
   for (let s = 0; s < ui.staffProgress.length; s++) {
     const cust = custs[s]
@@ -807,6 +819,7 @@ function tick(dt: number) {
   }
 
   tickSeating(dt)
+  hooks.kitchenTick?.(dt)
 
   if (ui.time >= DAY_LENGTH) endDay()
 }
@@ -832,6 +845,8 @@ function spawnCustomer() {
     const a = hooks.pickAddon?.(); if (a) c.addon = a
     // mùa Noel: ~40% khách đội mũ Noel (copy ngoại hình, không sửa ngoại hình gốc của nhân vật)
     if (isXmasSeason() && Math.random() < 0.4 && !HAT_STYLES.includes(c.look.style)) c.look = { ...c.look, acc: [...(c.look.acc ?? []), 'santa'] }
+    // khu bếp: gọi kèm món ăn → phiếu đơn vào bếp
+    if (c.needy === undefined) { const f = hooks.foodFor?.(c.name ?? REGULARS.find((r) => r.id === c.regular)?.name ?? 'Khách'); if (f) c.food = f }
     ui.queue.push(c)
   }
   if (ui.queue.length >= queueCapacity.value) {
@@ -907,7 +922,7 @@ function spawnOrder() {
   if (ui.view !== 'app') toast('📱 Có đơn mới trên app!', 'info', 1500)
 }
 
-function changeRep(d: number) {
+export function changeRep(d: number) {
   save.reputation = clamp(save.reputation + d, 0, 100)
 }
 
@@ -1121,6 +1136,7 @@ export function stepMs(step: StepId) {
 
 export function startBrew(target: 'cust' | 'order', id: number) {
   if (ui.brew || ui.present) return
+  if (staffAll.value) { toast('Nhân viên đang lo quầy pha chế – bạn vào Bếp nấu món nhé', 'info', 1800); return }
   const recipe = target === 'cust' ? ui.queue.find((c) => c.id === id)?.recipe : ui.orders.find((o) => o.id === id && o.state === 'new')?.recipe
   if (!recipe) return
   if (!canMake(recipe)) {
@@ -1366,6 +1382,7 @@ function endDay() {
   ui.waiters = []
   ui.rush = null
   ui.combo = 0
+  hooks.kitchenReset?.()
   // Xong 1 ngày → mở khoá món mới
   const nr = unlockNextRecipe()
   if (nr) ui.stats.newRecipe = nr
