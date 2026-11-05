@@ -1,8 +1,8 @@
 <script setup lang="ts">
-// Chữ hiện ra từng chữ như khách đang nói (kèm tiếng "bíp" nhỏ), dừng lâu hơn ở dấu câu.
+// Chữ hiện ra từng chữ như khách đang nói (kèm tiếng gõ máy đánh chữ, hết câu kêu "ting"), dừng lâu hơn ở dấu câu.
 // Chạm vào để hiện hết ngay. Phần chưa hiện vẫn giữ chỗ (ẩn) để khung chat không bị giật kích thước.
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
-import { talkBlip } from '../game/audio'
+import { talkBlip, typeDing } from '../game/audio'
 import { noEmoji } from '../game/text'
 
 const props = withDefaults(defineProps<{ text: string; speed?: number; pitch?: number; instant?: boolean }>(), { speed: 32, pitch: 560, instant: false })
@@ -17,7 +17,7 @@ const reduce = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced
 function stop() { if (timer) { clearTimeout(timer); timer = 0 } }
 function finish() { stop(); shown.value = chars.value.length; emit('done') }
 function tick() {
-  if (shown.value >= chars.value.length) return finish()
+  if (shown.value >= chars.value.length) { if (chars.value.length > 6) typeDing(); return finish() }
   shown.value++
   const ch = chars.value[shown.value - 1]
   if (/[\p{L}\p{N}]/u.test(ch) && shown.value % 2) talkBlip(props.pitch)

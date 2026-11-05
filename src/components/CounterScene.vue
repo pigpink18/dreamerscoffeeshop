@@ -246,7 +246,7 @@ function draw(now: number) {
   const P0 = save.meta.premise
   const floorH = geo.H - geo.top - SCENE_H
   drawCeiling(c, geo.top, P0, now / 1000, isXmasSeason())
-  drawFloor(c, geo.top + SCENE_H, floorH, P0)
+  drawFloor(c, geo.top + SCENE_H, floorH, P0, CW) // sàn trải hết bề ngang (cả 2 tường hông)
   drawSideWalls(c, OX, P0, ui.phase === 'open' ? ui.time / DAY_LENGTH : 0.15) // tường hông 2 bên (phối cảnh)
   c.setTransform(scale, 0, 0, scale, OX * scale, geo.top * scale) // cảnh gốc nằm giữa
   const dayFrac = ui.phase === 'open' ? ui.time / DAY_LENGTH : 0.15
@@ -390,8 +390,10 @@ const SCENE_PREF_W = 488 // độ rộng tối đa của khung cảnh (px)
 /** Khung dẹt ngang ~488 : 256 nhưng KHÔNG cắt / phóng to cảnh: cảnh gốc 128x92 giữ nguyên ở giữa (tường sau),
  *  2 bên thêm tường hông nhìn theo phối cảnh + quầy kéo dài (depth.ts) → cân xứng, có chiều sâu. */
 const OX = 24 // bề rộng mỗi tường hông (điểm ảnh cảnh)
-const CW = SCENE_W + 2 * OX // 176 → tỉ lệ 176:92 ≈ 488:255
-const geo = { top: 0, H: SCENE_H } // top: chiều cao trần thêm (âm = cắt tường) · H: chiều cao cả canvas (điểm ảnh cảnh)
+const CW = SCENE_W + 2 * OX // 176
+const FLOOR_H = 11 // dải sàn gỗ trước quầy → 176:103 ≈ 488:286
+const SCENE_FULL_H = SCENE_H + FLOOR_H
+const geo = { top: 0, H: SCENE_FULL_H } // top: chiều cao trần thêm (âm = cắt tường) · H: chiều cao cả canvas (điểm ảnh cảnh)
 const geoTick = ref(0) // đổi khi khung đổi → toạ độ các lớp phủ cập nhật
 
 // Kích thước cảnh được KHOÁ sau khi đo: chỉ đo lại khi đổi màn hình hoặc khoảng trống đổi nhiều,
@@ -416,8 +418,8 @@ function measure(): { w: number; top: number; H: number } {
     ph = page.clientHeight - others - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - parseFloat(cs.marginTop) - parseFloat(cs.marginBottom) - 8
   }
   let w = Math.min(SCENE_PREF_W, pw)
-  if (ph > 60 && (w * SCENE_H) / CW > ph) w = (ph * CW) / SCENE_H // màn quá thấp: thu nhỏ cả khung (giữ tỉ lệ)
-  return { w, top: 0, H: SCENE_H }
+  if (ph > 60 && (w * SCENE_FULL_H) / CW > ph) w = (ph * CW) / SCENE_FULL_H // màn quá thấp: thu nhỏ cả khung (giữ tỉ lệ)
+  return { w, top: 0, H: SCENE_FULL_H }
 }
 
 function resize(force: boolean | Event = false) {

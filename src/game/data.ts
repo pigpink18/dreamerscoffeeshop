@@ -11,8 +11,9 @@ export type RecipeId = 'denDa' | 'suaDa' | 'bacXiu' | 'latte' | 'americano' | 't
 export type UpgradeId = 'staff' | 'machine' | 'decor' | 'sign' | 'freezer' | 'shipper' | 'green' | 'farmer'
 export type WeatherId = 'sunny' | 'hot' | 'cloudy' | 'rainy'
 
-export type HairStyle = 'short' | 'long' | 'bun' | 'messy' | 'bob' | 'shoulder' | 'spiky' | 'nonla' | 'helmet' | 'hardhat' | 'cap' | 'beret' | 'slick' | 'afro' | 'combover' | 'mohawk' | 'curlers' | 'sunhat'
+export type HairStyle = 'short' | 'long' | 'bun' | 'messy' | 'bob' | 'shoulder' | 'spiky' | 'nonla' | 'helmet' | 'hardhat' | 'cap' | 'beret' | 'slick' | 'afro' | 'combover' | 'mohawk' | 'curlers' | 'sunhat' | 'bangs' | 'updo'
 export type Acc = 'santa' | 'glasses' | 'tie' | 'collar' | 'hoodie' | 'beard' | 'blush' | 'earring' | 'shades' | 'chain' | 'unibrow' | 'mustache' | 'lipstick' | 'catglasses' | 'bottleglasses' | 'nosering' | 'hoops' | 'scarf' | 'tattoobrow' | 'goldtooth'
+  | 'crown' | 'bolt' | 'star' | 'headphones' | 'flower' | 'buttons' | 'tank' | 'bikini'
 /** Ngoại hình nhân vật pixel */
 export interface Look { skin: string; hair: string; style: HairStyle; shirt: string; accent?: string; acc?: Acc[] }
 
@@ -668,6 +669,49 @@ export const CHARACTERS: Character[] = [
       ['{K} giỏi quá, {y} tặng thêm ly nước cam nha', 'Trời ơi cảm động, cảm ơn {b} nha'],
       ['Vậy là bé còn nhường {k} 1 lần', 'Hahaha đúng rồi, bé biết thương mẹ', 8],
       ['Dạ', 'Ừ… {t} đi đây, bé dậy rồi'])] },
+  // ----- ban nhạc trên dốc -----
+  { name: 'Chú Hoàng Vua Karaoke', title: 'Hát xong một bài mới chịu gọi món', p: xung.chu(),
+    look: { skin: '#f0c8a2', hair: '#1d1612', style: 'short', shirt: '#f4f4f0', acc: ['crown', 'mustache', 'tank'] },
+    greet: ['🎤 “Ly {drink} của tôiii…” Hát xong rồi, cho {t} {drink} nghe {b}', '{T} là vua karaoke cả dốc này. Một {drink}, pha cho xứng với nhà vua nha'],
+    chats: [tk('Tối qua {t} hát 3 tiếng liền, hàng xóm vỗ tay quá trời',
+      ['Dạ chắc {k} hát hay nên cả xóm mê', 'Đó! Bữa nào {t} hát tặng quán một bài'],
+      ['Dạ {y} nghe nói họ vỗ tay để {k} nghỉ', 'Hừ… vậy mà {t} tưởng họ xin bis', 7],
+      ['Dạ', 'Vua hát mà không ai khen một câu'])] },
+  { name: 'Anh Sấm Tia Chớp', title: 'Rocker vẽ sét lên mặt đi uống cà phê', p: xung.anh(),
+    look: { skin: '#f6d3b3', hair: '#e8603a', style: 'spiky', shirt: '#f4f4f0', acc: ['bolt', 'star'] },
+    greet: ['Yo! Một {drink}, đậm như solo guitar nha {b}', '{drink}! Pha nhanh như tia chớp, {t} còn đi tập band'],
+    chats: [tk('Cái tia chớp trên mặt {t} vẽ bằng bút lông, rửa 3 ngày chưa trôi',
+      ['Dạ để vậy luôn đi {k}, ngầu lắm', 'Chuẩn, {t} cũng tính để vậy tới show cuối tuần'],
+      ['Dạ nhìn giống bị điện giật đúng lúc chụp ảnh thẻ', 'Haha… thật ra {t} bị giật thiệt lúc cắm đàn', 7],
+      ['Dạ', 'Rock không có khán giả buồn ghê'])] },
+  { name: 'Chị Vy Áo Đỏ', title: 'Hát rock phòng trà, mặt lạnh như băng', p: xung.chi(),
+    look: { skin: '#fbe3d0', hair: '#111', style: 'bangs', shirt: '#c8323a', acc: ['buttons', 'lipstick'] },
+    greet: ['{drink}. Không đường. Không nói nhiều.', 'Cho {t} {drink}. {T} cười ít, nhưng uống ngon là {t} quay lại'],
+    chats: [tk('Mái tóc này {t} tự cắt, bằng một nhát kéo',
+      ['Dạ thẳng như thước kẻ, {y} phục {k} luôn', '…Cảm ơn. (khoé miệng nhếch lên 1 pixel)'],
+      ['Dạ nhát đó chắc cắt luôn nụ cười của {k}', 'Ha. Câu này được. {T} cho {b} 1 điểm', 8],
+      ['Dạ', '…'])] },
+  { name: 'Bé Mây Tai Nghe', title: 'Đeo tai nghe 24/24, gọi mãi không nghe', p: xung.em('f'),
+    look: { skin: '#f8dcc4', hair: '#f2d15a', style: 'long', shirt: '#9fd3ea', accent: '#3f8fd9', acc: ['headphones', 'blush'] },
+    greet: ['(nói rất to) CHO {T} MỘT {drink} Ạ! À… {t} quên tháo tai nghe', '{B} ơi {drink} nha, bài này hay quá {t} không tháo tai nghe được'],
+    chats: [tk('{B} có muốn nghe thử playlist “cà phê mưa Đà Lạt” của {t} không?',
+      ['Có chứ, cho {y} nghe ké một bên tai', 'Nè nè, bài số 3 là ruột của {t} đó'],
+      ['Dạ thôi, {y} sợ nghe xong cũng không tháo ra được', 'Hihi, công nhận gây nghiện thiệt', 7],
+      ['Không', '(không nghe thấy gì, vẫn gật gù)'])] },
+  { name: 'Cô Hồng Bolero', title: 'Hát bolero ai nghe cũng khóc', p: xung.co(),
+    look: { skin: '#f6d6c2', hair: '#111', style: 'updo', shirt: '#2b2b30', acc: ['flower', 'lipstick', 'blush'] },
+    greet: ['Cho {t} ly {drink}, ngọt ngọt thôi nghe {b}, để tối {t} còn hát', '{drink} nghe {b}. “Chiều nay không có mưa bay…” cà phê phải buồn buồn mới ngon'],
+    chats: [tk('Hồi đó {t} hát ở phòng trà, khán giả khóc ướt cả khăn',
+      ['Dạ {k} hát một câu cho {y} nghe với', '“Đêm nay ai đưa em về…” Đó, nghe là thấy nhớ nhà liền'],
+      ['Dạ chắc khán giả khóc vì giá vé phòng trà', 'Cái con nhỏ này! Mà… cũng có người khóc vì vậy thiệt', 7],
+      ['Dạ', 'Thôi, bolero không hợp người vô cảm'])] },
+  { name: 'DJ Hồng Bass', title: 'Đà Lạt 15 độ vẫn mặc đồ đi biển', p: xung.minh('f'),
+    look: { skin: '#c98a5e', hair: '#ff8fb1', style: 'shoulder', shirt: '#c98a5e', accent: '#3fae5a', acc: ['headphones', 'bikini', 'blush'] },
+    greet: ['Drop the bass! Cho {t} một {drink}, đá nhiều vào cho máu lửa', '{drink}! {T} vừa đi diễn về, lạnh quá mà vẫn phải giữ hình tượng'],
+    chats: [tk('Tối nay {t} quẩy ở hồ Xuân Hương, {b} tới không?',
+      ['Tới chứ, {y} đem cà phê tới tiếp sức cho {k}', 'Đỉnh! {B} là fan cứng đầu tiên của {t}'],
+      ['Tới, mà {y} đem theo áo khoác cho {k} trước', 'Haha… ừ thật ra {t} đang run cầm cập', 8],
+      ['Không', 'Okay, vậy {t} bật nhạc nhỏ thôi'])] },
 ]
 
 // ===== Khách du lịch theo nhóm (guests.ts) + hội khách cá tính =====

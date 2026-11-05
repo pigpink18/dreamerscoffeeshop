@@ -276,12 +276,32 @@ function loadSave(): SaveData {
     const raw = localStorage.getItem(SAVE_KEY)
     if (raw) {
       const data = JSON.parse(raw) as SaveData
-      if (data.version === 1) {
-        const base = newSave()
-        return {
+      if (data.version === 1) return migrateSave(data)
+    }
+  } catch { /* bỏ qua lỗi lưu trữ */ }
+  return newSave()
+}
+
+const MONEY_BAK = 'coffee-tycoon-money-bak'
+/** tiền hợp lệ gần nhất (lưu riêng) – dùng khi bản lưu chính bị hỏng số tiền */
+function moneyBackup(): number | null {
+  try { const b = JSON.parse(localStorage.getItem(MONEY_BAK) || 'null'); return typeof b?.money === 'number' && Number.isFinite(b.money) ? b.money : null } catch { return null }
+}
+const num = (v: unknown, d: number) => (typeof v === 'number' && Number.isFinite(v) ? v : d)
+/** Chuẩn hoá bản lưu (bản cũ / bản lưu ca bán dở): bù các trường mới, sửa số hỏng (NaN → null khi lưu JSON) */
+function migrateSave(data: SaveData): SaveData {
+  const base = newSave()
+  const prices = { ...base.prices }
+  for (const [id, p] of Object.entries(data.prices ?? {})) if (id in prices) prices[id as RecipeId] = num(p, prices[id as RecipeId])
+  const stock = { ...base.stock }
+  for (const [id, n] of Object.entries(data.stock ?? {})) if (id in stock) stock[id as IngredientId] = num(n, 0)
+  return {
           ...base, ...data,
-          stock: { ...base.stock, ...data.stock },
-          prices: { ...base.prices, ...data.prices },
+          money: num(data.money, moneyBackup() ?? base.money),
+          debt: num(data.debt, 0),
+          totals: { revenue: num(data.totals?.revenue, 0), served: num(data.totals?.served, 0), bestProfit: num(data.totals?.bestProfit, 0) },
+          stock,
+          prices,
           upgrades: { ...base.upgrades, ...data.upgrades },
           // bản lưu cũ: bổ sung 5 món có sẵn + bỏ món không còn tồn tại
           unlocked: [...new Set([...STARTER_RECIPES, ...(data.unlocked ?? [])])].filter((id) => id in recipeById),
@@ -295,14 +315,11 @@ function loadSave(): SaveData {
           // bản lưu cũ chưa có cốt truyện: bắt đầu từ hôm nay (chương 1 hiện ngay)
           // bản lưu cũ đã bán được rồi: bỏ qua hướng dẫn
           tutDone: data.tutDone ?? ((data.totals?.served ?? 0) > 0 || (data.day ?? 1) > 1),
+          history: (data.history ?? []).map((v) => num(v, 0)),
           events: { ...data.events },
           kitchen: { open: !!data.kitchen?.open, stock: { ...data.kitchen?.stock } },
           story: data.story ? { ...base.story, ...data.story, flags: { ...data.story.flags } } : { start: Math.max(0, (data.day ?? 1) - 1), seen: [], flags: {} },
-        }
-      }
-    }
-  } catch { /* bỏ qua lỗi lưu trữ */ }
-  return newSave()
+  }
 }
 
 function mergeMeta(base: MetaSave, m?: Partial<MetaSave>): MetaSave {
@@ -325,6 +342,24 @@ function emptyStats(rep: number): DayStats {
 
 // ---------- State ----------
 export const save = reactive<SaveData>(loadSave())
+compensateMoneyBug(() => JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'))
+/** Bồi thường 1 lần cho bản lưu từng dính lỗi tiền NaN (bản 11/2026): dấu hiệu là lịch sử lợi nhuận có ngày bị hỏng (null).
+ *  Không biết chính xác số tiền đã mất → trả lại theo lợi nhuận các ngày gần nhất, tối thiểu bằng tiền khởi nghiệp. */
+function compensateMoneyBug(readRaw: () => Partial<SaveData> | null) {
+  try {
+    if (save.events.moneyFix2026) return
+    const raw = readRaw()
+    const hit = !!raw && (raw.money === null || (raw.history ?? []).some((v) => v === null) || raw.totals?.revenue === null)
+    save.events.moneyFix2026 = true
+    if (!hit) return
+    const earned = (raw!.history ?? []).reduce<number>((a, v) => a + (typeof v === 'number' && v > 0 ? v : 0), 0)
+    const target = Math.max(START_MONEY, Math.round(earned / 1000) * 1000)
+    if (save.money >= target) return
+    const gift = target - save.money
+    save.money = target
+    setTimeout(() => toast(`Xin lỗi vì lỗi mất tiền! Quán được bồi thường ${moneyShort(gift)}`, 'good', 5000), 1500)
+  } catch { /* bỏ qua */ }
+}
 
 export const ui = reactive({
   tab: 'shop' as Tab,
@@ -358,7 +393,10 @@ let uid = 1
 const nextId = () => uid++
 
 export function persist() {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)) } catch { /* đầy bộ nhớ / chế độ ẩn danh */ }
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(save))
+    if (Number.isFinite(save.money)) localStorage.setItem(MONEY_BAK, JSON.stringify({ money: save.money, day: save.day }))
+  } catch { /* đầy bộ nhớ / chế độ ẩn danh */ }
   saveSession()
 }
 
@@ -384,6 +422,12 @@ function readSession(): { at: number; uid: number; save: SaveData; ui: Record<st
 }
 // Chỉ lưu khi không trong ngày bán (tránh lưu trạng thái dở dang)
 watch(save, () => { if (ui.phase !== 'open') persist() }, { deep: true })
+// lưới an toàn: tiền không bao giờ được thành NaN/Infinity (sẽ thành null → 0đ khi lưu)
+watch(() => save.money, (v, old) => {
+  if (Number.isFinite(v)) return
+  console.error('[money] giá trị hỏng, khôi phục', v, old)
+  save.money = Number.isFinite(old) ? old : 0
+}, { flush: 'sync' })
 
 // ---------- Tiện ích ----------
 export function vibrate(ms: number | number[] = 10) {
@@ -440,7 +484,10 @@ const XMAS_RECIPES = RECIPES.filter((r) => r.season === 'xmas').map((r) => r.id)
 /** Bật món Noel trong mùa (tặng nguyên liệu 1 lần), hết mùa gỡ khỏi menu */
 export function syncSeason() {
   if (isXmasSeason()) {
-    for (const id of XMAS_RECIPES) if (!save.unlocked.includes(id)) save.unlocked.push(id)
+    for (const id of XMAS_RECIPES) {
+      if (!save.unlocked.includes(id)) save.unlocked.push(id)
+      if (!Number.isFinite(save.prices[id])) save.prices[id] = recipeById[id].fairPrice
+    }
     if (!save.events.xmas2026) {
       save.events.xmas2026 = true
       for (const ing of ['cacao', 'kemTuoi', 'suaTuoi', 'syrup'] as IngredientId[]) save.stock[ing] += ingredientById[ing].packSize
@@ -657,8 +704,15 @@ function loop(now: number) {
 function restoreSession() {
   const s = readSession()
   if (!s) return
-  Object.assign(save, s.save)
+  Object.assign(save, migrateSave(s.save))
+  compensateMoneyBug(() => s.save) // ca bán lưu dở từ bản lỗi cũng được bồi thường
   for (const k of SESSION_UI) if (k in s.ui) (ui as any)[k] = s.ui[k]
+  // số liệu ca bán từ bản cũ: bù trường thiếu + sửa số hỏng để không cộng ra NaN
+  const st = { ...emptyStats(save.reputation), ...(s.ui.stats ?? {}) } as DayStats
+  for (const [k, v] of Object.entries(st)) if (v === null && k !== 'newRecipe') (st as any)[k] = 0
+  ui.stats = st
+  ui.combo = num(ui.combo, 0)
+  syncSeason()
   if (!Array.isArray(ui.seats) || ui.seats.length !== save.seating.tables * SEATS_PER_TABLE) ui.seats = Array.from({ length: save.seating.tables * SEATS_PER_TABLE }, newSeat)
   if (ui.waiters?.some((w) => w.seat !== null && w.seat >= save.seating.tables)) ui.waiters.forEach((w) => { w.seat = null; w.t = 0 })
   if (!Array.isArray(ui.waiters)) ui.waiters = []

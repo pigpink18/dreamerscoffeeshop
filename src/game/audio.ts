@@ -146,11 +146,27 @@ function noise(t: number, dur: number, opts: { type?: BiquadFilterType; freq?: n
 // ---------- Hiệu ứng âm thanh ----------
 export type Sfx = 'boss' | 'bossWin' | 'bossLose' | 'tap' | 'cup' | 'ice' | 'pour' | 'drip' | 'squeeze' | 'stir' | 'plop' | 'shake' | 'blend' | 'coin' | 'wrong' | 'horn' | 'angry' | 'bell' | 'done' | 'heart' | 'dayEnd' | 'buy' | 'comboBreak' | 'rush' | 'whoosh'
 
-/** Tiếng "bíp" nhỏ khi chữ hiện ra từng chữ (như khách đang nói). pitch: giọng cao/thấp theo khách */
+/** Tiếng gõ phím máy đánh chữ cổ khi chữ hiện ra từng chữ (như khách đang nói).
+ *  pitch: giọng cao/thấp theo khách → chỉ đổi nhẹ độ "đanh" của tiếng gõ để mỗi khách nghe hơi khác. */
 export function talkBlip(pitch = 520) {
   if (!audio.sfx || !ctx || ctx.state !== 'running') return
   const t = ctx.currentTime + 0.005
-  tone(pitch * (0.92 + Math.random() * 0.16), t, 0.04, { vol: 0.035, type: 'square', filter: 1600 })
+  const r = Math.min(1.25, Math.max(0.8, pitch / 560)) * (0.94 + Math.random() * 0.12)
+  // cần chữ đập vào trục cao su: tiếng "cạch" kim loại đanh
+  noise(t, 0.028, { type: 'bandpass', freq: 3400 * r, q: 1.4, vol: 0.16, attack: 0.001 })
+  tone(2300 * r, t, 0.014, { type: 'square', vol: 0.025, filter: 5200 })
+  // thân máy dội lại: tiếng "cộc" trầm
+  tone(170 * r, t + 0.002, 0.04, { type: 'triangle', vol: 0.09, to: 85 })
+  noise(t + 0.004, 0.04, { type: 'lowpass', freq: 700, vol: 0.05, attack: 0.002 })
+}
+
+/** Tiếng chuông "ting" + kéo trục khi hết dòng (máy đánh chữ về đầu dòng) */
+export function typeDing() {
+  if (!audio.sfx || !ctx || ctx.state !== 'running') return
+  const t = ctx.currentTime + 0.01
+  tone(2093, t, 0.55, { type: 'sine', vol: 0.05 })
+  tone(4186 * 1.003, t, 0.3, { type: 'sine', vol: 0.015 })
+  noise(t + 0.06, 0.16, { type: 'bandpass', freq: 1800, to: 900, q: 2, vol: 0.04, attack: 0.02 })
 }
 
 /** Tiếng "tích" đồng hồ khi khách sắp hết kiên nhẫn */

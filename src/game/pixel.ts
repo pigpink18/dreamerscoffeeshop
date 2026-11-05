@@ -276,6 +276,11 @@ export function drawPerson(c: Ctx, L: Look, x: number, y: number, mood: Mood, bl
   // tóc dài phía sau
   if (L.style === 'long') box(c, x + 1, y + 3, 14, 14, L.hair)
   if (L.style === 'bob') box(c, x + 1, y + 3, 14, 9, L.hair)
+  if (L.style === 'bangs') box(c, x, y + 2, 16, 12, L.hair) // tóc vuông dày ôm mặt
+  if (L.style === 'updo') { // tóc búi cao bồng hai bên
+    box(c, x - 1, y + 1, 18, 10, L.hair)
+    box(c, x - 2, y - 1, 6, 6, L.hair); box(c, x + 12, y - 1, 6, 6, L.hair)
+  }
   if (L.style === 'shoulder') { // tóc ngang vai, đuôi tóc hơi cụp vào
     box(c, x + 1, y + 3, 14, 13, L.hair)
     px(c, x + 1, y + 15, 2, 1, OUT); px(c, x + 13, y + 15, 2, 1, OUT)
@@ -296,6 +301,27 @@ export function drawPerson(c: Ctx, L: Look, x: number, y: number, mood: Mood, bl
     px(c, x + 4, y + 13, 8, 2, shirtS)
     px(c, x + 6, y + 16, 1, 4, '#e8e2da'); px(c, x + 9, y + 16, 1, 4, '#e8e2da')
   }
+  const acc2 = L.accent ?? '#3f7a5c'
+  if (acc.includes('tank')) { // áo ba lỗ: lộ vai, cổ khoét
+    px(c, x + 1, y + 15, 3, 14, L.skin); px(c, x + 12, y + 15, 3, 14, L.skin)
+    px(c, x + 3, y + 16, 1, 13, skinS); px(c, x + 12, y + 16, 1, 13, skinS)
+    px(c, x + 5, y + 14, 6, 2, L.skin)
+  }
+  if (acc.includes('bikini')) { // áo tắm 2 dây (shirt = màu da)
+    px(c, x + 3, y + 18, 4, 3, acc2); px(c, x + 9, y + 18, 4, 3, acc2); px(c, x + 7, y + 19, 2, 1, acc2)
+    px(c, x + 4, y + 15, 1, 3, acc2); px(c, x + 11, y + 15, 1, 3, acc2)
+    px(c, x + 4, y + 18, 1, 1, shade(acc2, 40)); px(c, x + 10, y + 18, 1, 1, shade(acc2, 40))
+  }
+  if (acc.includes('star')) { // sao đen giữa áo
+    const sx = x + 6, sy = y + 18
+    px(c, sx + 2, sy, 1, 1, '#1d1d1d'); px(c, sx + 1, sy + 1, 3, 1, '#1d1d1d'); px(c, sx, sy + 2, 5, 1, '#1d1d1d')
+    px(c, sx + 1, sy + 3, 3, 1, '#1d1d1d'); px(c, sx, sy + 4, 2, 1, '#1d1d1d'); px(c, sx + 3, sy + 4, 2, 1, '#1d1d1d')
+  }
+  if (acc.includes('buttons')) { // áo khoác cổ đứng 2 hàng nút
+    px(c, x + 4, y + 14, 8, 2, '#1d1d1d')
+    for (let i = 0; i < 4; i++) { px(c, x + 5, y + 17 + i * 3, 1, 1, '#1d1d1d'); px(c, x + 10, y + 17 + i * 3, 1, 1, '#1d1d1d') }
+    px(c, x + 7, y + 16, 2, 13, shirtS)
+  }
   // cổ
   px(c, x + 6, y + 12, 4, 3, skinS)
   if (acc.includes('collar')) { px(c, x + 5, y + 14, 2, 2, '#ffffff'); px(c, x + 9, y + 14, 2, 2, '#ffffff') }
@@ -305,6 +331,11 @@ export function drawPerson(c: Ctx, L: Look, x: number, y: number, mood: Mood, bl
   px(c, x + 4, y + 12, 8, 1, skinS)
   px(c, x + 2, y + 8, 1, 2, L.skin) // tai
   px(c, x + 13, y + 8, 1, 2, L.skin)
+  if (acc.includes('bolt')) { // vẽ mặt tia chớp
+    for (const [dx, dy, w] of [[7, 3, 2], [6, 4, 2], [5, 5, 2], [4, 6, 4], [6, 7, 2], [5, 8, 2], [4, 9, 2], [4, 10, 1]]) {
+      px(c, x + dx - 1, y + dy, 1, 1, '#d8333a'); px(c, x + dx, y + dy, w, 1, '#3fa9f5')
+    }
+  }
   // mắt
   const ey = y + 8
   if (blink || mood === 'happy' || mood === 'love') {
@@ -375,6 +406,17 @@ export function drawPerson(c: Ctx, L: Look, x: number, y: number, mood: Mood, bl
       if (L.style === 'bob') { px(c, x + 3, y + 6, 10, 1, H) }
       if (L.style === 'shoulder') { px(c, x + 3, y + 7, 1, 6, H); px(c, x + 12, y + 7, 1, 6, H); px(c, x + 9, y + 2, 3, 1, shade(H, 45)) }
       break
+    case 'bangs': // mái bằng dày cắt thẳng
+      box(c, x + 1, y + 1, 14, 6, H)
+      px(c, x + 2, y + 2, 12, 1, shade(H, 30))
+      px(c, x + 2, y + 7, 2, 6, H); px(c, x + 12, y + 7, 2, 6, H)
+      break
+    case 'updo': // búi cao + mái chéo
+      box(c, x + 2, y + 1, 12, 6, H)
+      box(c, x + 3, y - 5, 10, 7, H)
+      px(c, x + 5, y - 4, 4, 1, shade(H, 35)); px(c, x + 3, y + 2, 9, 1, shade(H, 25))
+      px(c, x + 3, y + 7, 1, 3, H); px(c, x + 12, y + 7, 1, 3, H)
+      break
     case 'afro':
       break // đã vẽ phía sau đầu
     case 'combover':
@@ -437,7 +479,23 @@ export function drawPerson(c: Ctx, L: Look, x: number, y: number, mood: Mood, bl
       px(c, x + 4, y + 9, 1, 4, '#b99a52'); px(c, x + 11, y + 9, 1, 4, '#b99a52')
       break
   }
-  if (acc.includes('santa') && !HAT_STYLES.includes(L.style)) drawSantaHat(c, x, y) // mùa Noel
+  if (acc.includes('flower')) { // hoa đỏ cài tóc
+    box(c, x, y - 1, 6, 6, '#d8333a'); px(c, x + 1, y, 2, 1, '#ef6a5f'); px(c, x + 2, y + 2, 2, 1, '#f2c14e')
+  }
+  if (acc.includes('crown')) { // vương miện vàng
+    box(c, x + 3, y - 2, 10, 4, '#f2c14e', '#7a5a00')
+    for (const [dx, w] of [[3, 3], [6, 4], [10, 3]]) box(c, x + dx, y - 5, w, 4, '#f2c14e', '#7a5a00')
+    box(c, x + 3, y - 2, 10, 4, '#f2c14e', '#7a5a00')
+    px(c, x + 4, y - 1, 8, 1, '#ffe08a'); px(c, x + 5, y, 1, 1, '#d8333a'); px(c, x + 8, y, 1, 1, '#3fa9f5'); px(c, x + 10, y, 1, 1, '#d8333a')
+  }
+  if (acc.includes('santa') && !HAT_STYLES.includes(L.style) && !acc.includes('crown')) drawSantaHat(c, x, y) // mùa Noel
+  if (acc.includes('headphones')) { // tai nghe chụp to (đeo đè lên mũ)
+    const hc = L.accent ?? '#5b8bd9'
+    px(c, x + 4, y - 3, 8, 2, OUT); px(c, x + 2, y - 2, 2, 2, OUT); px(c, x + 12, y - 2, 2, 2, OUT); px(c, x + 1, y, 2, 6, OUT); px(c, x + 13, y, 2, 6, OUT)
+    px(c, x + 5, y - 2, 6, 1, hc)
+    box(c, x - 1, y + 5, 5, 7, hc); box(c, x + 12, y + 5, 5, 7, hc)
+    px(c, x, y + 6, 1, 4, shade(hc, 40)); px(c, x + 13, y + 6, 1, 4, shade(hc, 40))
+  }
 }
 /** Mũ Noel đội lên đầu nhân vật drawPerson (x, y = góc trên trái của nhân vật) */
 export function drawSantaHat(c: Ctx, x: number, y: number) {

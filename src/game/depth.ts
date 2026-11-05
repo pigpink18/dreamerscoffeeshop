@@ -97,13 +97,14 @@ function bigLamp(c: Ctx, lx: number, cord: number) {
  * Sàn trước quầy nhìn xuống: ván / gạch hội tụ về điểm tụ phía trên, hàng gần người xem to hơn.
  * y0 = mép sàn chạm chân quầy, h = chiều cao vùng sàn.
  */
-export function drawFloor(c: Ctx, y0: number, h: number, premise: number) {
+export function drawFloor(c: Ctx, y0: number, h: number, premise: number, w = SCENE_W) {
   if (h <= 0) return
-  c.drawImage(cached(`floor:${h}:${premise}`, SCENE_W, h, (cc) => paintFloor(cc, h, premise)), 0, y0)
+  c.drawImage(cached(`floor:${h}:${premise}:${w}`, w, h, (cc) => paintFloor(cc, h, premise, w)), 0, y0)
 }
 
 /** vẽ sàn vào canvas phụ (toạ độ y bắt đầu từ 0) */
-function paintFloor(c: Ctx, h: number, premise: number) {
+function paintFloor(c: Ctx, h: number, premise: number, W: number) {
+  const VX = W / 2
   const y0 = 0
   const P = PAL[premise] ?? PAL[0]
   const vy = y0 - 90 // điểm tụ cao phía trên → sàn nghiêng vừa phải
@@ -121,7 +122,7 @@ function paintFloor(c: Ctx, h: number, premise: number) {
     for (let i = -14; i <= 14; i++) {
       const xa = VX + (i * colW - colW / 2) * k
       const xb = VX + ((i + 1) * colW - colW / 2) * k
-      const a = Math.max(0, Math.round(xa)), b = Math.min(SCENE_W, Math.round(xb))
+      const a = Math.max(0, Math.round(xa)), b = Math.min(W, Math.round(xb))
       if (b <= a) continue
       // ván gỗ so le theo hàng; gạch caro xen kẽ
       const alt = tiles ? (i + r) % 2 === 0 : (i * 7 + r * 3) % 5 === 0
@@ -129,11 +130,11 @@ function paintFloor(c: Ctx, h: number, premise: number) {
       if (!tiles && (i + r) % 2 === 0) px(c, a, y, 1, 1, P.seam) // mạch ván so le
       if (tiles) px(c, a, y, 1, 1, P.seam)
     }
-    if (isSeamRow) px(c, 0, y, SCENE_W, 1, P.seam)
+    if (isSeamRow) px(c, 0, y, W, 1, P.seam)
   }
   // bóng đổ chân quầy + ánh đèn loang trên sàn
-  px(c, 0, y0, SCENE_W, 2, 'rgba(38, 28, 27, 0.35)')
-  px(c, 0, y0 + 2, SCENE_W, 2, 'rgba(38, 28, 27, 0.15)')
+  px(c, 0, y0, W, 2, 'rgba(38, 28, 27, 0.35)')
+  px(c, 0, y0 + 2, W, 2, 'rgba(38, 28, 27, 0.15)')
   c.fillStyle = 'rgba(255, 226, 150, 0.10)'
   c.beginPath(); c.ellipse(VX, y0 + h * 0.45, 46, Math.max(4, h * 0.3), 0, 0, Math.PI * 2); c.fill()
   // thảm phối cảnh trước quầy
