@@ -11,7 +11,7 @@ import { sfx } from '../game/audio'
 import { CAST } from '../game/story'
 import {
   kitchen, kitchenOpen, unlockKitchen, startCook, cookStep, trashCook, foodById, foodStock, canCook,
-  KSTEPS, FOOD_INGS, KITCHEN_COST, FOODS, finishMini, type KStep, type FoodIng,
+  KSTEPS, KITCHEN_COST, FOODS, finishMini, type KStep, type FoodIng,
 } from '../game/kitchen'
 import PixelIcon from './ui/PixelIcon.vue'
 
@@ -38,8 +38,7 @@ const groups = computed(() => {
     .map(([k, title]) => ({ k, title, items: uniq.filter((s) => KSTEPS[s].kind === k).map(item) }))
     .filter((g) => g.items.length)
 })
-// chưa nấu: tồn kho nguyên liệu bếp (xem nhanh, không bấm)
-const stockList = computed(() => FOOD_INGS.map((i) => ({ id: i.id, n: foodStock(i.id) })))
+
 const label = (s: KStep) => KSTEPS[s].label
 const stockOf = (s: KStep) => (KSTEPS[s].kind === 'ing' ? foodStock(s as FoodIng) : null)
 const shaking = ref(false)
@@ -461,13 +460,6 @@ const waiting = computed(() => ui.queue.length)
         </div>
         <button class="trash-btn" @pointerdown.prevent="act('trash')"><img :src="iconUrl('trash')" class="pix" alt="" /> Đổ bỏ làm lại</button>
       </div>
-      <div v-else class="board idle">
-        <b>Chạm 1 phiếu đơn ở trên để bắt đầu nấu</b>
-        <span class="muted small">Bạn chỉ chọn dụng cụ và làm thao tác – nguyên liệu Yến tự bỏ vào.</span>
-        <div class="stock">
-          <span v-for="x in stockList" :key="x.id" class="sk" :class="{ low: x.n < 3 }"><img :src="iconUrl(x.id)" class="pix" alt="" />{{ x.n }}</span>
-        </div>
-      </div>
     </template>
     <div v-else class="menu-preview">
       <div v-for="f in FOODS" :key="f.id" class="mp"><img :src="iconUrl(f.id)" class="pix" alt="" /><span>{{ f.name }}<small>{{ moneyShort(f.price) }}</small></span></div>
@@ -563,13 +555,6 @@ const waiting = computed(() => ui.queue.length)
 .kbtn.out { opacity: 0.4; filter: grayscale(0.8); }
 .trash-btn { align-self: flex-end; display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; font-size: 11px; font-weight: 900; background: #f1e2cf; box-shadow: var(--px-border-2); }
 .trash-btn img { width: 16px; height: 16px; }
-.board.idle { align-items: center; text-align: center; color: #fff4dc; padding: 10px 8px; }
-.board.idle b { font-size: 13px; }
-.board.idle .muted { color: #f1d9b8; }
-.stock { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-top: 4px; }
-.sk { display: inline-flex; align-items: center; gap: 2px; padding: 2px 5px 2px 2px; font-size: 11px; font-weight: 900; color: #3b2a20; background: #fffaf2; box-shadow: 0 0 0 2px #3b2a20; }
-.sk img { width: 18px; height: 18px; }
-.sk.low { background: #ffd9d2; color: #b8262c; }
 .menu-preview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 3px 0; }
 .mp { display: flex; align-items: center; gap: 5px; background: #fffaf0; padding: 5px; box-shadow: var(--px-border-2); font-size: 11px; font-weight: 800; line-height: 1.2; }
 .mp img { width: 26px; height: 26px; }
