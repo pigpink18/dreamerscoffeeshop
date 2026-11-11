@@ -185,6 +185,33 @@ function drawPresent() {
   px(c, 9, 22, 1, 1, '#ff6b81'); px(c, 11, 22, 1, 1, '#ff6b81'); px(c, 9, 23, 3, 1, '#ff6b81'); px(c, 10, 24, 1, 1, '#ff6b81')
 }
 
+// ---- nhân viên pha chế diễn từng bước của món theo tiến độ pha (máy chiết, ly đầy dần, shaker, máy xay) ----
+/** chỗ đứng (x người) cho từng bước: máy espresso · chỗ đặt ly · shaker · máy xay */
+const STAFF_AT: Partial<Record<StepId, number>> = { chiet: 16, lac: 50, xay: 98 }
+const STAFF_CUP_X = 30
+let staffX = 49, staffLastT = 0
+function staffAnim() {
+  if (ui.phase !== 'open' || !staffAll.value || ui.brew) return null
+  const r = ui.staffRecipe[0], prog = ui.staffProgress[0] ?? 0
+  if (!r || prog <= 0) return null
+  const steps = recipeById[r].steps
+  const p = Math.min(0.999, prog / staffServeTime.value)
+  const n = steps.length, fk = p * n, k = Math.floor(fk), q = fk - k
+  const look = emptyCup()
+  const apply = (st: StepId) => {
+    if (st === 'ly') look.cup = true
+    else if (st === 'da') look.ice = true
+    else if (st === 'khuay' || st === 'lac') look.mixed = true
+    else if (st === 'xay') { look.blended = true; look.ice = false }
+    else if (st === 'kem') look.foam = true
+    else if (st === 'kemTuoi') look.whip = true
+    else if (STEPS[st].color) { look.layers.push(STEPS[st].color!); look.mixed = false; if (st === 'dao') look.chunks = true }
+  }
+  for (let i = 0; i < k; i++) apply(steps[i])
+  if (STEPS[steps[k]].kind === 'ing' && q > 0.5) apply(steps[k]) // nguyên liệu rơi vào ly ở nửa sau của bước
+  return { step: steps[k], q, look, p }
+}
+
 function cupLook(): CupLook | null {
   const b = ui.brew
   if (!b || ui.present) return null
@@ -266,7 +293,15 @@ function draw(now: number) {
   // nhân viên đứng sau quầy
   const staffN = ui.phase === 'open' ? ui.staffProgress.length : U.staff
   const sp = (i: number) => (ui.staffProgress[i] ?? 0) / staffServeTime.value
-  if (staffN >= 1) drawBarista(c, 49, LAYOUT.customerY + 1, (ui.staffProgress[0] ?? 0) > 0, t, 0, sp(0))
+  const sa = staffAnim()
+  {
+    // nhân viên 1 đi tới đúng chỗ của bước đang làm (rảnh thì về giữa quầy lau bàn)
+    const goal = sa ? STAFF_AT[sa.step] ?? STAFF_CUP_X : 49
+    const dts = Math.min(0.1, Math.max(0, t - staffLastT)); staffLastT = t
+    const walking = Math.abs(goal - staffX) > 0.5
+    if (walking) staffX += Math.sign(goal - staffX) * Math.min(Math.abs(goal - staffX), 55 * dts)
+    if (staffN >= 1) drawBarista(c, Math.round(staffX), LAYOUT.customerY + 1, (ui.staffProgress[0] ?? 0) > 0, t, 0, sp(0), sa ? (walking ? 'walk' : 'work') : 'auto')
+  }
   if (staffN >= 2) drawBarista(c, 99, LAYOUT.customerY + 1, (ui.staffProgress[1] ?? 0) > 0, t, 1, sp(1))
 
   // khách
@@ -314,12 +349,14 @@ function draw(now: number) {
   // máy espresso + ly shot
   const el = actStep ? now - actStart : 0
   const act = (s: StepId) => actStep === s && el < stepMs(s) + 50
+  /** tiến độ 0..1 của thao tác s (người chơi đang pha, hoặc nhân viên đang tới bước này), -1 = không làm */
+  const actP = (s: StepId) => (act(s) ? el / stepMs(s) : sa && sa.step === s && Math.abs(staffX - (STAFF_AT[s] ?? STAFF_CUP_X)) < 2 ? sa.q : -1)
   const esp = images[espressoKey(U.machine)] ?? images.espresso
   const espY = COUNTER_Y + 2 - (esp?.height ?? 25)
   const shotX = LAYOUT.espresso.x + 12, shotY = espY + (esp?.height ?? 25) - 10
   if (esp) c.drawImage(esp, LAYOUT.espresso.x, espY)
-  if (act('chiet')) {
-    const p = el / stepMs('chiet')
+  if (actP('chiet') >= 0) {
+    const p = actP('chiet')
     const sx = shotX, sy = shotY
     if (p < 0.65) {
       if (images.shot) c.drawImage(images.shot, sx, sy)
@@ -339,8 +376,8 @@ function draw(now: number) {
 
   // shaker
   if (images.shaker) {
-    if (act('lac')) {
-      const p = el / STEPS.lac.ms
+    if (actP('lac') >= 0) {
+      const p = actP('lac')
       const up = p < 0.15 ? p / 0.15 : p > 0.85 ? (1 - p) / 0.15 : 1
       const sx = LAYOUT.shaker.x - 14 * up + Math.round(Math.sin(t * 40) * 2 * (p > 0.15 && p < 0.85 ? 1 : 0))
       const sy = LAYOUT.shaker.y - 20 * up + Math.round(Math.cos(t * 40) * 2 * (p > 0.15 && p < 0.85 ? 1 : 0))
@@ -350,28 +387,29 @@ function draw(now: number) {
   }
   // máy xay
   if (images.blender) {
-    const v = act('xay') ? Math.round(Math.sin(t * 60)) : 0
+    const v = actP('xay') >= 0 ? Math.round(Math.sin(t * 60)) : 0
     c.drawImage(images.blender, LAYOUT.blender.x + v, LAYOUT.blender.y)
-    if (act('xay')) {
+    if (actP('xay') >= 0) {
       for (let i = 0; i < 6; i++) px(c, LAYOUT.blender.x + 3 + ((i * 3 + Math.floor(t * 30)) % 9), LAYOUT.blender.y + 4 + ((i * 5) % 10), 2, 1, '#9cc66b')
     }
   }
 
   // ly đang pha
-  const look = cupLook()
+  const look = cupLook() ?? (sa?.look.cup ? sa.look : null)
   if (look) {
     drawCup(c, look, LAYOUT.cup.x, LAYOUT.cup.y)
     // nguyên liệu rơi vào ly
-    if (actStep && STEPS[actStep].kind === 'ing' && el < 300) {
-      const img = dropImgs[actStep]
-      const p = el / 300
+    const dropStep = actStep && STEPS[actStep].kind === 'ing' && el < 300 ? actStep : sa && STEPS[sa.step].kind === 'ing' && sa.q > 0.15 && sa.q < 0.5 && Math.abs(staffX - STAFF_CUP_X) < 2 ? sa.step : null
+    if (dropStep) {
+      const img = dropImgs[dropStep]
+      const p = actStep === dropStep ? el / 300 : (sa!.q - 0.15) / 0.35
       if (img && img.complete) c.drawImage(img, LAYOUT.cup.x, Math.round(LAYOUT.cup.y - 16 + 12 * p), 12, 12)
     }
-    if (act('khuay')) {
+    if (actP('khuay') >= 0) {
       const a = t * 18
       px(c, LAYOUT.cup.x + 6 + Math.round(Math.cos(a) * 3), LAYOUT.cup.y - 6, 1, 12, '#c4cbd1')
     }
-    if (act('xay') && el > STEPS.xay.ms * 0.8) px(c, LAYOUT.cup.x + 6, LAYOUT.cup.y - 4, 1, 6, '#9cc66b')
+    if (actP('xay') > 0.8) px(c, LAYOUT.cup.x + 6, LAYOUT.cup.y - 4, 1, 6, '#9cc66b')
   } else if (ui.phase === 'open' && !ui.present) {
     drawCup(c, emptyCup(), LAYOUT.cup.x, LAYOUT.cup.y)
   }
@@ -461,7 +499,10 @@ const pctX = (x: number) => `${((x + OX) / CW) * 100}%`
 const pctY = (y: number) => (geoTick.value, `${((y + geo.top) / geo.H) * 100}%`)
 /** Bóng thoại nằm phía trên (sát mép trên vùng tường, ngay dưới trần) như bản gốc;
  *  luôn chừa 14px cho nhãn tên nên không bị cắt ở mép trên, quá dài thì phần lời thoại tự cuộn */
+/** nhân viên đang pha cho khách này: thu bóng thoại thành thẻ nhỏ trên đầu khách để thấy rõ nhân viên pha ở quầy */
+const staffCompact = computed(() => staffAll.value && typed.value && talkHere.value?.mode !== 'chat' && !ui.present && (ui.staffProgress[0] ?? 0) > 0)
 const bubbleStyle = computed(() => {
+  if (staffCompact.value) return { top: `max(14px, ${pctY(8)})`, right: `calc(100% - ${pctX(96)})`, left: 'auto', width: 'auto', maxWidth: `${(110 / CW) * 100}%` }
   const top = `max(14px, ${pctY(6)})`
   return { top, maxHeight: `calc(100% - ${top} - 8px)`, left: pctX(-20), width: `${(96 / CW) * 100}%` } // từ tường hông trái tới sát đầu khách
 })
@@ -510,7 +551,13 @@ const bubbleStyle = computed(() => {
         <div class="money" v-if="!review.needy">+{{ (review.price / 1000).toFixed(0) }}k<span v-if="review.tip"> · tip {{ (review.tip / 1000).toFixed(0) }}k</span></div>
       </div>
       <div v-else-if="angry" key="an" class="bubble angry" :style="bubbleStyle"><div class="txt"><TypeText :text="`“${angry}”`" :pitch="340" :speed="24" /></div></div>
-      <div v-else-if="cur && actorView?.state === 'idle'" :style="bubbleStyle" :key="'c' + cur.id + (talkHere?.mode ?? '') + (brewingHere ? 'b' : '')" class="bubble" @click="typer?.skip()">
+      <div v-else-if="cur && actorView?.state === 'idle'" :style="bubbleStyle" :key="'c' + cur.id + (talkHere?.mode ?? '') + (brewingHere ? 'b' : '')" class="bubble" :class="{ compact: staffCompact }" @click="typer?.skip()">
+        <template v-if="staffCompact">
+          <div class="cmp"><PixelIcon name="staff" :size="2" /> <span class="cmp-t">Đang pha <b>{{ recipeById[cur.recipe].name }}</b></span>
+            <button v-if="!cur.chatted && cur.needy === undefined" @click.stop="talkHere ? talkChat() : (openTalk(cur.id), talkChat())"><PixelIcon name="chat" :size="2" /> Tám</button>
+          </div>
+        </template>
+        <template v-else>
         <div class="who" :class="whoKind">{{ who }}</div>
         <div class="txt" :class="{ hurry: cur.line && cur.patience / cur.maxPatience < 0.5 && !talkHere }"><TypeText ref="typer" :text="bubbleText" :pitch="voice" :instant="lineInstant" @done="onTyped" /></div>
         <div v-if="cur.addon" class="addon" :class="{ done: cur.addonDone }"><img :src="iconUrl(cur.addon)" alt="" /><span>{{ cur.addonDone ? 'Đã trao' : 'Kèm' }}: <b>{{ goodName(cur.addon) }}</b></span></div>
@@ -529,6 +576,7 @@ const bubbleStyle = computed(() => {
           </button>
            <button v-if="!cur.chatted && cur.needy === undefined" @click="talkHere ? talkChat() : (openTalk(cur.id), talkChat())"><PixelIcon name="chat" :size="2" /> Tám</button>
         </div>
+        </template>
       </div>
     </Transition>
 
@@ -560,6 +608,12 @@ const bubbleStyle = computed(() => {
   justify-content: flex-start;
 }
 .scene-wrap > canvas { flex: none; }
+.bubble.compact { padding: 4px 6px; }
+.bubble.compact::after, .bubble.compact::before { right: 10px; }
+.cmp { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.cmp b { font-weight: 900; }
+.cmp-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.cmp button { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; font-size: 11px; font-weight: 900; background: #f1e2cf; box-shadow: var(--px-border-2); }
 .scene-wrap.shake { animation: shake 0.3s; }
 @keyframes shake { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
 .pixel { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }

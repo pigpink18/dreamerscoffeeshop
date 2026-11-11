@@ -821,7 +821,8 @@ export function drawScooter(c: Ctx, x: number, y: number) {
 }
 
 /** Nhân viên pha chế đứng sau quầy */
-export function drawBarista(c: Ctx, x: number, y: number, busy: boolean, t: number, hue = 0, progress = 0) {
+/** pose: 'auto' = lắc shaker khi bận / lau quầy khi rảnh · 'work' = đang thao tác ở máy (2 tay đưa ra trước) · 'walk' = đi sang chỗ khác */
+export function drawBarista(c: Ctx, x: number, y: number, busy: boolean, t: number, hue = 0, progress = 0, pose: 'auto' | 'work' | 'walk' = 'auto') {
   const look: Look = {
     skin: ['#f0c8a2', '#e2b089', '#f6d3b3'][hue % 3],
     hair: ['#2b1d16', '#6b4026', '#1d1612'][hue % 3],
@@ -834,7 +835,14 @@ export function drawBarista(c: Ctx, x: number, y: number, busy: boolean, t: numb
   // tạp dề + mũ
   px(c, x + 3, y + 17 - bob, 10, 10, '#6f4e37'); px(c, x + 5, y + 15 - bob, 6, 2, '#6f4e37')
   px(c, x + 3, y - bob, 10, 2, '#6f4e37')
-  if (busy) {
+  if (busy && pose !== 'auto') {
+    // diễn từng bước pha: tay làm việc trên mặt quầy (hoặc đánh tay khi đi) + thanh tiến độ trên đầu
+    const w = pose === 'walk' ? Math.floor(t * 10) % 2 : Math.floor(t * 7) % 2
+    px(c, x + 2, y + 21 - (pose === 'work' ? w * 2 : w) - bob, 3, 3, look.skin)
+    px(c, x + 11, y + 21 - (pose === 'work' ? (1 - w) * 2 : 1 - w) - bob, 3, 3, look.skin)
+    px(c, x, y - 6, 16, 3, OUT); px(c, x + 1, y - 5, 14, 1, '#5a4334')
+    px(c, x + 1, y - 5, Math.max(1, Math.round(14 * Math.min(1, progress))), 1, '#3fd18b')
+  } else if (busy) {
     // đang pha: tay cầm shaker lắc lên xuống + thanh tiến độ trên đầu
     const sh = Math.floor(t * 10) % 2
     px(c, x + 13, y + 19 - sh * 2 - bob, 3, 3, look.skin)

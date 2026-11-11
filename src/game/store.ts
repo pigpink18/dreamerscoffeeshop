@@ -373,6 +373,7 @@ export const ui = reactive({
   shippers: [] as Shipper[],
   staffProgress: [] as number[],
   staffJob: [] as (string | null)[], // nhân viên đang làm gì (hiện trên màn hình)
+  staffRecipe: [] as (RecipeId | null)[], // món nhân viên đang pha (cảnh quầy diễn từng bước theo tiến độ)
   seats: [] as Seat[], // bàn ở khu khách ngồi
   waiters: [] as Waiter[], // nhân viên phục vụ đang làm gì
   page: 0, // đang xem: 0 = quầy, 1 = khu khách ngồi
@@ -675,6 +676,7 @@ export function openShop() {
   for (let i = 0; i < save.upgrades.shipper; i++) addShipper(i)
   ui.staffProgress = Array(save.upgrades.staff).fill(0)
   ui.staffJob = []
+  ui.staffRecipe = []
   ui.seats = Array.from({ length: save.seating.tables * SEATS_PER_TABLE }, newSeat)
   ui.waiters = Array.from({ length: save.seating.waiter }, (_, i) => ({ seat: null, t: 0, x: 100 - i * 14 }))
   ui.page = 0
@@ -842,6 +844,7 @@ function tick(dt: number) {
     const cust = custs[s]
     const order = cust ? undefined : ords[s - custs.length]
     ui.staffJob[s] = cust ? `${recipeById[cust.recipe].name} cho ${cust.name ?? 'khách'}` : order ? `đơn app của ${order.name}` : null
+    ui.staffRecipe[s] = cust?.recipe ?? order?.recipe ?? null
     if (!cust && !order) { ui.staffProgress[s] = 0; continue }
     ui.staffProgress[s] += dt
     if (ui.staffProgress[s] >= staffServeTime.value) {
