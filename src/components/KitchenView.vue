@@ -4,7 +4,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { save, ui, staffAll } from '../game/store'
 import { moneyShort } from '../game/data'
 import { iconUrl, px, box, CZ, drawPerson, type Ctx } from '../game/pixel'
-import { KART_W, KART_H, KART_LAYERS, KANCHOR } from '../game/kitchenArt'
+import { KART_W, KART_H, KANCHOR, drawKitchenBack, drawKitchenFront, drawPan, drawPot, drawBowl, drawPlate } from '../game/kitchenArt'
 import { coinsFly, sparkle, popText, type Pt } from '../game/fx'
 import { sfx } from '../game/audio'
 import { CAST } from '../game/story'
@@ -136,7 +136,7 @@ const gauge = computed(() => {
 })
 
 // ---- kích thước ----
-// Cảnh vẽ trong không gian ảnh bếp KayKit (KART_W x KART_H). Mỗi điểm ảnh = kscale điểm ảnh màn hình (số nguyên → nét).
+// Cảnh bếp pixel 2D (kitchenArt.ts) trong không gian KART_W x KART_H. Mỗi điểm ảnh = kscale điểm ảnh màn hình (số nguyên → nét).
 function resize() {
   const el = root.value, c = cv.value
   if (!el || !c) return
@@ -160,13 +160,6 @@ function frame(now: number) {
   lastBg = now
   draw(now / 1000)
 }
-// ảnh bếp 3D đã bake (tools/kaykit/bake.mjs)
-const art: Partial<Record<(typeof KART_LAYERS)[number], HTMLImageElement>> = {}
-for (const k of KART_LAYERS) {
-  const im = new Image()
-  im.onload = () => { art[k] = im }
-  im.src = `${import.meta.env.BASE_URL}assets/kitchen/${k}.png`
-}
 onMounted(() => {
   resize()
   requestAnimationFrame(resize)
@@ -179,7 +172,6 @@ onBeforeUnmount(() => { cancelAnimationFrame(raf); ro?.disconnect() })
 // ---------- Vẽ cảnh bếp ----------
 const INK = '#3b2a20'
 const A = (k: keyof typeof KANCHOR) => [Math.round(KANCHOR[k][0]), Math.round(KANCHOR[k][1])] as const
-function layer(c: Ctx, k: (typeof KART_LAYERS)[number], dx = 0, dy = 0) { const im = art[k]; if (im) c.drawImage(im, dx, dy) }
 /** lửa gas liếm quanh đáy chảo / nồi */
 function fire(c: Ctx, [bx, by]: readonly [number, number], t: number) {
   for (let i = -9; i <= 9; i += 3) {
@@ -204,18 +196,17 @@ function draw(t: number) {
   const done = new Set(ck?.done ?? [])
   const f = ck ? foodById[ck.food] : null
   // lớp sau: sàn, tường, tủ treo, máy hút mùi
-  if (art.back) layer(c, 'back')
-  else { px(c, 0, 0, KART_W, KART_H, '#e8c9a8'); px(c, 0, 100, KART_W, KART_H - 100, '#d8d0c6') }
+  drawKitchenBack(c)
   // Yến đứng sau quầy sơ chế (vẽ to x2 cho hợp tỉ lệ đồ bếp)
   c.save(); c.scale(2, 2)
   drawPerson(c, CAST.yen.look, 35, 15 - (act ? Math.floor(t * 6) % 2 : 0), ck ? 'happy' : 'neutral', Math.floor(t * 10) % 41 === 0)
   c.restore()
   // lớp trước: tủ lạnh, quầy, bếp gas, bồn rửa
-  layer(c, 'front')
+  drawKitchenFront(c)
 
   // --- chảo: bánh mì chảo ---
   if (act === 'chien') fire(c, A('burnerL'), t)
-  layer(c, 'pan')
+  drawPan(c)
   const [px0, py0] = A('panIn')
   if (f?.id === 'banhMiChao') {
     if (done.has('pate')) { px(c, px0 - 7, py0 - 1, 5, 2, '#c9875a'); px(c, px0 - 6, py0 - 1, 3, 1, '#e2a77a') }
@@ -228,7 +219,7 @@ function draw(t: number) {
 
   // --- nồi trụng mì ---
   if (act === 'luoc') fire(c, A('burnerR'), t)
-  layer(c, 'pot')
+  drawPot(c)
   const [qx, qy] = A('potIn')
   const isMi = f?.id === 'miTronCay'
   const boiling = act === 'luoc'
@@ -241,7 +232,7 @@ function draw(t: number) {
   if (isMi && done.has('to')) {
     const sh = act === 'tron' ? Math.round(Math.sin(t * 40) * 1.5) : 0
     c.save(); c.translate(sh, 0)
-    layer(c, 'bowl')
+    drawBowl(c)
     const [bx, by] = A('bowl')
     if (done.has('mi')) { px(c, bx - 9, by - 2, 19, 3, '#f2cf6b'); for (let i = 0; i < 5; i++) px(c, bx - 8 + i * 4, by - 2 + (i & 1), 3, 1, '#d9a92e') }
     if (done.has('sotCay')) px(c, bx - 6, by - 3, 7, 2, done.has('tron') ? '#e8703a' : '#d8333a')
@@ -282,7 +273,7 @@ function draw(t: number) {
 
   // --- đĩa ra món waffle (đặt trên thớt) ---
   if (isW && done.has('dia')) {
-    layer(c, 'plate')
+    drawPlate(c)
     const [lx, ly] = A('plate')
     box(c, lx - 9, ly - 6, 18, 7, '#e7b35a', '#8a5a1c')
     for (let x = lx - 6; x < lx + 7; x += 4) px(c, x, ly - 5, 1, 5, '#b9802f')

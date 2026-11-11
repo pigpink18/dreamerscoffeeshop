@@ -29,6 +29,5 @@ dist-ssr
 # bộ ảnh Brew & Bloom gốc (giấy phép không cho phân phối lại nguyên bộ) – chỉ chép món dùng vào public/assets/cozy bằng tools/cozy.py
 Cozy_World_Free_80/
 
-# bộ 3D gốc KayKit Restaurant Bits (CC0) – chỉ dùng để bake ảnh bếp (tools/kaykit/bake.mjs → public/assets/kitchen)
+# bộ KayKit Restaurant Bits (CC0) – chỉ để tham khảo bố cục khu bếp (bếp vẽ pixel 2D bằng code trong kitchenArt.ts)
 coffee&cooking/
-tools/kaykit/gltf
