@@ -430,9 +430,9 @@ function draw(now: number) {
     const shadow = (x: number, y: number, w: number) => { c.fillStyle = 'rgba(38, 28, 27, 0.18)'; c.fillRect(Math.round(x - w / 2), Math.round(y - 1), w, 3) }
     // hàng sau (sát quầy): hộp cây bên trái, bonsai bên phải
     shadow(-6, yb, 40); x2(-26, yb, () => { const im = images.planter; if (im) c.drawImage(im, 0, -im.height) })
-    shadow(140, yb, 22); x2(140, yb, () => potted('bonsai'))
+    if (!xmas) { shadow(140, yb, 22); x2(140, yb, () => potted('bonsai')) } // mùa Noel: góc phải nhường cho cây thông
     // cây thông to (x2) đứng sàn bên phải
-    if (xmas) { shadow(102, yt + 12, 70); x2(64, yt - 114 + 12, () => drawXmasTree(c, 0, 0, t, 'xl')) }
+    if (xmas) { shadow(130, yt + 12, 90); x2(79, yt - 160 + 12, () => drawXmasTree(c, 0, 0, t, 'xxl')) } // cây thông to cao (x2 cỡ xxl ≈ 160 điểm ảnh)
     // khách đang chờ xếp hàng trên sàn (x2: gần người xem nên to hơn khách ở quầy)
     if (ui.phase === 'open') {
       ui.queue.slice(1, 3).forEach((q, i) => {
@@ -449,7 +449,7 @@ function draw(now: number) {
     }
     // hàng trước (gần người xem nhất): dương xỉ trái, xương rồng phải
     shadow(-8, yf, 26); x2(-8, yf, () => potted('fern'))
-    shadow(140, yf, 26); x2(140, yf, () => potted('cactus'))
+    if (!xmas) { shadow(140, yf, 26); x2(140, yf, () => potted('cactus')) } // mùa Noel: góc phải là cây thông
   }
   if (treeOnFloor && !wide) {
     if (floorH >= 44) drawXmasTree(c, 92, SCENE_H + Math.round(floorH * 0.6) - 57, t, 'xl')
