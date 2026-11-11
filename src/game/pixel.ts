@@ -822,14 +822,19 @@ export function drawScooter(c: Ctx, x: number, y: number) {
 
 /** Nhân viên pha chế đứng sau quầy */
 /** pose: 'auto' = lắc shaker khi bận / lau quầy khi rảnh · 'work' = đang thao tác ở máy (2 tay đưa ra trước) · 'walk' = đi sang chỗ khác */
-export function drawBarista(c: Ctx, x: number, y: number, busy: boolean, t: number, hue = 0, progress = 0, pose: 'auto' | 'work' | 'walk' = 'auto') {
-  const look: Look = {
+/** ngoại hình nhân viên pha chế thứ hue (dùng chung cho cảnh quầy và thẻ nhân viên) */
+export function baristaLook(hue = 0): Look {
+  return {
     skin: ['#f0c8a2', '#e2b089', '#f6d3b3'][hue % 3],
     hair: ['#2b1d16', '#6b4026', '#1d1612'][hue % 3],
     style: (['bun', 'short', 'bob'] as const)[hue % 3],
     shirt: '#fffaf2',
     acc: ['blush'],
   }
+}
+export const BARISTA_NAMES = ['Na', 'Tũn', 'Bơ']
+export function drawBarista(c: Ctx, x: number, y: number, busy: boolean, t: number, hue = 0, progress = 0, pose: 'auto' | 'work' | 'walk' = 'auto') {
+  const look = baristaLook(hue)
   const bob = busy ? Math.floor(t * 8) % 2 : 0
   drawPerson(c, look, x, y - bob, busy ? 'happy' : 'neutral', Math.floor(t * 10) % 41 === 0)
   // tạp dề + mũ

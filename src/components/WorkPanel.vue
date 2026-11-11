@@ -5,8 +5,10 @@ import { ui, save, brewStep, cancelBrew, startBrew, canMake, giveAddon, tutOn, s
 import { kitchen, kitchenOpen } from '../game/kitchen'
 import { GOODS, goodUnlocked } from '../game/metaData'
 import { recipeById, STEPS, type StepId, type IngredientId } from '../game/data'
-import { iconUrl, IMG_URL } from '../game/pixel'
+import { iconUrl, IMG_URL, baristaLook, BARISTA_NAMES } from '../game/pixel'
 import PixelIcon from './ui/PixelIcon.vue'
+import PersonPortrait from './ui/PersonPortrait.vue'
+import DrinkIcon from './ui/DrinkIcon.vue'
 
 const showOrders = ref(false)
 // kệ hàng bán kèm (bánh / lưu niệm) – hiện khi đã thuê mặt bằng có bán
@@ -70,12 +72,20 @@ function pickOrder(id: number) {
 <template>
   <!-- có nhân viên pha chế: họ lo hết quầy nước, bạn chỉ xem & vào bếp -->
   <div v-if="staffAll" class="panel staff-panel">
-    <div class="sp-head"><PixelIcon name="staff" :size="3" /><div class="grow"><b>Nhân viên đang lo quầy pha chế</b><small>Nhận đơn, pha nước và đơn app đều do nhân viên làm. Bạn rảnh tay vào bếp nấu món.</small></div></div>
-    <div class="sp-list">
-      <div v-for="(p, i) in ui.staffProgress" :key="i" class="sp-row">
-        <span class="nm">Pha chế {{ i + 1 }}</span>
-        <span class="job">{{ ui.staffJob[i] ?? 'Đang rảnh' }}</span>
-        <i class="bar"><em :style="{ width: ui.staffJob[i] ? Math.min(100, (p / staffServeTime) * 100) + '%' : '0%' }" /></i>
+    <!-- quầy do nhân viên lo: thẻ nhân viên kiểu game (chân dung pixel, ly đang pha, thanh 10 ô) -->
+    <div class="sp-top">
+      <span class="section-title">Quầy pha chế</span>
+      <span class="sp-hint">Nhân viên lo hết · bạn vào bếp</span>
+    </div>
+    <div class="card sp-card">
+      <div v-for="(p, i) in ui.staffProgress" :key="i" class="sp-row" :class="{ busy: !!ui.staffRecipe[i] }">
+        <span class="sp-face"><PersonPortrait :look="baristaLook(i)" :mood="ui.staffRecipe[i] ? 'happy' : 'neutral'" :scale="2" /></span>
+        <span class="grow sp-info">
+          <span class="sp-name">{{ BARISTA_NAMES[i % 3] }} <i class="pxtag" :class="{ on: !!ui.staffRecipe[i] }">{{ ui.staffRecipe[i] ? 'Đang pha' : 'Rảnh' }}</i></span>
+          <span class="sp-job">{{ ui.staffRecipe[i] ? ui.staffJob[i] : 'Lau quầy, chờ khách…' }}</span>
+          <span class="sp-cells"><i v-for="k in 10" :key="k" :class="{ on: ui.staffRecipe[i] && k <= Math.ceil(Math.min(1, p / staffServeTime) * 10) }" /></span>
+        </span>
+        <span class="sp-cup"><DrinkIcon v-if="ui.staffRecipe[i]" :id="ui.staffRecipe[i]!" :scale="2" /></span>
       </div>
     </div>
     <div v-if="shelf.length" class="shelf">
@@ -84,8 +94,9 @@ function pickOrder(id: number) {
         <img :src="iconUrl(g.id)" class="pix" alt="" /><span class="gq">{{ save.meta.goods[g.id] ?? 0 }}</span>
       </button>
     </div>
-    <button class="btn go-kitchen" @click="ui.page = 2">
-      <PixelIcon name="house" :size="2" /> {{ kitchenOpen() ? `VÀO BẾP${kitchen.tickets.length ? ` · ${kitchen.tickets.length} phiếu chờ` : ''}` : 'MỞ KHU BẾP' }} ›
+    <button class="btn accent big go-kitchen" @click="ui.page = 2">
+      <PixelIcon name="house" :size="3" /> {{ kitchenOpen() ? 'VÀO BẾP' : 'MỞ KHU BẾP' }}
+      <span v-if="kitchenOpen() && kitchen.tickets.length" class="pxtag warn">{{ kitchen.tickets.length }} phiếu</span>
     </button>
   </div>
   <div v-else class="panel">
@@ -254,16 +265,23 @@ function pickOrder(id: number) {
   .aic { width: 22px; height: 22px; }
 }
 .staff-panel { display: flex; flex-direction: column; gap: 8px; }
-.sp-head { display: flex; align-items: center; gap: 8px; background: #e3f4ea; padding: 8px; box-shadow: var(--px-border-2); }
-.sp-head b { display: block; font-size: 13px; }
-.sp-head small { display: block; font-size: 11px; color: #4b5d52; line-height: 1.35; }
-.sp-list { display: flex; flex-direction: column; gap: 4px; }
-.sp-row { display: grid; grid-template-columns: auto 1fr 70px; align-items: center; gap: 8px; font-size: 12px; background: #fffaf2; padding: 5px 8px; box-shadow: var(--px-border-2); }
-.sp-row .nm { font-weight: 900; }
-.sp-row .job { color: #6f4e37; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sp-row .bar { height: 6px; background: #e6d6c2; box-shadow: 0 0 0 1px #3b2a20; }
-.sp-row .bar em { display: block; height: 100%; background: #2f9e6b; }
-.go-kitchen { width: 100%; justify-content: center; background: #f2c14e; font-weight: 900; padding: 12px; box-shadow: var(--px-border-2), inset 0 -4px 0 #d99a2b, 0 4px 0 rgba(59, 42, 32, 0.5); }
+.sp-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-right: 6px; }
+.sp-top .section-title { margin: 6px 6px 2px; }
+.sp-hint { font-size: 11px; font-weight: 800; color: #8a7566; }
+.sp-card { display: flex; flex-direction: column; gap: 6px; padding: 8px; }
+.sp-row { display: flex; align-items: center; gap: 8px; padding: 5px 6px; background: #fffaf2; box-shadow: var(--px-border-2), inset 0 -3px 0 #e6d6c2; }
+.sp-row.busy { background: #f1fbf4; }
+.sp-face { flex: none; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; background: #f1e2cf; box-shadow: var(--px-border-2), inset 0 -3px 0 #e0c8a8; }
+.sp-info { display: flex; flex-direction: column; gap: 3px; }
+.sp-name { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 900; }
+.sp-name .pxtag { font-style: normal; font-size: 10px; padding: 1px 5px; }
+.sp-name .pxtag.on { background: #c9f0d8; color: #1d6b47; }
+.sp-job { font-size: 11px; font-weight: 700; color: #6f4e37; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-cells { display: flex; gap: 2px; }
+.sp-cells i { width: 9px; height: 6px; background: #e6d6c2; box-shadow: 0 0 0 1px #3b2a20; }
+.sp-cells i.on { background: #3fd18b; }
+.sp-cup { flex: none; width: 32px; height: 44px; display: flex; align-items: center; justify-content: center; }
+.go-kitchen .pxtag { margin-left: 4px; font-size: 12px; letter-spacing: 0; }
 .tut { flex-basis: 100%; margin-top: 4px; padding: 4px 7px; font-size: 12px; font-weight: 700; color: #3b2a20; background: #ffe9a8; box-shadow: 0 0 0 2px #d99a2b; animation: tutIn 0.3s ease-out; }
 .tut b { font-size: 10px; letter-spacing: 1px; color: #fff; background: #d8333a; padding: 1px 4px; margin-right: 4px; }
 @keyframes tutIn { from { transform: translateY(-4px); opacity: 0; } }
