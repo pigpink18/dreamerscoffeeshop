@@ -33,7 +33,8 @@ const groups = computed(() => {
   const uniq = [...new Set(f.steps)]
   const remain = cook.value ? f.steps.slice(cook.value.done.length) : f.steps
   const item = (s: KStep) => ({ s, used: !remain.includes(s) })
-  return ([['tool', 'Dụng cụ'], ['ing', 'Nguyên liệu'], ['act', 'Thao tác']] as const)
+  // nguyên liệu tự bỏ vào → bàn nấu chỉ còn dụng cụ + thao tác
+  return ([['tool', 'Dụng cụ'], ['act', 'Thao tác']] as const)
     .map(([k, title]) => ({ k, title, items: uniq.filter((s) => KSTEPS[s].kind === k).map(item) }))
     .filter((g) => g.items.length)
 })
@@ -433,7 +434,8 @@ const waiting = computed(() => ui.queue.length)
         <template v-if="food && cook">
           <div class="rhead">
             <span class="rname">{{ food.name }}</span>
-            <span v-if="curStep" class="cur">Bước {{ cook.done.length + 1 }}/{{ food.steps.length }}: <b>{{ label(curStep) }}</b></span>
+            <span v-if="curStep && cook.auto" class="cur">Đang bỏ <b>{{ label(curStep) }}</b>…</span>
+            <span v-else-if="curStep" class="cur">Bước {{ cook.done.length + 1 }}/{{ food.steps.length }}: <b>{{ label(curStep) }}</b></span>
             <span v-else class="cur ok">Ra món!</span>
           </div>
           <div class="steps">
@@ -461,7 +463,7 @@ const waiting = computed(() => ui.queue.length)
       </div>
       <div v-else class="board idle">
         <b>Chạm 1 phiếu đơn ở trên để bắt đầu nấu</b>
-        <span class="muted small">Nấu món nào, bàn nấu chỉ hiện đúng đồ của món đó.</span>
+        <span class="muted small">Bạn chỉ chọn dụng cụ và làm thao tác – nguyên liệu Yến tự bỏ vào.</span>
         <div class="stock">
           <span v-for="x in stockList" :key="x.id" class="sk" :class="{ low: x.n < 3 }"><img :src="iconUrl(x.id)" class="pix" alt="" />{{ x.n }}</span>
         </div>

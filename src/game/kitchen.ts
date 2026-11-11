@@ -73,6 +73,7 @@ export interface Ticket { id: number; name: string; food: FoodId; t: number; max
 export interface Cooking {
   ticketId: number; food: FoodId; done: KStep[]; mistakes: number; busy: boolean; action: KStep | null; actionAt: number; shake: number
   mini: { step: KAct; at: number } | null // đang chơi mini-game của thao tác (áp chảo / trụng / trộn / nướng)
+  auto?: boolean // đang tự bỏ nguyên liệu (người chơi chỉ bấm dụng cụ + thao tác)
 }
 /** trạng thái bếp trong ca (không lưu vào bản lưu – hết ca là xoá) */
 export const kitchen = reactive({
@@ -122,12 +123,45 @@ export function startCook(ticketId: number) {
   }
   sfx('tap'); vibrate(8)
   kitchen.cook = { ticketId, food: tk.food, done: [], mistakes: 0, busy: false, action: null, actionAt: 0, shake: 0, mini: null }
+  autoIngredients(kitchen.cook)
+}
+
+/** Nguyên liệu tự bỏ vào (từng món một, đủ chậm để thấy Yến cầm thả): người chơi chỉ bấm dụng cụ + thao tác */
+const AUTO_MS = 420
+function autoIngredients(ck: Cooking) {
+  const next = foodById[ck.food].steps[ck.done.length]
+  if (!next || KSTEPS[next].kind !== 'ing') { ck.auto = false; return }
+  ck.auto = true
+  setTimeout(() => {
+    if (kitchen.cook !== ck) return
+    if (foodStock(next as FoodIng) < 1) { ck.auto = false; toast(`Hết ${KSTEPS[next].label}!`, 'bad'); sfx('wrong'); return }
+    addStock(next as FoodIng, -1)
+    completeStep(ck, next)
+  }, AUTO_MS)
+}
+/** ghi nhận 1 bước xong (dụng cụ / nguyên liệu), rồi tự bỏ tiếp nguyên liệu nếu bước sau là nguyên liệu */
+function completeStep(ck: Cooking, step: KStep) {
+  const info = KSTEPS[step]
+  const f = foodById[ck.food]
+  kitchenSfx(info.sound)
+  vibrate(6)
+  ck.action = step
+  ck.actionAt = performance.now()
+  ck.done.push(step)
+  const at = ck.actionAt
+  const anim = Math.min(info.ms, 260)
+  setTimeout(() => { if (kitchen.cook === ck && ck.actionAt === at) ck.action = null }, anim)
+  if (ck.done.length === f.steps.length) {
+    ck.auto = false
+    ck.busy = true
+    setTimeout(() => { if (kitchen.cook === ck) serveFood() }, Math.max(300, anim))
+  } else autoIngredients(ck)
 }
 
 export function cookStep(step: KStep) {
   const ck = kitchen.cook
   if (!ck) { toast('Chạm vào 1 phiếu đơn trên thanh treo để bắt đầu nấu', 'info', 1500); sfx('wrong'); return }
-  if (ck.busy || ck.mini) return
+  if (ck.busy || ck.mini || ck.auto) return
   const f = foodById[ck.food]
   const expected = f.steps[ck.done.length]
   if (!expected) return
@@ -150,18 +184,7 @@ export function cookStep(step: KStep) {
     if (foodStock(step as FoodIng) < 1) { toast(`Hết ${info.label}!`, 'bad'); sfx('wrong'); return }
     addStock(step as FoodIng, -1)
   }
-  kitchenSfx(info.sound)
-  vibrate(6)
-  ck.action = step
-  ck.actionAt = performance.now()
-  ck.done.push(step)
-  const at = ck.actionAt
-  const anim = Math.min(info.ms, 260)
-  setTimeout(() => { if (kitchen.cook === ck && ck.actionAt === at) ck.action = null }, anim)
-  if (ck.done.length === f.steps.length) {
-    ck.busy = true
-    setTimeout(() => { if (kitchen.cook === ck) serveFood() }, Math.max(300, anim))
-  }
+  completeStep(ck, step)
 }
 
 /** Kết thúc mini-game: good = làm chuẩn. Làm hụt vẫn xong bước nhưng tính 1 lỗi (mất combo, ít tip) */
@@ -177,7 +200,7 @@ export function finishMini(good: boolean) {
   if (ck.done.length === foodById[ck.food].steps.length) {
     ck.busy = true
     setTimeout(() => { if (kitchen.cook === ck) serveFood() }, 450)
-  }
+  } else autoIngredients(ck)
 }
 export { kitchenSfx }
 
