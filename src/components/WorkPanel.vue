@@ -7,7 +7,6 @@ import { GOODS, goodUnlocked } from '../game/metaData'
 import { recipeById, STEPS, type StepId, type IngredientId } from '../game/data'
 import { iconUrl, IMG_URL } from '../game/pixel'
 import PixelIcon from './ui/PixelIcon.vue'
-import StaffBoard from './StaffBoard.vue'
 
 const showOrders = ref(false)
 // kệ hàng bán kèm (bánh / lưu niệm) – hiện khi đã thuê mặt bằng có bán
@@ -71,8 +70,7 @@ function pickOrder(id: number) {
 <template>
   <!-- có nhân viên pha chế: họ lo hết quầy nước, bạn chỉ xem & vào bếp -->
   <div v-if="staffAll" class="panel staff-panel">
-    <!-- quầy do nhân viên lo: cảnh pixel dãy quầy sau, nhân viên pha + bóng thoại ly đang pha -->
-    <StaffBoard />
+    <!-- quầy do nhân viên lo: nhân viên pha ngay trong cảnh quầy phía trên → ở đây chỉ còn kệ hàng + nút vào bếp -->
     <div v-if="shelf.length" class="shelf">
       <span class="sh-lbl">KỆ</span>
       <button v-for="g in shelf" :key="g.id" class="good" :class="{ want: wanted === g.id, out: (save.meta.goods[g.id] ?? 0) < 1 }" @pointerdown.prevent="giveAddon(g.id)">

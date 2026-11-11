@@ -832,7 +832,6 @@ export function baristaLook(hue = 0): Look {
     acc: ['blush'],
   }
 }
-export const BARISTA_NAMES = ['Na', 'Tũn', 'Bơ']
 export function drawBarista(c: Ctx, x: number, y: number, busy: boolean, t: number, hue = 0, progress = 0, pose: 'auto' | 'work' | 'walk' = 'auto') {
   const look = baristaLook(hue)
   const bob = busy ? Math.floor(t * 8) % 2 : 0
