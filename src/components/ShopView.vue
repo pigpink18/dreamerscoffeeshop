@@ -13,7 +13,7 @@ const shelf = computed(() => GOODS.filter((g) => goodUnlocked(g, save.meta.premi
 import InstallHint from './InstallHint.vue'
 import CounterScene from './CounterScene.vue'
 import SeatingScene from './SeatingScene.vue'
-import { ref } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { dirtySeats } from '../game/store'
 import WorkPanel from './WorkPanel.vue'
 import KitchenView from './KitchenView.vue'
@@ -47,6 +47,8 @@ function swMove(e: PointerEvent) {
   const dx = e.clientX - sx, dy = e.clientY - sy
   if (horiz === null && Math.abs(dx) + Math.abs(dy) > 10) horiz = Math.abs(dx) > Math.abs(dy) * 1.2
   if (!horiz) return
+  // chuột: giữ luồng sự kiện kể cả khi rê ra ngoài khung / qua ảnh, nút
+  if (!(e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   // kéo theo ngón tay (có lực cản ở 2 đầu)
   const edge = (ui.page === 0 && dx > 0) || (ui.page === PAGES - 1 && dx < 0)
   drag.value = edge ? dx * 0.25 : dx
@@ -64,6 +66,14 @@ function swUp(e: PointerEvent) {
 /** 3 trang khi đang bán: quầy pha chế · khu khách ngồi · bếp */
 const PAGES = 3
 function swCancel() { tracking = false; drag.value = 0 }
+// máy tính: phím ← → cũng chuyển trang
+function onKey(e: KeyboardEvent) {
+  if (ui.phase !== 'open' || ui.tab !== 'shop' || (e.target as HTMLElement)?.closest?.('input, textarea')) return
+  if (e.key === 'ArrowRight' && ui.page < PAGES - 1) ui.page++
+  else if (e.key === 'ArrowLeft' && ui.page > 0) ui.page--
+}
+onMounted(() => window.addEventListener('keydown', onKey))
+onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 
 const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensive + ui.stats.cancelled)
 </script>
@@ -197,7 +207,7 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
     </div>
 
     <!-- Vuốt ngang: trang 1 = quầy pha chế · trang 2 = khu khách ngồi -->
-    <div class="pager" @pointerdown="swDown" @pointermove="swMove" @pointerup="swUp" @pointercancel="swCancel">
+    <div class="pager" @pointerdown="swDown" @pointermove="swMove" @pointerup="swUp" @pointercancel="swCancel" @dragstart.prevent>
       <div class="track" :class="{ dragging: drag !== 0 }" :style="{ transform: `translateX(calc(${(-ui.page * 100) / PAGES}% + ${drag}px))` }">
         <div class="page">
           <div class="scene-box"><CounterScene /></div>
@@ -212,9 +222,9 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
       </div>
     </div>
     <div class="dots">
-      <i :class="{ on: ui.page === 0 }" />
-      <i :class="{ on: ui.page === 1, warn: dirtySeats > 0 && ui.page !== 1 }" />
-      <i :class="{ on: ui.page === 2, warn: kitchen.tickets.length > 0 && !kitchen.cook && ui.page !== 2 }" />
+      <i :class="{ on: ui.page === 0 }" @click="ui.page = 0" />
+      <i :class="{ on: ui.page === 1, warn: dirtySeats > 0 && ui.page !== 1 }" @click="ui.page = 1" />
+      <i :class="{ on: ui.page === 2, warn: kitchen.tickets.length > 0 && !kitchen.cook && ui.page !== 2 }" @click="ui.page = 2" />
     </div>
 
     <Transition name="fade">
@@ -279,7 +289,8 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 /* Đang bán */
 .open { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .open > * { flex: none; }
-.open > .pager { flex: 1 1 0; min-height: 0; overflow: hidden; position: relative; touch-action: pan-y; }
+.open > .pager { flex: 1 1 0; min-height: 0; overflow: hidden; position: relative; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.pager :deep(img) { -webkit-user-drag: none; }
 .track { display: flex; width: 300%; height: 100%; transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); will-change: transform; }
 .track.dragging { transition: none; }
 .page { width: 33.3334%; height: 100%; min-height: 0; display: flex; flex-direction: column; }
@@ -288,7 +299,7 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 .seat-page { padding: 10px 3px 12px; }
 .seat-page > * { flex: 1 1 0; min-height: 0; } /* khu ngồi phủ hết chiều cao trang, chừa đều 2 bên */
 .dots { display: flex; justify-content: center; gap: 6px; padding: 5px 0 1px; }
-.dots i { width: 7px; height: 7px; background: #cdb69a; box-shadow: 0 0 0 1px #3b2a20; }
+.dots i { cursor: pointer; width: 7px; height: 7px; background: #cdb69a; box-shadow: 0 0 0 1px #3b2a20; }
 .dots i.on { background: #3b2a20; width: 16px; }
 .dots i.warn { background: #d9534f; animation: blink 0.8s steps(2) infinite; }
 @keyframes blink { 50% { opacity: 0.35; } }
