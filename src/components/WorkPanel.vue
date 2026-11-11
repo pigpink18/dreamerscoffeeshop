@@ -77,9 +77,13 @@ function pickOrder(id: number) {
         <img :src="iconUrl(g.id)" class="pix" alt="" /><span class="gq">{{ save.meta.goods[g.id] ?? 0 }}</span>
       </button>
     </div>
-    <button class="btn accent big go-kitchen" @click="ui.page = 2">
-      <PixelIcon name="house" :size="3" /> {{ kitchenOpen() ? 'VÀO BẾP' : 'MỞ KHU BẾP' }}
-      <span v-if="kitchenOpen() && kitchen.tickets.length" class="pxtag warn">{{ kitchen.tickets.length }} phiếu</span>
+    <!-- bảng gỗ đóng đinh đồng (cùng chất liệu nhãn gỗ / thanh trên của game) -->
+    <button class="go-kitchen" @click="ui.page = 2">
+      <i class="nail l" /><i class="nail r" />
+      <PixelIcon name="house" :size="3" />
+      <span class="gk-t">{{ kitchenOpen() ? 'Vào bếp' : 'Mở khu bếp' }}</span>
+      <span v-if="kitchenOpen() && kitchen.tickets.length" class="gk-n">{{ kitchen.tickets.length }} phiếu</span>
+      <span class="gk-arrow">›</span>
     </button>
   </div>
   <div v-else class="panel">
@@ -248,7 +252,15 @@ function pickOrder(id: number) {
   .aic { width: 22px; height: 22px; }
 }
 .staff-panel { display: flex; flex-direction: column; gap: 8px; }
-.go-kitchen .pxtag { margin-left: 4px; font-size: 12px; letter-spacing: 0; }
+.go-kitchen { position: relative; display: flex; align-items: center; justify-content: center; gap: 10px; margin: 2px 3px 6px; min-height: 54px; padding: 0 22px 4px;
+  background: repeating-linear-gradient(0deg, rgba(59, 42, 32, 0.35) 0 1px, transparent 1px 9px), linear-gradient(90deg, rgba(255,255,255,0.04) 0 30%, transparent 30% 62%, rgba(0,0,0,0.05) 62%), #8a5a3c;
+  box-shadow: var(--px-border), inset 0 3px 0 #b07b52, inset 0 -5px 0 #5a3826, 0 6px 0 #3b2a20; transition: transform 0.06s, box-shadow 0.06s; }
+.go-kitchen:active { transform: translateY(4px); box-shadow: var(--px-border), inset 0 3px 0 #b07b52, inset 0 -3px 0 #5a3826, 0 2px 0 #3b2a20; }
+.go-kitchen .nail { position: absolute; top: 50%; width: 4px; height: 4px; margin-top: -4px; background: #f0d27a; box-shadow: 0 0 0 1px #3b2a20, 1px 1px 0 1px #886321; }
+.go-kitchen .nail.l { left: 8px; } .go-kitchen .nail.r { right: 8px; }
+.gk-t { font-size: 17px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; color: #ffe8b8; text-shadow: 0 2px 0 #3b2a20; }
+.gk-n { font-size: 11px; font-weight: 900; padding: 2px 6px; color: #3b2a20; background: #f2c14e; box-shadow: var(--px-border-2), inset 0 -2px 0 #d99a2b; }
+.gk-arrow { font-size: 22px; font-weight: 900; color: #f2c14e; text-shadow: 0 2px 0 #3b2a20; line-height: 1; margin-top: -2px; }
 .tut { flex-basis: 100%; margin-top: 4px; padding: 4px 7px; font-size: 12px; font-weight: 700; color: #3b2a20; background: #ffe9a8; box-shadow: 0 0 0 2px #d99a2b; animation: tutIn 0.3s ease-out; }
 .tut b { font-size: 10px; letter-spacing: 1px; color: #fff; background: #d8333a; padding: 1px 4px; margin-right: 4px; }
 @keyframes tutIn { from { transform: translateY(-4px); opacity: 0; } }

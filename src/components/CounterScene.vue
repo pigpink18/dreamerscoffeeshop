@@ -16,7 +16,7 @@ import { moneyShort } from '../game/data'
 import { recipeById, REGULARS, NEEDY, BOND_LEVELS, bondLevel, STEPS, GUEST_GROUPS, type StepId } from '../game/data'
 import {
   SCENE_W, SCENE_H, LAYOUT, COUNTER_Y, images, loadImages, drawRoom, drawCounter, drawCup, drawPerson, iconUrl,
-  emptyCup, px, OUT, espressoKey, drawPlant, drawLights, drawBunting, drawOpenSign, drawPoster, drawCat, drawFridge, drawSack, drawGreen, drawScooter, drawBarista, drawCorgi,
+  emptyCup, px, box, OUT, espressoKey, drawPlant, drawLights, drawBunting, drawOpenSign, drawPoster, drawCat, drawFridge, drawSack, drawGreen, drawScooter, drawBarista, drawCorgi,
   type CupLook, type Mood,
 } from '../game/pixel'
 import { isXmasSeason, drawXmasTree } from '../game/xmas'
@@ -416,31 +416,45 @@ function draw(now: number) {
   }
   // đồ trên sàn + cây thông: có sàn thì cây đứng hẳn trên sàn góc phải, không thì đứng trước quầy
   const treeOnFloor = xmas && floorH >= 20
-  drawFloorProps(c, SCENE_H, floorH, t, treeOnFloor)
-  // quán mở rộng (có sàn rộng): khách đang chờ xếp hàng trên sàn, đứng đủ người
-  if (floorH >= 44 && ui.phase === 'open') {
-    const line = ui.queue.slice(1, 5)
-    const fy = SCENE_H + Math.round(floorH * 0.55) // chân khách
-    line.forEach((q, i) => {
-      const x = 62 - i * 20 + (i % 2 ? 3 : 0), y = fy - 38 + (i % 2 ? 4 : 0)
-      const low = q.patience / q.maxPatience
-      const bob = Math.floor(t * 2 + i) % 2
-      // chân + giày
-      const pants = ['#3a4a6a', '#4a3a30', '#2e2e33', '#5a6b4a'][q.id % 4]
-      px(c, x + 3, y + 29, 10, 1, OUT)
-      for (const lx of [x + 4, x + 9]) { px(c, lx - 1, y + 29, 5, 8, OUT); px(c, lx, y + 29, 3, 7, pants); px(c, lx - 1, y + 36, 5, 2, '#2b1d16') }
-      drawPerson(c, q.look, x, y - bob, low < 0.3 ? 'angry' : low < 0.55 ? 'grumpy' : 'neutral', Math.floor(t * 10 + i * 7) % 37 === 0)
-      // bóng dưới chân
-      c.fillStyle = 'rgba(38, 28, 27, 0.18)'; c.fillRect(x + 1, y + 38, 14, 2)
-    })
+  // ---- quán mở rộng (có nhân viên, sàn rộng): đồ trên sàn GẦN người xem nên vẽ to x2 – cây xanh, khách chờ, cây thông ----
+  const wide = floorH >= 60
+  if (!wide) drawFloorProps(c, SCENE_H, floorH, t, treeOnFloor)
+  const x2 = (x: number, y: number, fn: () => void) => { c.save(); c.translate(Math.round(x), Math.round(y)); c.scale(2, 2); fn(); c.restore() }
+  /** chậu cây đất nung + cây (sprite Cozy) – (0,0) = giữa đáy chậu, toạ độ x2 */
+  const potted = (key: 'fern' | 'bonsai' | 'cactus' | 'boxwood') => {
+    box(c, -6, -9, 12, 9, '#c8784a'); px(c, -5, -8, 10, 1, '#e0965e'); px(c, -7, -10, 14, 3, OUT); px(c, -6, -10, 12, 2, '#d9874f'); px(c, -5, -10, 10, 1, '#f0b07a')
+    const im = images[key]; if (im) c.drawImage(im, -Math.round(im.width / 2), -9 - im.height)
   }
-  if (treeOnFloor) {
-    // sàn rộng (quán mở rộng): cây thông to đứng hẳn trên sàn góc phải; sàn hẹp: cây vừa
-    if (floorH >= 90) drawXmasTree(c, 84, SCENE_H + Math.round(floorH * 0.62) - 81, t, 'xxl')
-    else if (floorH >= 44) drawXmasTree(c, 92, SCENE_H + Math.round(floorH * 0.6) - 57, t, 'xl')
+  if (wide) {
+    const yb = SCENE_H + Math.round(floorH * 0.3), yf = SCENE_H + Math.round(floorH * 0.86), yt = SCENE_H + Math.round(floorH * 0.66)
+    const shadow = (x: number, y: number, w: number) => { c.fillStyle = 'rgba(38, 28, 27, 0.18)'; c.fillRect(Math.round(x - w / 2), Math.round(y - 1), w, 3) }
+    // hàng sau (sát quầy): hộp cây bên trái, bonsai bên phải
+    shadow(-6, yb, 40); x2(-26, yb, () => { const im = images.planter; if (im) c.drawImage(im, 0, -im.height) })
+    shadow(140, yb, 22); x2(140, yb, () => potted('bonsai'))
+    // cây thông to (x2) đứng sàn bên phải
+    if (xmas) { shadow(102, yt + 12, 70); x2(64, yt - 114 + 12, () => drawXmasTree(c, 0, 0, t, 'xl')) }
+    // khách đang chờ xếp hàng trên sàn (x2: gần người xem nên to hơn khách ở quầy)
+    if (ui.phase === 'open') {
+      ui.queue.slice(1, 3).forEach((q, i) => {
+        const fx = 46 - i * 30, fy = yt + 6 + i * 8
+        const low = q.patience / q.maxPatience
+        const bob = Math.floor(t * 2 + i) % 2
+        const pants = ['#3a4a6a', '#4a3a30', '#2e2e33', '#5a6b4a'][q.id % 4]
+        shadow(fx, fy, 30)
+        x2(fx - 16, fy - 76, () => {
+          for (const lx of [4, 9]) { px(c, lx - 1, 29, 5, 8, OUT); px(c, lx, 29, 3, 7, pants); px(c, lx - 1, 36, 5, 2, '#2b1d16') }
+          drawPerson(c, q.look, 0, -bob, low < 0.3 ? 'angry' : low < 0.55 ? 'grumpy' : 'neutral', Math.floor(t * 10 + i * 7) % 37 === 0)
+        })
+      })
+    }
+    // hàng trước (gần người xem nhất): dương xỉ trái, xương rồng phải
+    shadow(-8, yf, 26); x2(-8, yf, () => potted('fern'))
+    shadow(140, yf, 26); x2(140, yf, () => potted('cactus'))
+  }
+  if (treeOnFloor && !wide) {
+    if (floorH >= 44) drawXmasTree(c, 92, SCENE_H + Math.round(floorH * 0.6) - 57, t, 'xl')
     else drawXmasTree(c, 101, SCENE_H + Math.min(floorH - 3, 26) - 40, t, 'lg')
-  }
-  else if (xmas) {
+  } else if (xmas && !treeOnFloor) {
     const [tx, ty] = XMAS_SPOT[P] ?? XMAS_SPOT[0]
     drawXmasTree(c, tx, ty, t, 'lg')
     if (P === 1) corgi() // cây đứng chỗ Cáo nằm → vẽ lại Cáo ngồi trước gốc cây

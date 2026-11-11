@@ -46,7 +46,7 @@ const IMG_FILES = {
   potMachine: 'coffee-pot-machine-2.png',
 }
 // Đồ nội thất / cây cảnh từ bộ Brew & Bloom (public/assets/cozy, xuất bằng tools/cozy.py)
-const COZY_FILES = ['sack', 'pot', 'boxwood', 'tulip'] as const
+const COZY_FILES = ['sack', 'pot', 'boxwood', 'tulip', 'fern', 'bonsai', 'planter', 'cactus'] as const
 export type ImgKey = keyof typeof IMG_FILES | (typeof COZY_FILES)[number]
 export const IMG_URL = {
   ...Object.fromEntries(Object.entries(IMG_FILES).map(([k, f]) => [k, `${base}assets/karsiori/${f}`])),

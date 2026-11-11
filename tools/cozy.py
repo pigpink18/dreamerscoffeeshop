@@ -20,6 +20,10 @@ SPRITES = {
     'pot': '0321',         # chậu đất nung nhỏ (mặt quầy, khu ngồi)
     'boxwood': '0441',     # bụi cây tròn (chậu lớn trước quầy, góc khu ngồi)
     'tulip': '0461',       # khóm tulip trên bậu cửa sổ
+    'fern': '0453',        # bụi dương xỉ (cây xanh đứng sàn khi quán mở rộng)
+    'bonsai': '0333',      # chậu bonsai (sàn quán mở rộng)
+    'planter': '0341',     # hộp cây xanh (sàn quán mở rộng)
+    'cactus': '0477',      # xương rồng ra hoa (sàn quán mở rộng)
 }
 
 
