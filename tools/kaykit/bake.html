@@ -1,0 +1,77 @@
+<!doctype html><body style="margin:0;background:#222"><script type="module">
+// Dựng bếp 3D từ KayKit Restaurant Bits (CC0) rồi chụp ra ảnh pixel cho KitchenView.
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+const L = new GLTFLoader()
+const cache = {}
+const load = async (n) => (cache[n] ??= (await L.loadAsync('/tools/kaykit/gltf/' + n + '.gltf')).scene)
+async function put(group, n, x, y, z, ry = 0, s = 1) {
+  const o = (await load(n)).clone(true)
+  o.position.set(x, y, z); o.rotation.y = ry; o.scale.setScalar(s)
+  group.add(o); return o
+}
+function makeRenderer(w, h) {
+  const r = new THREE.WebGLRenderer({ antialias: false, alpha: true, preserveDrawingBuffer: true })
+  r.setPixelRatio(1); r.setSize(w, h); r.outputColorSpace = THREE.SRGBColorSpace
+  return r
+}
+function camera(c) {
+  const cam = new THREE.OrthographicCamera(-c.hw, c.hw, c.hh, -c.hh, 0.1, 100)
+  cam.position.set(c.cx, c.cy + c.dist * Math.sin(c.pitch), c.dist * Math.cos(c.pitch))
+  cam.lookAt(c.cx, c.cy, 0); cam.updateMatrixWorld(); cam.updateProjectionMatrix()
+  return cam
+}
+function lights(scene) {
+  scene.add(new THREE.HemisphereLight(0xfff4e0, 0x8a7060, 2.2))
+  const d = new THREE.DirectionalLight(0xffffff, 1.6); d.position.set(-3, 8, 6); scene.add(d)
+}
+/** chụp 1 nhóm vật thể (các nhóm khác ẩn) → dataURL */
+function shoot(r, scene, cam, groups, show) {
+  for (const [k, g] of Object.entries(groups)) g.visible = show.includes(k)
+  r.setClearColor(0x000000, 0); r.render(scene, cam)
+  return r.domElement.toDataURL('image/png')
+}
+window.bake = async (c) => {
+  const scene = new THREE.Scene(); lights(scene)
+  const G = { back: new THREE.Group(), front: new THREE.Group(), pan: new THREE.Group(), pot: new THREE.Group(), bowl: new THREE.Group(), plate: new THREE.Group() }
+  for (const g of Object.values(G)) scene.add(g)
+  // ---- lớp sau: sàn, tường, tủ treo, máy hút mùi ----
+  for (const x of [-4, 0, 4]) for (const z of [2, 6]) await put(G.back, 'floor_kitchen', x, -0.5, z)
+  await put(G.back, 'wall', -4, 0, 0); await put(G.back, 'wall', 0, 0, 0); await put(G.back, 'wall_window_closed', 4, 0, 0)
+  for (const x of [-8, 8]) await put(G.back, 'wall', x, 0, 0)
+  await put(G.back, 'kitchencabinet', -2, 0, 0.25)
+  await put(G.back, 'extractorhood', 0, 0, 0.25)
+  await put(G.back, 'shelf_papertowel_decorated', 2, 2.4, 0.25)
+  // ---- lớp trước: tủ lạnh, quầy, bếp, bồn rửa + đồ trang trí ----
+  await put(G.front, 'fridge_A', -4, 0, 1.25)
+  await put(G.front, 'kitchencounter_straight_A_backsplash', -2, 0, 1.25)
+  await put(G.front, 'stove_multi', 0, 0, 1.25)
+  await put(G.front, 'kitchencounter_straight_B_backsplash', 2, 0, 1.25)
+  await put(G.front, 'kitchencounter_sink_backsplash', 4, 0, 1.25)
+  await put(G.front, 'cuttingboard', -2.1, 1.0, 1.1)
+  await put(G.front, 'knife', -1.75, 1.18, 1.1, 0, 0.8).then((o) => { o.rotation.z = Math.PI / 2 })
+  for (const [n, x, z] of [['jar_A_small', -2.75, 0.6], ['jar_B_small', -2.35, 0.55], ['jar_C_small', -1.5, 0.55]]) await put(G.front, n, x, 1.0, z)
+  await put(G.front, 'dishrack_plates', 4.6, 1.0, 0.75, 0, 0.8)
+  for (const x of [-8, 8]) await put(G.front, 'kitchencounter_straight_A', x, 0, 1.25)
+  // ---- đồ động (vẽ riêng, đè lên theo trạng thái nấu) ----
+  await put(G.pan, 'pan_A', c.panX, c.stoveTop, c.burnerZ - 0.1, -Math.PI / 2, 0.78)
+  await put(G.pot, 'pot_A', c.potX, c.stoveTop, c.burnerZ, 0, 0.62)
+  await put(G.bowl, 'bowl', c.bowlX, 1.0, 1.35, 0, 0.8)
+  await put(G.plate, 'plate', c.plateX, 1.13, 1.15, 0, 0.8)
+  const r = makeRenderer(c.w, c.h), cam = camera(c)
+  const out = {}
+  for (const k of Object.keys(G)) out[k] = shoot(r, scene, cam, G, [k])
+  out.all = shoot(r, scene, cam, G, Object.keys(G))
+  // điểm neo (toạ độ ảnh) cho lửa / chảo / nồi / khuôn waffle / Yến
+  const P = (x, y, z) => { const v = new THREE.Vector3(x, y, z).project(cam); return [+((v.x + 1) / 2 * c.w).toFixed(1), +((1 - v.y) / 2 * c.h).toFixed(1)] }
+  out.anchors = {
+    burnerL: P(c.panX, c.stoveTop, c.burnerZ), burnerR: P(c.potX, c.stoveTop, c.burnerZ),
+    panIn: P(c.panX, c.stoveTop + 0.15, c.burnerZ), potIn: P(c.potX, c.stoveTop + 0.3, c.burnerZ),
+    bowl: P(c.bowlX, 1.22, 1.35), plate: P(c.plateX, 1.2, 1.15), waffle: P(c.waffleX, 1.0, 1.35),
+    counterTopFront: P(0, 1.0, 2.29), cook: P(-2, 0, 2.6),
+  }
+  r.dispose()
+  return out
+}
+window.ready = true
+</script>

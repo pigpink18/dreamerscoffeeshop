@@ -3,7 +3,8 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { save, ui, staffAll } from '../game/store'
 import { moneyShort } from '../game/data'
-import { iconUrl, px, box, SCENE_W, CZ, drawPerson, type Ctx } from '../game/pixel'
+import { iconUrl, px, box, CZ, drawPerson, type Ctx } from '../game/pixel'
+import { KART_W, KART_H, KART_LAYERS, KANCHOR } from '../game/kitchenArt'
 import { coinsFly, sparkle, popText, type Pt } from '../game/fx'
 import { sfx } from '../game/audio'
 import { CAST } from '../game/story'
@@ -13,8 +14,6 @@ import {
 } from '../game/kitchen'
 import PixelIcon from './ui/PixelIcon.vue'
 
-const ASPECT = 256 / 488
-const H = Math.round(SCENE_W * ASPECT) // 67 điểm ảnh
 const root = ref<HTMLDivElement>()
 const cv = ref<HTMLCanvasElement>()
 let ctx: Ctx | null = null
@@ -36,12 +35,12 @@ watch(() => cook.value?.shake, (n, o) => { if (n && n !== o) { shaking.value = t
 function scenePt(sx: number, sy: number): Pt {
   const r = cv.value?.getBoundingClientRect()
   if (!r) return { x: innerWidth / 2, y: innerHeight / 3 }
-  return { x: r.left + (sx / SCENE_W) * r.width, y: r.top + (sy / H) * r.height }
+  return { x: r.left + (sx / KART_W) * r.width, y: r.top + (sy / KART_H) * r.height }
 }
 watch(() => kitchen.served?.at, () => {
   const s = kitchen.served
   if (!s || ui.page !== 2) return
-  const at = scenePt(64, 40)
+  const at = scenePt(128, 78)
   coinsFly(at, s.perfect ? 5 : 2)
   if (s.perfect) sparkle(at, 16)
 })
@@ -80,8 +79,8 @@ const miniInfo = computed(() => {
   }[m.step]
 })
 function endMini(good: boolean, text: string) {
-  popText(text, scenePt(64, 26), good ? 'green' : 'red')
-  if (good) sparkle(scenePt(64, 36), 10)
+  popText(text, scenePt(128, 50), good ? 'green' : 'red')
+  if (good) sparkle(scenePt(128, 72), 10)
   holding.value = false
   finishMini(good)
 }
@@ -137,6 +136,7 @@ const gauge = computed(() => {
 })
 
 // ---- kích thước ----
+// Cảnh vẽ trong không gian ảnh bếp KayKit (KART_W x KART_H). Mỗi điểm ảnh = kscale điểm ảnh màn hình (số nguyên → nét).
 function resize() {
   const el = root.value, c = cv.value
   if (!el || !c) return
@@ -144,10 +144,10 @@ function resize() {
   if (w < 50) return
   cssW.value = w
   const dpr = window.devicePixelRatio || 1
-  scale = Math.max(1, Math.ceil((w * dpr) / SCENE_W))
-  if (c.width !== SCENE_W * scale || c.height !== H * scale) { c.width = SCENE_W * scale; c.height = H * scale }
+  scale = Math.max(1, Math.ceil((w * dpr) / KART_W))
+  if (c.width !== KART_W * scale || c.height !== KART_H * scale) { c.width = KART_W * scale; c.height = KART_H * scale }
   c.style.width = `${Math.floor(w)}px`
-  c.style.height = `${Math.round(w * ASPECT)}px`
+  c.style.height = `${Math.round((w * KART_H) / KART_W)}px`
   ctx = c.getContext('2d')
 }
 let ro: ResizeObserver | null = null
@@ -160,6 +160,13 @@ function frame(now: number) {
   lastBg = now
   draw(now / 1000)
 }
+// ảnh bếp 3D đã bake (tools/kaykit/bake.mjs)
+const art: Partial<Record<(typeof KART_LAYERS)[number], HTMLImageElement>> = {}
+for (const k of KART_LAYERS) {
+  const im = new Image()
+  im.onload = () => { art[k] = im }
+  im.src = `${import.meta.env.BASE_URL}assets/kitchen/${k}.png`
+}
 onMounted(() => {
   resize()
   requestAnimationFrame(resize)
@@ -170,7 +177,23 @@ onMounted(() => {
 onBeforeUnmount(() => { cancelAnimationFrame(raf); ro?.disconnect() })
 
 // ---------- Vẽ cảnh bếp ----------
-const STEEL = '#c9cfd4', STEEL_D = '#8f979e', STEEL_L = '#eef2f4'
+const INK = '#3b2a20'
+const A = (k: keyof typeof KANCHOR) => [Math.round(KANCHOR[k][0]), Math.round(KANCHOR[k][1])] as const
+function layer(c: Ctx, k: (typeof KART_LAYERS)[number], dx = 0, dy = 0) { const im = art[k]; if (im) c.drawImage(im, dx, dy) }
+/** lửa gas liếm quanh đáy chảo / nồi */
+function fire(c: Ctx, [bx, by]: readonly [number, number], t: number) {
+  for (let i = -9; i <= 9; i += 3) {
+    const h = 3 + ((Math.floor(t * 14) + i * 5) & 3) - Math.floor(Math.abs(i) / 5)
+    px(c, bx + i, by - h + 1, 2, h, '#ff7a2e'); px(c, bx + i, by - Math.max(1, h - 2) + 1, 1, Math.max(1, h - 2), '#ffd23f')
+    px(c, bx + i, by + 1, 2, 1, '#5b8bd9')
+  }
+}
+function steam(c: Ctx, x: number, y: number, t: number, n = 4, spread = 4) {
+  for (let i = 0; i < n; i++) {
+    const k = (t * 0.9 + i / n) % 1
+    px(c, x + (i - n / 2) * spread + Math.round(Math.sin(t * 3 + i * 2) * 2), Math.round(y - k * 22), 2, 3, `rgba(255,255,255,${(0.8 * (1 - k)).toFixed(2)})`)
+  }
+}
 function draw(t: number) {
   const c = ctx
   if (!c) return
@@ -180,93 +203,102 @@ function draw(t: number) {
   const act = ck?.action && KSTEPS[ck.action].kind === 'act' ? ck.action : null
   const done = new Set(ck?.done ?? [])
   const f = ck ? foodById[ck.food] : null
-  // tường gạch men trắng
-  px(c, 0, 0, SCENE_W, 44, '#f4efe6')
-  for (let y = 3; y < 44; y += 5) {
-    px(c, 0, y, SCENE_W, 1, '#ddd3c4')
-    for (let x = ((y / 5) % 2) * 5; x < SCENE_W; x += 10) px(c, x, y - 4, 1, 4, '#ddd3c4')
+  // lớp sau: sàn, tường, tủ treo, máy hút mùi
+  if (art.back) layer(c, 'back')
+  else { px(c, 0, 0, KART_W, KART_H, '#e8c9a8'); px(c, 0, 100, KART_W, KART_H - 100, '#d8d0c6') }
+  // Yến đứng sau quầy sơ chế (vẽ to x2 cho hợp tỉ lệ đồ bếp)
+  c.save(); c.scale(2, 2)
+  drawPerson(c, CAST.yen.look, 35, 15 - (act ? Math.floor(t * 6) % 2 : 0), ck ? 'happy' : 'neutral', Math.floor(t * 10) % 41 === 0)
+  c.restore()
+  // lớp trước: tủ lạnh, quầy, bếp gas, bồn rửa
+  layer(c, 'front')
+
+  // --- chảo: bánh mì chảo ---
+  if (act === 'chien') fire(c, A('burnerL'), t)
+  layer(c, 'pan')
+  const [px0, py0] = A('panIn')
+  if (f?.id === 'banhMiChao') {
+    if (done.has('pate')) { px(c, px0 - 7, py0 - 1, 5, 2, '#c9875a'); px(c, px0 - 6, py0 - 1, 3, 1, '#e2a77a') }
+    if (done.has('trungGa')) { px(c, px0 - 2, py0 - 2, 7, 4, '#fbf3e4'); px(c, px0, py0 - 1, 3, 2, done.has('chien') ? '#e8a23a' : '#f2c14e') }
+    if (done.has('xucXich')) { px(c, px0 + 4, py0 - 2, 5, 2, '#d9574a'); px(c, px0 - 6, py0 + 1, 5, 2, '#d9574a'); px(c, px0 + 5, py0 - 2, 3, 1, '#f08a74') }
+    if (done.has('chien') && act !== 'chien') { px(c, px0 - 6, py0 + 1, 5, 1, '#9e2f26'); px(c, px0 + 4, py0 - 1, 5, 1, '#9e2f26') }
+    if (done.has('banhMi')) { px(c, px0 + 6, py0 - 7, 14, 5, INK); px(c, px0 + 7, py0 - 6, 12, 3, '#e3a24c'); px(c, px0 + 8, py0 - 6, 9, 1, '#f6cf86'); for (const dx of [10, 13, 16]) px(c, px0 + dx, py0 - 5, 1, 1, '#b9762e') }
   }
-  // máy hút mùi inox
-  for (let r = 0; r < 12; r++) px(c, 30 - r, r, 44 + r * 2, 1, r === 0 ? STEEL_D : r < 2 ? STEEL_L : STEEL)
-  px(c, 18, 12, 68, 2, STEEL_D); px(c, 20, 14, 64, 1, 'rgba(38,28,27,0.2)')
-  px(c, 22, 6, 60, 1, STEEL_L)
-  if (act === 'chien' || act === 'luoc') px(c, 24, 13, 4, 1, '#6ad08f') // đèn máy hút
-  // kệ gia vị bên phải
-  px(c, 92, 16, 34, 2, CZ.w3); px(c, 92, 18, 34, 1, CZ.w1)
-  for (let i = 0; i < 5; i++) { const x = 94 + i * 6; box(c, x, 9, 5, 7, ['#d8333a', '#f2c14e', '#7fb34d', '#c9875a', '#fbf6ec'][i], '#3b2a20'); px(c, x, 8, 5, 2, '#3b2a20') }
-  // dụng cụ treo bên trái
-  px(c, 2, 8, 14, 1, STEEL_D)
-  px(c, 4, 9, 1, 10, CZ.w2); box(c, 2, 18, 5, 4, STEEL) // muôi
-  px(c, 10, 9, 1, 9, CZ.w2); px(c, 8, 17, 5, 5, STEEL_D) // xẻng
-  px(c, 14, 9, 1, 7, CZ.w2); box(c, 12, 15, 5, 3, '#4a4f57') // vá
-  // Yến đứng bếp (sau quầy)
-  drawPerson(c, CAST.yen.look, 2, 24 - (act ? Math.floor(t * 6) % 2 : 0), ck ? 'happy' : 'neutral', Math.floor(t * 10) % 41 === 0)
-  // mặt bếp + tủ
-  px(c, 0, 44, SCENE_W, 1, CZ.ink)
-  px(c, 0, 45, SCENE_W, 3, STEEL_L); px(c, 0, 48, SCENE_W, 1, STEEL_D)
-  px(c, 0, 49, SCENE_W, H - 49, CZ.w2)
-  for (let x = 2; x < SCENE_W; x += 25) {
-    px(c, x, 51, 22, H - 53, CZ.ink); px(c, x + 1, 52, 20, H - 55, CZ.t1); px(c, x + 1, 52, 20, 1, CZ.t0)
-    px(c, x + 9, 55, 4, 1, STEEL)
-  }
-  // bếp gas 2 họng
-  box(c, 24, 41, 50, 5, '#2b2f35', CZ.ink)
-  for (const bx of [36, 62]) { px(c, bx - 4, 42, 9, 2, '#4a4f57'); px(c, bx - 2, 42, 5, 1, '#6b7380') }
-  const fire = (bx: number) => { for (let i = -3; i <= 3; i += 2) { const h = 2 + ((Math.floor(t * 12) + i * 7) & 1) + (i === -1 || i === 1 ? 1 : 0); px(c, bx + i, 41 - h, 1, h, '#ff7a2e'); px(c, bx + i, 41 - 1, 1, 1, '#5b8bd9') } }
-  // --- chảo (bánh mì chảo) ---
-  const isBM = f?.id === 'banhMiChao'
-  if (act === 'chien') fire(36)
-  box(c, 27, 35, 19, 5, '#4a4f57', CZ.ink); px(c, 28, 36, 17, 1, '#2b2f35'); px(c, 46, 37, 8, 2, CZ.w1)
-  if (isBM) {
-    if (done.has('pate')) px(c, 30, 35, 4, 2, '#c9875a')
-    if (done.has('trungGa')) { px(c, 34, 34, 6, 3, '#fbf3e4'); px(c, 36, 35, 2, 1, '#f2c14e') }
-    if (done.has('xucXich')) { px(c, 40, 34, 5, 2, '#d9574a'); px(c, 31, 33, 4, 2, '#d9574a') }
-    if (done.has('chien') && act !== 'chien') px(c, 34, 34, 6, 1, '#e8a23a')
-    if (done.has('banhMi')) { px(c, 48, 30, 12, 4, CZ.ink); px(c, 49, 31, 10, 2, '#e3a24c'); px(c, 50, 31, 8, 1, '#f6cf86') }
-  }
-  if (act === 'chien') for (let i = 0; i < 4; i++) { const yy = 32 - ((t * 20 + i * 4) % 10); px(c, 30 + i * 4 + Math.round(Math.sin(t * 9 + i)), yy, 1, 1, 'rgba(255,255,255,0.8)') }
+  if (act === 'chien') for (let i = 0; i < 5; i++) { const k = (t * 1.6 + i / 5) % 1; px(c, px0 - 8 + i * 4 + Math.round(Math.sin(t * 9 + i)), Math.round(py0 - 3 - k * 10), 1, 1, `rgba(255,255,255,${(0.9 * (1 - k)).toFixed(2)})`) }
+
   // --- nồi trụng mì ---
+  if (act === 'luoc') fire(c, A('burnerR'), t)
+  layer(c, 'pot')
+  const [qx, qy] = A('potIn')
   const isMi = f?.id === 'miTronCay'
-  if (act === 'luoc') fire(62)
-  box(c, 54, 30, 16, 11, STEEL, CZ.ink); px(c, 55, 31, 14, 2, '#9fd3ea'); px(c, 52, 33, 2, 2, CZ.ink); px(c, 70, 33, 2, 2, CZ.ink); px(c, 55, 33, 1, 6, STEEL_L)
-  if (isMi && done.has('mi') && !done.has('to')) px(c, 57, 31, 10, 2, '#f2cf6b')
-  const steamPot = act === 'luoc' || (isMi && done.has('mi') && !done.has('to'))
-  if (steamPot) for (let i = 0; i < 4; i++) { const yy = 28 - ((t * 14 + i * 5) % 14); px(c, 57 + i * 3 + Math.round(Math.sin(t * 4 + i) * 1.5), yy, 1, 2, 'rgba(255,255,255,0.75)') }
+  const boiling = act === 'luoc'
+  px(c, qx - 8, qy, 17, 2, boiling ? '#cfeaf6' : '#9fd3ea')
+  if (boiling) for (let i = 0; i < 4; i++) px(c, qx - 6 + i * 4, qy + ((Math.floor(t * 10) + i) & 1), 2, 1, '#ffffff')
+  if (isMi && done.has('mi') && !done.has('to')) { px(c, qx - 6, qy, 13, 2, '#f2cf6b'); for (let i = 0; i < 4; i++) px(c, qx - 5 + i * 3, qy + (i & 1), 2, 1, '#d9a92e') }
+  if (boiling || (isMi && done.has('mi') && !done.has('to'))) steam(c, qx, qy - 2, t)
+
   // --- tô mì trộn ---
   if (isMi && done.has('to')) {
-    const sh = act === 'tron' ? Math.round(Math.sin(t * 40)) : 0
-    const bx = 106 + sh
-    for (let r = 0; r < 5; r++) { px(c, bx + r, 38 + r, 18 - r * 2, 1, CZ.ink); if (r < 4) px(c, bx + 1 + r, 38 + r, 16 - r * 2, 1, r === 1 ? '#5b8bd9' : '#fbf6ec') }
-    px(c, bx + 3, 36, 12, 2, '#f2cf6b'); px(c, bx + 2, 37, 14, 1, CZ.ink)
-    if (done.has('sotCay')) px(c, bx + 5, 35, 5, 2, done.has('tron') ? '#e8703a' : '#d8333a')
-    if (done.has('trungGa')) { px(c, bx + 10, 34, 4, 2, '#fbf3e4'); px(c, bx + 11, 35, 1, 1, '#f2c14e') }
-    if (done.has('tron')) { px(c, bx + 3, 36, 12, 1, '#e89a4a') }
-    if (act === 'tron') { px(c, bx + 8, 28, 1, 8, CZ.w3); px(c, bx + 11, 29, 1, 7, CZ.w3) }
+    const sh = act === 'tron' ? Math.round(Math.sin(t * 40) * 1.5) : 0
+    c.save(); c.translate(sh, 0)
+    layer(c, 'bowl')
+    const [bx, by] = A('bowl')
+    if (done.has('mi')) { px(c, bx - 9, by - 2, 19, 3, '#f2cf6b'); for (let i = 0; i < 5; i++) px(c, bx - 8 + i * 4, by - 2 + (i & 1), 3, 1, '#d9a92e') }
+    if (done.has('sotCay')) px(c, bx - 6, by - 3, 7, 2, done.has('tron') ? '#e8703a' : '#d8333a')
+    if (done.has('tron')) { px(c, bx - 9, by - 2, 19, 1, '#e89a4a'); px(c, bx - 4, by, 9, 1, '#e8703a') }
+    if (done.has('trungGa')) { px(c, bx + 2, by - 4, 6, 3, '#fbf3e4'); px(c, bx + 4, by - 3, 2, 1, '#f2c14e') }
+    if (done.has('tron')) { px(c, bx - 2, by - 4, 1, 1, '#3f7a5c'); px(c, bx + 6, by - 2, 1, 1, '#3f7a5c') }
+    if (act === 'tron') { const w = Math.round(Math.sin(t * 30) * 2); px(c, bx - 1 + w, by - 18, 1, 16, '#c9875a'); px(c, bx + 3 + w, by - 17, 1, 15, '#c9875a') }
+    c.restore()
   }
-  // --- khuôn waffle ---
-  const isW = f && f.id.startsWith('waffle')
-  const open = !(act === 'nuong')
-  box(c, 82, 38, 20, 6, '#4a4f57', CZ.ink)
-  for (let i = 85; i < 100; i += 3) px(c, i, 40, 1, 3, '#2b2f35')
-  px(c, 102, 40, 4, 2, CZ.w1)
-  if (isW && done.has('botWaffle') && !done.has('dia')) { px(c, 84, 39, 16, 3, done.has('nuong') ? '#e7b35a' : '#f6e3b0'); if (done.has(f!.steps[2])) px(c, 90, 40, 4, 1, f!.filling!) }
-  if (open) { box(c, 82, 26, 20, 6, '#4a4f57', CZ.ink); px(c, 83, 27, 18, 1, '#6b7380') } // nắp mở dựng đứng
-  else { box(c, 82, 34, 20, 5, '#4a4f57', CZ.ink); px(c, 83, 37, 18, 1, (Math.floor(t * 6) % 2) ? '#ff7a2e' : '#d8333a'); for (const x of [86, 92, 98]) px(c, x, 28 + ((t * 12 + x) % 6), 1, 2, 'rgba(255,255,255,0.7)') }
-  // waffle ra đĩa
+
+  // --- khuôn waffle (đặt trên quầy giữa) ---
+  const [wx, wy] = A('waffle')
+  const isW = !!f && f.id.startsWith('waffle')
+  const closed = act === 'nuong'
+  const IRON = '#4a4f57', IRON_L = '#6b7380', IRON_D = '#2b2f35'
+  const grid = (y: number, h: number) => { for (let x = wx - 10; x <= wx + 10; x += 5) px(c, x, y, 1, h, IRON_D); px(c, wx - 12, y + Math.floor(h / 2), 24, 1, IRON_D) }
+  if (!closed) {
+    // nắp mở ngả ra sau: mặt trong có ô vuông
+    box(c, wx - 13, wy - 19, 26, 11, IRON, INK); px(c, wx - 12, wy - 18, 24, 1, IRON_L)
+    px(c, wx - 11, wy - 16, 22, 6, '#3a3f46'); grid(wy - 16, 6)
+  }
+  // đế khuôn + tay cầm gỗ
+  box(c, wx - 14, wy - 8, 28, 8, IRON, INK); px(c, wx - 13, wy - 7, 26, 1, IRON_L)
+  px(c, wx - 12, wy - 6, 24, 4, '#3a3f46'); grid(wy - 6, 4)
+  px(c, wx + 14, wy - 5, 7, 2, CZ.w1); px(c, wx + 19, wy - 5, 2, 2, INK)
+  if (isW && done.has('botWaffle') && !done.has('dia') && !closed) {
+    const col = done.has('nuong') ? '#e7b35a' : '#f6e3b0'
+    px(c, wx - 11, wy - 6, 22, 4, col)
+    for (let x = wx - 9; x < wx + 10; x += 5) px(c, x, wy - 6, 1, 4, done.has('nuong') ? '#b9802f' : '#e6cf96')
+    if (f!.steps[2] && done.has(f!.steps[2])) { px(c, wx - 4, wy - 5, 8, 2, f!.filling!); px(c, wx + 5, wy - 4, 2, 1, f!.filling!) }
+  }
+  if (closed) {
+    // đóng nắp nướng: viền đỏ rực + hơi nóng
+    box(c, wx - 14, wy - 13, 28, 6, IRON, INK); px(c, wx - 13, wy - 12, 26, 1, IRON_L)
+    px(c, wx - 12, wy - 8, 24, 1, Math.floor(t * 6) % 2 ? '#ff7a2e' : '#d8333a')
+    steam(c, wx, wy - 14, t, 3, 7)
+  }
+
+  // --- đĩa ra món waffle (đặt trên thớt) ---
   if (isW && done.has('dia')) {
-    px(c, 104, 41, 20, 1, CZ.ink); px(c, 103, 42, 22, 2, '#fbf6ec'); px(c, 104, 44, 20, 1, CZ.ink)
-    box(c, 107, 35, 14, 7, '#e7b35a', '#8a5a1c'); for (let i = 110; i < 120; i += 3) px(c, i, 36, 1, 5, '#b9802f'); px(c, 117, 40, 3, 1, f!.filling!)
+    layer(c, 'plate')
+    const [lx, ly] = A('plate')
+    box(c, lx - 9, ly - 6, 18, 7, '#e7b35a', '#8a5a1c')
+    for (let x = lx - 6; x < lx + 7; x += 4) px(c, x, ly - 5, 1, 5, '#b9802f')
+    px(c, lx - 2, ly - 7, 6, 2, f!.filling!); px(c, lx + 4, ly - 3, 3, 1, f!.filling!)
   }
-  // món vừa ra: đĩa lấp lánh giữa quầy
+
+  // món vừa ra: loé sáng cả bếp
   const sv = kitchen.served
   if (sv && performance.now() - sv.at < 1400) {
     const a = 1 - (performance.now() - sv.at) / 1400
-    c.fillStyle = `rgba(255, 240, 180, ${0.35 * a})`; c.fillRect(0, 0, SCENE_W, H)
+    c.fillStyle = `rgba(255, 240, 180, ${0.35 * a})`; c.fillRect(0, 0, KART_W, KART_H)
   }
   // bếp chưa mở: tối + mạng nhện
   if (!kitchenOpen()) {
-    c.fillStyle = 'rgba(40, 30, 25, 0.55)'; c.fillRect(0, 0, SCENE_W, H)
-    for (const [x, y] of [[0, 0], [SCENE_W - 14, 0]]) for (let i = 0; i < 14; i++) { px(c, x + (x ? 13 - i : i), y, 1, 14 - i, 'rgba(230,230,230,0.12)') }
+    c.fillStyle = 'rgba(40, 30, 25, 0.6)'; c.fillRect(0, 0, KART_W, KART_H)
+    for (const x of [0, KART_W - 28]) for (let i = 0; i < 28; i++) px(c, x + (x ? 27 - i : i), 0, 1, 28 - i, 'rgba(230,230,230,0.1)')
   }
 }
 
@@ -296,7 +328,7 @@ const waiting = computed(() => ui.queue.length)
         </div>
         <button class="mbtn" :class="{ hold: holding }" @pointerdown.prevent="miniDown" @pointerup.prevent="miniUp" @pointerleave="miniUp" @pointercancel="miniUp" @contextmenu.prevent>{{ miniInfo.btn }}</button>
       </div>
-      <div v-if="!kitchenOpen()" class="locked">
+      <div v-if="!kitchenOpen()" class="kclosed">
         <b>KHU BẾP CÒN ĐÓNG CỬA</b>
         <span>Mở bếp để bán kèm bánh mì chảo, mì trộn cay và waffle nhiều loại nhân. Tặng sẵn 1 gói mỗi nguyên liệu.</span>
         <button class="btn sm accent" :disabled="save.money < KITCHEN_COST" @click="unlockKitchen">MỞ BẾP · {{ moneyShort(KITCHEN_COST) }}</button>
@@ -362,9 +394,9 @@ const waiting = computed(() => ui.queue.length)
 .ktitle { position: absolute; left: 4px; top: 4px; display: flex; align-items: center; gap: 4px; line-height: 1; font-size: 10px; font-weight: 900; letter-spacing: 0.12em; color: #ffe8b8; background: rgba(59, 42, 32, 0.85); padding: 3px 6px; }
 .counter-chip { position: absolute; right: 4px; top: 4px; line-height: 1; font-size: 10px; font-weight: 900; color: #3b2a20; background: #f2c14e; padding: 4px 6px; box-shadow: 0 0 0 2px #3b2a20; animation: chip 1s ease-in-out infinite; }
 @keyframes chip { 50% { filter: brightness(1.15); } }
-.locked { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 10px 18px; text-align: center; line-height: 1.35; color: #fff4dc; }
-.locked b { font-size: 14px; letter-spacing: 0.08em; text-shadow: 0 2px 0 #3b2a20; }
-.locked span { font-size: 12px; font-weight: 700; text-shadow: 0 1px 0 #3b2a20; }
+.kclosed { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 10px 18px; text-align: center; line-height: 1.35; color: #fff4dc; }
+.kclosed > b { font-size: 14px; letter-spacing: 0.08em; text-shadow: 0 2px 0 #3b2a20; }
+.kclosed > span { font-size: 12px; font-weight: 700; text-shadow: 0 1px 0 #3b2a20; }
 
 .mini {
   position: absolute; left: 4%; right: 4%; bottom: 5px; z-index: 5;

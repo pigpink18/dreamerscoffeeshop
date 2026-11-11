@@ -92,6 +92,7 @@ Chỉnh độ khó / thêm thoại: sửa `src/game/data.ts` (giá, công thức
 - Máy espresso, shaker, máy xay, ly shot: **FREE Pixel Art Bar and Cafe Items Pack** – KARSIORI STUDIO (CC0) – https://karsiori.itch.io/free-pixel-art-bar-and-cafe-items-pack
 - Nền quán, quầy, nhân vật, icon nguyên liệu, ly nước: vẽ pixel bằng code trong `src/game/pixel.ts`.
 - Chậu cây, bụi cây, khóm tulip, bao cà phê: **Brew & Bloom — 80 Free Props** (cho dùng thương mại, không phân phối lại nguyên bộ). Bộ gốc để ở `Cozy_World_Free_80/` (không đưa lên git); chỉ những món dùng được chép vào `public/assets/cozy/` bằng `python3 tools/cozy.py` (cần Pillow).
+- Khu bếp (tường, bếp gas, tủ lạnh, quầy, chảo, nồi, tô, đĩa…): **KayKit Restaurant Bits 1.0** – Kay Lousberg (CC0) – https://kaylousberg.com. Bộ 3D gốc để ở `coffee&cooking/` (không đưa lên git); dựng cảnh và bake ra ảnh pixel `public/assets/kitchen/` bằng `node tools/kaykit/bake.mjs` (cần `npx vite --port 5199` đang chạy).
 
 ## Ghi công âm nhạc
 
