@@ -440,8 +440,8 @@ const waiting = computed(() => ui.queue.length)
           <span class="tf">
             <i class="tbar"><em :style="{ width: ticketPct(tk.id) + '%' }" /></i>
             <span class="tsec">{{ Math.ceil(tk.t) }}s</span>
+            <span class="tstate">{{ cook?.ticketId === tk.id ? 'NẤU…' : !canCook(tk.food) ? 'HẾT' : 'NẤU' }}</span>
           </span>
-          <span class="tstate">{{ cook?.ticketId === tk.id ? 'ĐANG NẤU' : !canCook(tk.food) ? 'HẾT NL' : 'NẤU ›' }}</span>
         </button>
       </div>
 
@@ -486,9 +486,10 @@ const waiting = computed(() => ui.queue.length)
           <button v-for="m in menuCards" :key="m.id" class="kmc" :class="{ wait: m.wait > 0, none: m.can < 1 }" @pointerdown.prevent="m.ticket && startCook(m.ticket)">
             <span v-if="m.wait" class="kmw">{{ m.wait }} đơn</span>
             <img :src="iconUrl(m.id)" class="pix" alt="" />
-            <span class="kmn">{{ m.name }}</span>
-            <span class="kmp">{{ moneyShort(m.price) }}</span>
-            <span class="kmc-can">{{ m.can < 1 ? 'Hết nguyên liệu' : `Nấu được ${m.can} phần` }}</span>
+            <span class="kmt">
+              <span class="kmn">{{ m.name }}</span>
+              <span class="kmp">{{ moneyShort(m.price) }} · <span class="kmc-can">{{ m.can < 1 ? 'hết NL' : `còn ${m.can}` }}</span></span>
+            </span>
           </button>
         </div>
         <span v-if="staffAll" class="kmnote">Nhân viên lo quầy nước – bạn chỉ việc nấu</span>
@@ -501,7 +502,7 @@ const waiting = computed(() => ui.queue.length)
 </template>
 
 <style scoped>
-.kitchen { height: 100%; min-height: 0; display: flex; flex-direction: column; padding: 8px 3px 0; }
+.kitchen { min-height: 100%; display: flex; flex-direction: column; padding: 8px 3px 0; }
 .kitchen > * { flex: none; }
 .scene { position: relative; align-self: center; box-shadow: var(--px-border), 0 7px 0 rgba(59, 42, 32, 0.3); background: #f4efe6; line-height: 0; }
 .scene.shake { animation: shake 0.3s; }
@@ -542,28 +543,28 @@ const waiting = computed(() => ui.queue.length)
 .mbtn.hold { background: #ff9a3c; animation: holdPulse 0.3s ease-in-out infinite alternate; }
 @keyframes holdPulse { to { filter: brightness(1.12); } }
 .mini.tron .mbtn { background: #9fe0b8; box-shadow: var(--px-border-2), inset 0 -4px 0 #2f9e6b, 0 4px 0 rgba(59, 42, 32, 0.45); }
-.rail { position: relative; display: flex; gap: 8px; overflow-x: auto; margin: 10px 3px 0; padding: 12px 6px 8px; min-height: 92px; background: repeating-linear-gradient(90deg, rgba(0,0,0,0.07) 0 2px, transparent 2px 14px), #6f4630; box-shadow: var(--px-border), inset 0 -4px 0 #4a2e1f; align-items: flex-start; scrollbar-width: none; }
+.rail { position: relative; display: flex; gap: 8px; overflow-x: auto; margin: 8px 3px 0; padding: 11px 6px 6px; min-height: 74px; background: repeating-linear-gradient(90deg, rgba(0,0,0,0.07) 0 2px, transparent 2px 14px), #6f4630; box-shadow: var(--px-border), inset 0 -4px 0 #4a2e1f; align-items: flex-start; scrollbar-width: none; }
 .rail::-webkit-scrollbar { display: none; }
 .rbar { position: absolute; left: 0; right: 0; top: 7px; height: 4px; background: #c3cad0; box-shadow: 0 2px 0 #8f979e, 0 -1px 0 #3b2a20, 0 3px 0 #3b2a20; } /* thanh inox treo phiếu */
 .rail .empty { align-self: center; margin: 8px auto 0; padding: 0 8px; font-size: 11px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; color: #f1d9b8; text-align: center; line-height: 1.4; }
 /* phiếu order giấy: kẹp trên thanh, mép dưới răng cưa */
-.ticket { position: relative; flex: none; width: 104px; display: flex; flex-direction: column; gap: 3px; padding: 7px 7px 9px; background: #fffaf0; text-align: left; color: #3b2a20;
+.ticket { position: relative; flex: none; width: 100px; display: flex; flex-direction: column; gap: 2px; padding: 5px 6px 8px; background: #fffaf0; text-align: left; color: #3b2a20;
   box-shadow: 0 0 0 2px #3b2a20, 0 4px 0 rgba(0, 0, 0, 0.3); transform: rotate(-1.5deg); transform-origin: top center;
   -webkit-mask: linear-gradient(#000 0 0) top / 100% calc(100% - 4px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 8px 4px repeat-x;
   mask: linear-gradient(#000 0 0) top / 100% calc(100% - 4px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 8px 4px repeat-x; }
 .ticket:nth-child(odd) { transform: rotate(1.2deg); }
 .ticket .pin { position: absolute; top: -1px; left: 50%; width: 14px; height: 8px; margin-left: -7px; background: #d9534f; box-shadow: 0 0 0 2px #3b2a20, inset 0 2px 0 #f08a74; }
-.th { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; padding-top: 3px; border-bottom: 2px dashed #d8c4a8; padding-bottom: 2px; }
+.th { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; padding-top: 2px; border-bottom: 2px dashed #d8c4a8; padding-bottom: 1px; }
 .th b { font-size: 10px; font-weight: 900; letter-spacing: 0.06em; color: #b8262c; }
 .th span { font-size: 9px; font-weight: 800; color: #8a7566; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tbody { display: flex; align-items: center; gap: 4px; min-height: 30px; }
-.tbody img { flex: none; width: 28px; height: 28px; }
-.tn { font-size: 11px; font-weight: 900; line-height: 1.15; }
+.tbody { display: flex; align-items: center; gap: 4px; min-height: 24px; }
+.tbody img { flex: none; width: 22px; height: 22px; }
+.tn { font-size: 10px; font-weight: 900; line-height: 1.1; }
 .tf { display: flex; align-items: center; gap: 4px; }
 .ticket .tbar { flex: 1; height: 5px; background: #e6d6c2; box-shadow: 0 0 0 1px #3b2a20; }
 .ticket .tbar em { display: block; height: 100%; background: #2f9e6b; }
 .tsec { font-size: 9px; font-weight: 900; color: #6f4e37; min-width: 20px; text-align: right; }
-.tstate { align-self: stretch; text-align: center; font-size: 9px; font-weight: 900; letter-spacing: 0.08em; padding: 2px 0; background: #f2c14e; box-shadow: 0 0 0 1px #3b2a20; }
+.tstate { flex: none; font-size: 8px; font-weight: 900; letter-spacing: 0.06em; padding: 1px 3px; background: #f2c14e; box-shadow: 0 0 0 1px #3b2a20; }
 .ticket.low .tbar em { background: #d8333a; }
 .ticket.low .tsec { color: #b8262c; }
 .ticket.low { animation: tk 0.5s ease-in-out infinite alternate; }
@@ -573,22 +574,23 @@ const waiting = computed(() => ui.queue.length)
 .ticket.dis { opacity: 0.6; }
 .ticket.dis .tstate { background: #e6d6c2; color: #8a7566; }
 /* thực đơn bếp (chưa nấu) */
-.kmenu { margin: 8px 3px 0; padding: 8px; background: #2c4a40; box-shadow: var(--px-border), inset 0 0 0 3px #603b25, inset 0 0 0 5px #3d2c16; color: #eef2ea; }
-.kmh { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; padding: 2px 4px 6px; }
+.kmenu { margin: 8px 3px 0; padding: 6px 7px 7px; background: #2c4a40; box-shadow: var(--px-border), inset 0 0 0 3px #603b25, inset 0 0 0 5px #3d2c16; color: #eef2ea; }
+.kmh { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; padding: 1px 3px 5px; }
 .kmh b { font-size: 12px; font-weight: 900; letter-spacing: 0.14em; color: #f2c14e; }
 .kmh span { font-size: 10px; font-weight: 800; color: #cfe0d6; }
 .kmh em { font-style: normal; color: #fff3b0; }
-.kmgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.kmc { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 3px 5px; background: rgba(255, 255, 255, 0.06); box-shadow: 0 0 0 2px rgba(238, 242, 234, 0.25); color: inherit; }
-.kmc img { width: 30px; height: 30px; }
-.kmn { font-size: 10px; font-weight: 900; text-align: center; line-height: 1.15; }
+.kmgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px 5px; padding-top: 3px; }
+.kmc { position: relative; display: flex; align-items: center; gap: 4px; padding: 4px 4px; text-align: left; background: rgba(255, 255, 255, 0.06); box-shadow: 0 0 0 2px rgba(238, 242, 234, 0.25); color: inherit; }
+.kmc img { flex: none; width: 22px; height: 22px; }
+.kmt { min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
+.kmn { font-size: 10px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kmp { font-size: 10px; font-weight: 900; color: #f2c14e; }
-.kmc-can { font-size: 9px; font-weight: 700; color: #cfe0d6; }
+.kmc-can { font-weight: 700; color: #cfe0d6; }
 .kmc.none { opacity: 0.5; }
 .kmc.none .kmc-can { color: #ff9a8a; }
 .kmc.wait { background: rgba(242, 193, 78, 0.18); box-shadow: 0 0 0 2px #f2c14e; animation: kmw 0.9s ease-in-out infinite; }
 @keyframes kmw { 50% { transform: translateY(-2px); } }
-.kmw { position: absolute; top: -6px; right: -4px; font-size: 9px; font-weight: 900; padding: 1px 4px; background: #d9534f; color: #fff; box-shadow: 0 0 0 2px #3b2a20; }
+.kmw { position: absolute; top: -9px; right: -3px; z-index: 1; font-size: 8px; line-height: 11px; font-weight: 900; padding: 0 3px; background: #d9534f; color: #fff; box-shadow: 0 0 0 2px #3b2a20; }
 .kmnote { display: block; margin-top: 6px; text-align: center; font-size: 10px; font-weight: 800; color: #cfe0d6; }
 
 .recipe { display: flex; flex-wrap: wrap; align-items: center; align-content: center; gap: 6px 8px; min-height: 50px; margin: 6px 3px 0; }
@@ -628,8 +630,6 @@ const waiting = computed(() => ui.queue.length)
 @media (max-height: 720px) {
   .kbtn { min-height: 48px; }
   .kbtn img { width: 24px; height: 24px; }
-  .rail { min-height: 80px; margin-top: 6px; }
-  .tbody img { width: 22px; height: 22px; }
-  .kmc img { width: 24px; height: 24px; }
+  .rail { min-height: 70px; margin-top: 6px; }
 }
 </style>

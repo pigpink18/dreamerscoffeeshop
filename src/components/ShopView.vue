@@ -312,8 +312,8 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 .track.dragging { transition: none; }
 .page { width: 33.3334%; height: 100%; min-height: 0; display: flex; flex-direction: column; }
 .page > * { flex: none; }
-.counter-page { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-.counter-page::-webkit-scrollbar { display: none; }
+.counter-page, .kitchen-page { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.counter-page::-webkit-scrollbar, .kitchen-page::-webkit-scrollbar { display: none; }
 .page > .scene-box { flex: 1 0 auto; min-height: 0; display: flex; justify-content: center; align-items: center; padding: 2px 0 8px; } /* cảnh khoá kích thước, nằm giữa; khay pha chế luôn ở dưới cho dễ bấm */
 .seat-page { padding: 10px 3px 12px; }
 .seat-page > * { flex: 1 1 0; min-height: 0; } /* khu ngồi phủ hết chiều cao trang, chừa đều 2 bên */
