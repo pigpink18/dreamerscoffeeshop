@@ -3,7 +3,6 @@
 // Toạ độ: trần nằm ở y ∈ [0, top), cảnh gốc 128x92 dịch xuống top, sàn ở y ∈ [top + SCENE_H, H).
 import { px, box, CZ, SCENE_W, drawPlant, type Ctx } from './pixel'
 
-const VX = SCENE_W / 2 // điểm tụ phối cảnh (giữa quán)
 
 interface Pal { ceil: string; ceilFar: string; beam: string; beamHi: string; floorA: string; floorB: string; seam: string; rug: string; rugEdge: string }
 const PAL: Pal[] = [
@@ -32,18 +31,19 @@ function cached(key: string, w: number, h: number, paint: (c: Ctx) => void): HTM
   return cv
 }
 
-export function drawCeiling(c: Ctx, top: number, premise: number, t: number, xmas: boolean) {
+export function drawCeiling(c: Ctx, top: number, premise: number, t: number, xmas: boolean, w = SCENE_W) {
   if (top <= 0) return
-  c.drawImage(cached(`ceil:${top}:${premise}`, SCENE_W, top, (cc) => paintCeiling(cc, top, premise)), 0, 0)
+  c.drawImage(cached(`ceil:${top}:${premise}:${w}`, w, top, (cc) => paintCeiling(cc, top, premise, w)), 0, 0)
   // phần động: dây đèn Noel nhấp nháy
-  if (xmas) garland(c, top, t)
+  if (xmas) garland(c, top, t, w)
   // 2 đèn thả gần người xem: to hơn, dây dài từ trần (vẽ sau dây đèn)
-  if (top >= 14) for (const lx of [24, SCENE_W - 24]) bigLamp(c, lx, Math.min(top - 6, 10 + Math.round(top * 0.3)))
+  if (top >= 14) for (const lx of [Math.round(w * 0.22), Math.round(w * 0.78)]) bigLamp(c, lx, Math.min(top - 6, 10 + Math.round(top * 0.3)))
 }
 
-function paintCeiling(c: Ctx, top: number, premise: number) {
+function paintCeiling(c: Ctx, top: number, premise: number, W = SCENE_W) {
+  const VX = W / 2
   const P = PAL[premise] ?? PAL[0]
-  for (let y = 0; y < top; y++) px(c, 0, y, SCENE_W, 1, mixHex(P.ceil, P.ceilFar, y / top))
+  for (let y = 0; y < top; y++) px(c, 0, y, W, 1, mixHex(P.ceil, P.ceilFar, y / top))
   // rui dọc hội tụ (xa → gần)
   const vy = top + 70
   for (let i = -6; i <= 6; i++) {
@@ -57,21 +57,21 @@ function paintCeiling(c: Ctx, top: number, premise: number) {
   let d = 3, y = top - 2
   while (y > -4) {
     const th = Math.max(1, Math.round(d / 3))
-    px(c, 0, y - th, SCENE_W, th, P.beam)
-    px(c, 0, y - th, SCENE_W, 1, P.beamHi)
-    px(c, 0, y, SCENE_W, 1, 'rgba(38, 28, 27, 0.25)')
+    px(c, 0, y - th, W, th, P.beam)
+    px(c, 0, y - th, W, 1, P.beamHi)
+    px(c, 0, y, W, 1, 'rgba(38, 28, 27, 0.25)')
     d *= 1.7
     y -= Math.round(d)
   }
   // mép trần chạm tường (bóng)
-  px(c, 0, top - 1, SCENE_W, 1, 'rgba(38, 28, 27, 0.3)')
+  px(c, 0, top - 1, W, 1, 'rgba(38, 28, 27, 0.3)')
 }
 
-function garland(c: Ctx, top: number, t: number) {
+function garland(c: Ctx, top: number, t: number, W = SCENE_W) {
   const cols = ['#ff5f52', '#ffd23f', '#6ad08f', '#5b8bd9', '#ff9ac1']
   const sag = Math.min(8, Math.round(top * 0.35))
-  for (let x = 0; x < SCENE_W; x++) {
-    const y = 2 + Math.round(Math.sin((x / SCENE_W) * Math.PI * 3) ** 2 * sag)
+  for (let x = 0; x < W; x++) {
+    const y = 2 + Math.round(Math.sin((x / W) * Math.PI * 3) ** 2 * sag)
     px(c, x, y, 1, 1, '#2f6b4a')
     if (x % 8 === 4) {
       const on = (Math.floor(t * 2.5) + x / 8) % 3 !== 0
@@ -137,18 +137,6 @@ function paintFloor(c: Ctx, h: number, premise: number, W: number) {
   px(c, 0, y0 + 2, W, 2, 'rgba(38, 28, 27, 0.15)')
   c.fillStyle = 'rgba(255, 226, 150, 0.10)'
   c.beginPath(); c.ellipse(VX, y0 + h * 0.45, 46, Math.max(4, h * 0.3), 0, 0, Math.PI * 2); c.fill()
-  // thảm phối cảnh trước quầy
-  if (h >= 14) {
-    const rt = y0 + Math.round(h * 0.25), rb = y0 + h - Math.round(h * 0.12)
-    const kt = (rt - vy) / (y0 - vy), kb = (rb - vy) / (y0 - vy)
-    const half = 30
-    c.fillStyle = P.rugEdge
-    c.beginPath(); c.moveTo(VX - half * kt - 1, rt - 1); c.lineTo(VX + half * kt + 1, rt - 1); c.lineTo(VX + half * kb + 2, rb + 1); c.lineTo(VX - half * kb - 2, rb + 1); c.fill()
-    c.fillStyle = P.rug
-    c.beginPath(); c.moveTo(VX - half * kt, rt); c.lineTo(VX + half * kt, rt); c.lineTo(VX + half * kb, rb); c.lineTo(VX - half * kb, rb); c.fill()
-    c.fillStyle = 'rgba(255,255,255,0.18)'
-    c.beginPath(); c.moveTo(VX - half * kt + 3, rt + 2); c.lineTo(VX + half * kt - 3, rt + 2); c.lineTo(VX + half * kb - 4, rb - 2); c.lineTo(VX - half * kb + 4, rb - 2); c.closePath(); c.lineWidth = 1; c.strokeStyle = 'rgba(255,255,255,0.35)'; c.stroke()
-  }
 }
 
 /** đồ đặt trên sàn (vẽ sau cảnh gốc để đè lên chân quầy): chậu cây góc trái, bảng menu đứng góc phải */

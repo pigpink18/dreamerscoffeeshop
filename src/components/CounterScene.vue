@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { sceneW } from '../game/sceneSize'
 // Cảnh quầy pha chế pixel art: khách bước tới quầy, thiết bị, ly nước, hoạt ảnh.
-import { ref, computed, onMounted, onBeforeUnmount, onActivated, onDeactivated, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, onActivated, onDeactivated, watch, nextTick } from 'vue'
 import {
   ui, save, bus, openTalk, talkChat, talkReply, brewFromTalk, startBrew, canMake, stepMs, DAY_LENGTH, staffServeTime, skipPresent, tutOn, comboRate, staffAll,
   type Customer, type GameEvent,
@@ -16,7 +16,7 @@ import { moneyShort } from '../game/data'
 import { recipeById, REGULARS, NEEDY, BOND_LEVELS, bondLevel, STEPS, GUEST_GROUPS, type StepId } from '../game/data'
 import {
   SCENE_W, SCENE_H, LAYOUT, COUNTER_Y, images, loadImages, drawRoom, drawCounter, drawCup, drawPerson, iconUrl,
-  emptyCup, px, espressoKey, drawPlant, drawLights, drawBunting, drawOpenSign, drawPoster, drawCat, drawFridge, drawSack, drawGreen, drawScooter, drawBarista, drawCorgi,
+  emptyCup, px, OUT, espressoKey, drawPlant, drawLights, drawBunting, drawOpenSign, drawPoster, drawCat, drawFridge, drawSack, drawGreen, drawScooter, drawBarista, drawCorgi,
   type CupLook, type Mood,
 } from '../game/pixel'
 import { isXmasSeason, drawXmasTree } from '../game/xmas'
@@ -272,8 +272,9 @@ function draw(now: number) {
   // không gian thêm: trần phía trên + sàn trước quầy (depth.ts), rồi dịch cảnh gốc xuống dưới trần
   const P0 = save.meta.premise
   const floorH = geo.H - geo.top - SCENE_H
-  drawCeiling(c, geo.top, P0, now / 1000, isXmasSeason())
+  drawCeiling(c, geo.top, P0, now / 1000, isXmasSeason(), CW) // trần (khi quán mở rộng: có nhân viên, không còn khay pha)
   drawFloor(c, geo.top + SCENE_H, floorH, P0, CW) // sàn trải hết bề ngang (cả 2 tường hông)
+  c.setTransform(scale, 0, 0, scale, 0, geo.top * scale)
   drawSideWalls(c, OX, P0, ui.phase === 'open' ? ui.time / DAY_LENGTH : 0.15) // tường hông 2 bên (phối cảnh)
   c.setTransform(scale, 0, 0, scale, OX * scale, geo.top * scale) // cảnh gốc nằm giữa
   const dayFrac = ui.phase === 'open' ? ui.time / DAY_LENGTH : 0.15
@@ -416,7 +417,29 @@ function draw(now: number) {
   // đồ trên sàn + cây thông: có sàn thì cây đứng hẳn trên sàn góc phải, không thì đứng trước quầy
   const treeOnFloor = xmas && floorH >= 20
   drawFloorProps(c, SCENE_H, floorH, t, treeOnFloor)
-  if (treeOnFloor) drawXmasTree(c, 101, SCENE_H + Math.min(floorH - 3, 26) - 40, t, 'lg')
+  // quán mở rộng (có sàn rộng): khách đang chờ xếp hàng trên sàn, đứng đủ người
+  if (floorH >= 44 && ui.phase === 'open') {
+    const line = ui.queue.slice(1, 5)
+    const fy = SCENE_H + Math.round(floorH * 0.55) // chân khách
+    line.forEach((q, i) => {
+      const x = 62 - i * 20 + (i % 2 ? 3 : 0), y = fy - 38 + (i % 2 ? 4 : 0)
+      const low = q.patience / q.maxPatience
+      const bob = Math.floor(t * 2 + i) % 2
+      // chân + giày
+      const pants = ['#3a4a6a', '#4a3a30', '#2e2e33', '#5a6b4a'][q.id % 4]
+      px(c, x + 3, y + 29, 10, 1, OUT)
+      for (const lx of [x + 4, x + 9]) { px(c, lx - 1, y + 29, 5, 8, OUT); px(c, lx, y + 29, 3, 7, pants); px(c, lx - 1, y + 36, 5, 2, '#2b1d16') }
+      drawPerson(c, q.look, x, y - bob, low < 0.3 ? 'angry' : low < 0.55 ? 'grumpy' : 'neutral', Math.floor(t * 10 + i * 7) % 37 === 0)
+      // bóng dưới chân
+      c.fillStyle = 'rgba(38, 28, 27, 0.18)'; c.fillRect(x + 1, y + 38, 14, 2)
+    })
+  }
+  if (treeOnFloor) {
+    // sàn rộng (quán mở rộng): cây thông to đứng hẳn trên sàn góc phải; sàn hẹp: cây vừa
+    if (floorH >= 90) drawXmasTree(c, 84, SCENE_H + Math.round(floorH * 0.62) - 81, t, 'xxl')
+    else if (floorH >= 44) drawXmasTree(c, 92, SCENE_H + Math.round(floorH * 0.6) - 57, t, 'xl')
+    else drawXmasTree(c, 101, SCENE_H + Math.min(floorH - 3, 26) - 40, t, 'lg')
+  }
   else if (xmas) {
     const [tx, ty] = XMAS_SPOT[P] ?? XMAS_SPOT[0]
     drawXmasTree(c, tx, ty, t, 'lg')
@@ -439,13 +462,31 @@ const geoTick = ref(0) // đổi khi khung đổi → toạ độ các lớp ph�
 let locked: { vw: number; vh: number; bh: number; w: number; top: number; H: number } | null = null
 
 function measure(): { w: number; top: number; H: number } {
-  // khung LUÔN full chiều ngang (tối đa 488px), không bao giờ thu nhỏ theo chiều cao:
-  // thiếu chỗ thì khay pha chế tự gọn lại, vẫn không đủ thì trang quầy cuộn nhẹ (ShopView)
+  // khung LUÔN full chiều ngang (tối đa 488px), không thu nhỏ theo chiều cao.
+  // Có nhân viên lo quầy (không còn khay pha): dùng chỗ trống để MỞ RỘNG quán theo chiều dọc – thêm trần + sàn (không phóng to)
   const el = wrap.value!
-  const pw = el.parentElement?.clientWidth || el.clientWidth
-  return { w: Math.min(SCENE_PREF_W, pw), top: 0, H: SCENE_FULL_H }
+  const box = el.parentElement
+  const pw = box?.clientWidth || el.clientWidth
+  const w = Math.min(SCENE_PREF_W, pw)
+  const base = { w, top: 0, H: SCENE_FULL_H }
+  const page = box?.parentElement
+  if (!staffAll.value || ui.phase !== 'open' || !box || !page) return base
+  let others = 0
+  for (const ch of Array.from(page.children) as HTMLElement[]) {
+    if (ch === box) continue
+    const st = getComputedStyle(ch)
+    others += ch.getBoundingClientRect().height + parseFloat(st.marginTop) + parseFloat(st.marginBottom)
+  }
+  const cs = getComputedStyle(box)
+  const ph = page.clientHeight - others - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - parseFloat(cs.marginTop) - parseFloat(cs.marginBottom) - 6
+  const H = Math.min(SCENE_H + 170, Math.floor((ph * CW) / w)) // lấp đầy chỗ trống (tối đa thêm 170 điểm ảnh)
+  const extra = H - SCENE_H
+  if (extra <= FLOOR_H + 6) return base
+  const top = Math.min(44, Math.round(extra * 0.4))
+  return { w, top, H }
 }
 
+watch([staffAll, () => ui.phase], () => nextTick(() => requestAnimationFrame(() => resize(true))))
 function resize(force: boolean | Event = false) {
   const el = wrap.value, canvas = cv.value
   if (!el || !canvas) return
