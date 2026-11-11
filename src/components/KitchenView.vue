@@ -26,6 +26,14 @@ const cook = computed(() => kitchen.cook)
 const food = computed(() => (cook.value ? foodById[cook.value.food] : null))
 const curStep = computed(() => (cook.value && food.value ? food.value.steps[cook.value.done.length] ?? null : null))
 // khay: chỉ nguyên liệu + dụng cụ mà thực đơn bếp dùng
+// thực đơn bếp (khi chưa nấu): số phần còn nấu được theo kho + số đơn đang chờ
+const menuCards = computed(() => FOODS.map((f) => {
+  const need: Record<string, number> = {}
+  for (const st of f.steps) if (KSTEPS[st].kind === 'ing') need[st] = (need[st] ?? 0) + 1
+  const can = Math.min(...Object.entries(need).map(([id, n]) => Math.floor(foodStock(id as FoodIng) / n)))
+  const tks = kitchen.tickets.filter((t) => t.food === f.id)
+  return { id: f.id, name: f.name, price: f.price, can, wait: tks.length, ticket: tks[0]?.id ?? 0 }
+}))
 // khay THEO MÓN: chỉ hiện đúng dụng cụ / nguyên liệu / thao tác của món đang nấu (5–6 nút to thay vì 19 nút)
 const groups = computed(() => {
   const f = food.value
@@ -420,16 +428,25 @@ const waiting = computed(() => ui.queue.length)
       </div>
       <!-- phiếu đơn treo trên thanh -->
       <div v-else class="rail">
-        <span v-if="!kitchen.tickets.length" class="muted small empty">Chưa có đơn bếp – khách gọi kèm món sẽ hiện phiếu ở đây</span>
+        <i class="rbar" />
+        <span v-if="!kitchen.tickets.length" class="empty">Chưa có đơn bếp · khách gọi kèm món sẽ hiện phiếu ở đây</span>
         <button v-for="tk in kitchen.tickets" :key="tk.id" class="ticket" :class="{ on: cook?.ticketId === tk.id, low: ticketPct(tk.id) < 30, dis: !canCook(tk.food) }" @pointerdown.prevent="startCook(tk.id)">
-          <img :src="iconUrl(tk.food)" class="pix" alt="" />
-          <span class="tt"><b>{{ foodById[tk.food].name }}</b><small>{{ tk.name }}</small></span>
-          <i class="tbar"><em :style="{ width: ticketPct(tk.id) + '%' }" /></i>
+          <i class="pin" />
+          <span class="th"><b>#{{ tk.id % 100 }}</b><span>{{ tk.name }}</span></span>
+          <span class="tbody">
+            <img :src="iconUrl(tk.food)" class="pix" alt="" />
+            <span class="tn">{{ foodById[tk.food].name }}</span>
+          </span>
+          <span class="tf">
+            <i class="tbar"><em :style="{ width: ticketPct(tk.id) + '%' }" /></i>
+            <span class="tsec">{{ Math.ceil(tk.t) }}s</span>
+          </span>
+          <span class="tstate">{{ cook?.ticketId === tk.id ? 'ĐANG NẤU' : !canCook(tk.food) ? 'HẾT NL' : 'NẤU ›' }}</span>
         </button>
       </div>
 
       <!-- món đang nấu -->
-      <div class="recipe">
+      <div v-if="food && cook" class="recipe">
         <template v-if="food && cook">
           <div class="rhead">
             <span class="rname">{{ food.name }}</span>
@@ -443,7 +460,6 @@ const waiting = computed(() => ui.queue.length)
             </span>
           </div>
         </template>
-        <span v-else class="muted hint">{{ staffAll ? 'Nhân viên lo quầy nước – bạn chỉ việc nấu' : kitchen.tickets.length ? 'Chọn món để nấu' : 'Chưa có đơn bếp' }}</span>
       </div>
 
       <!-- bàn nấu: chỉ đồ của món đang nấu, chia nhóm, bước kế tiếp sáng lên -->
@@ -459,6 +475,23 @@ const waiting = computed(() => ui.queue.length)
           </div>
         </div>
         <button class="trash-btn" @pointerdown.prevent="act('trash')"><img :src="iconUrl('trash')" class="pix" alt="" /> Đổ bỏ làm lại</button>
+      </div>
+      <!-- chưa nấu: thực đơn bếp – còn nấu được bao nhiêu phần, món nào đang có đơn (bấm để nấu luôn) -->
+      <div v-else class="kmenu">
+        <div class="kmh">
+          <b>THỰC ĐƠN BẾP</b>
+          <span>Hôm nay: <em>{{ ui.stats.foodSold ?? 0 }}</em> món · <em>{{ moneyShort(ui.stats.foodRev ?? 0) }}</em></span>
+        </div>
+        <div class="kmgrid">
+          <button v-for="m in menuCards" :key="m.id" class="kmc" :class="{ wait: m.wait > 0, none: m.can < 1 }" @pointerdown.prevent="m.ticket && startCook(m.ticket)">
+            <span v-if="m.wait" class="kmw">{{ m.wait }} đơn</span>
+            <img :src="iconUrl(m.id)" class="pix" alt="" />
+            <span class="kmn">{{ m.name }}</span>
+            <span class="kmp">{{ moneyShort(m.price) }}</span>
+            <span class="kmc-can">{{ m.can < 1 ? 'Hết nguyên liệu' : `Nấu được ${m.can} phần` }}</span>
+          </button>
+        </div>
+        <span v-if="staffAll" class="kmnote">Nhân viên lo quầy nước – bạn chỉ việc nấu</span>
       </div>
     </template>
     <div v-else class="menu-preview">
@@ -509,21 +542,54 @@ const waiting = computed(() => ui.queue.length)
 .mbtn.hold { background: #ff9a3c; animation: holdPulse 0.3s ease-in-out infinite alternate; }
 @keyframes holdPulse { to { filter: brightness(1.12); } }
 .mini.tron .mbtn { background: #9fe0b8; box-shadow: var(--px-border-2), inset 0 -4px 0 #2f9e6b, 0 4px 0 rgba(59, 42, 32, 0.45); }
-.rail { display: flex; gap: 6px; overflow-x: auto; margin: 10px 3px 0; padding: 4px 4px 6px; min-height: 52px; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.06) 0 2px, transparent 2px 8px), #6f4630; box-shadow: var(--px-border), inset 0 3px 0 #8a5a3c; align-items: center; }
-.rail .empty { color: #e6c79c; padding: 0 6px; }
-.ticket { position: relative; flex: none; display: flex; align-items: center; gap: 5px; padding: 4px 7px 7px 5px; background: #fffaf0; text-align: left; box-shadow: var(--px-border-2), 0 3px 0 rgba(0, 0, 0, 0.3); transform: rotate(-1deg); }
-.ticket:nth-child(even) { transform: rotate(1deg); }
-.ticket img { width: 26px; height: 26px; }
-.ticket .tt { display: flex; flex-direction: column; line-height: 1.15; }
-.ticket b { font-size: 11px; }
-.ticket small { font-size: 9px; color: var(--muted); max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ticket .tbar { position: absolute; left: 4px; right: 4px; bottom: 2px; height: 3px; background: #e6d6c2; }
+.rail { position: relative; display: flex; gap: 8px; overflow-x: auto; margin: 10px 3px 0; padding: 12px 6px 8px; min-height: 92px; background: repeating-linear-gradient(90deg, rgba(0,0,0,0.07) 0 2px, transparent 2px 14px), #6f4630; box-shadow: var(--px-border), inset 0 -4px 0 #4a2e1f; align-items: flex-start; scrollbar-width: none; }
+.rail::-webkit-scrollbar { display: none; }
+.rbar { position: absolute; left: 0; right: 0; top: 7px; height: 4px; background: #c3cad0; box-shadow: 0 2px 0 #8f979e, 0 -1px 0 #3b2a20, 0 3px 0 #3b2a20; } /* thanh inox treo phiếu */
+.rail .empty { align-self: center; margin: 8px auto 0; padding: 0 8px; font-size: 11px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; color: #f1d9b8; text-align: center; line-height: 1.4; }
+/* phiếu order giấy: kẹp trên thanh, mép dưới răng cưa */
+.ticket { position: relative; flex: none; width: 104px; display: flex; flex-direction: column; gap: 3px; padding: 7px 7px 9px; background: #fffaf0; text-align: left; color: #3b2a20;
+  box-shadow: 0 0 0 2px #3b2a20, 0 4px 0 rgba(0, 0, 0, 0.3); transform: rotate(-1.5deg); transform-origin: top center;
+  -webkit-mask: linear-gradient(#000 0 0) top / 100% calc(100% - 4px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 8px 4px repeat-x;
+  mask: linear-gradient(#000 0 0) top / 100% calc(100% - 4px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 8px 4px repeat-x; }
+.ticket:nth-child(odd) { transform: rotate(1.2deg); }
+.ticket .pin { position: absolute; top: -1px; left: 50%; width: 14px; height: 8px; margin-left: -7px; background: #d9534f; box-shadow: 0 0 0 2px #3b2a20, inset 0 2px 0 #f08a74; }
+.th { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; padding-top: 3px; border-bottom: 2px dashed #d8c4a8; padding-bottom: 2px; }
+.th b { font-size: 10px; font-weight: 900; letter-spacing: 0.06em; color: #b8262c; }
+.th span { font-size: 9px; font-weight: 800; color: #8a7566; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tbody { display: flex; align-items: center; gap: 4px; min-height: 30px; }
+.tbody img { flex: none; width: 28px; height: 28px; }
+.tn { font-size: 11px; font-weight: 900; line-height: 1.15; }
+.tf { display: flex; align-items: center; gap: 4px; }
+.ticket .tbar { flex: 1; height: 5px; background: #e6d6c2; box-shadow: 0 0 0 1px #3b2a20; }
 .ticket .tbar em { display: block; height: 100%; background: #2f9e6b; }
+.tsec { font-size: 9px; font-weight: 900; color: #6f4e37; min-width: 20px; text-align: right; }
+.tstate { align-self: stretch; text-align: center; font-size: 9px; font-weight: 900; letter-spacing: 0.08em; padding: 2px 0; background: #f2c14e; box-shadow: 0 0 0 1px #3b2a20; }
 .ticket.low .tbar em { background: #d8333a; }
+.ticket.low .tsec { color: #b8262c; }
 .ticket.low { animation: tk 0.5s ease-in-out infinite alternate; }
-@keyframes tk { to { transform: rotate(2deg); } }
-.ticket.on { background: #ffe9a8; box-shadow: 0 0 0 3px #d99a2b, 0 3px 0 rgba(0, 0, 0, 0.3); }
-.ticket.dis { opacity: 0.55; }
+@keyframes tk { from { transform: rotate(-2.5deg); } to { transform: rotate(2.5deg); } }
+.ticket.on { background: #fff1c2; }
+.ticket.on .tstate { background: #2f9e6b; color: #fff; }
+.ticket.dis { opacity: 0.6; }
+.ticket.dis .tstate { background: #e6d6c2; color: #8a7566; }
+/* thực đơn bếp (chưa nấu) */
+.kmenu { margin: 8px 3px 0; padding: 8px; background: #2c4a40; box-shadow: var(--px-border), inset 0 0 0 3px #603b25, inset 0 0 0 5px #3d2c16; color: #eef2ea; }
+.kmh { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; padding: 2px 4px 6px; }
+.kmh b { font-size: 12px; font-weight: 900; letter-spacing: 0.14em; color: #f2c14e; }
+.kmh span { font-size: 10px; font-weight: 800; color: #cfe0d6; }
+.kmh em { font-style: normal; color: #fff3b0; }
+.kmgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.kmc { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 3px 5px; background: rgba(255, 255, 255, 0.06); box-shadow: 0 0 0 2px rgba(238, 242, 234, 0.25); color: inherit; }
+.kmc img { width: 30px; height: 30px; }
+.kmn { font-size: 10px; font-weight: 900; text-align: center; line-height: 1.15; }
+.kmp { font-size: 10px; font-weight: 900; color: #f2c14e; }
+.kmc-can { font-size: 9px; font-weight: 700; color: #cfe0d6; }
+.kmc.none { opacity: 0.5; }
+.kmc.none .kmc-can { color: #ff9a8a; }
+.kmc.wait { background: rgba(242, 193, 78, 0.18); box-shadow: 0 0 0 2px #f2c14e; animation: kmw 0.9s ease-in-out infinite; }
+@keyframes kmw { 50% { transform: translateY(-2px); } }
+.kmw { position: absolute; top: -6px; right: -4px; font-size: 9px; font-weight: 900; padding: 1px 4px; background: #d9534f; color: #fff; box-shadow: 0 0 0 2px #3b2a20; }
+.kmnote { display: block; margin-top: 6px; text-align: center; font-size: 10px; font-weight: 800; color: #cfe0d6; }
 
 .recipe { display: flex; flex-wrap: wrap; align-items: center; align-content: center; gap: 6px 8px; min-height: 50px; margin: 6px 3px 0; }
 .rhead { display: flex; flex: 1 1 0; align-items: baseline; gap: 8px; min-width: 0; }
@@ -562,7 +628,8 @@ const waiting = computed(() => ui.queue.length)
 @media (max-height: 720px) {
   .kbtn { min-height: 48px; }
   .kbtn img { width: 24px; height: 24px; }
-  .rail { min-height: 44px; margin-top: 6px; }
-  .ticket img { width: 20px; height: 20px; }
+  .rail { min-height: 80px; margin-top: 6px; }
+  .tbody img { width: 22px; height: 22px; }
+  .kmc img { width: 24px; height: 24px; }
 }
 </style>
