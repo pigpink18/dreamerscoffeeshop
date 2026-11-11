@@ -134,35 +134,32 @@ let TW = 22 // nửa bề rộng bàn (đặt lại mỗi khung hình theo compa
 /** góc trên trái của khách ở ghế side (0 trái, 1 phải); đầu khách ở ty - 20 */
 const seatX = (cx: number, side: number) => (compact() ? (side === 0 ? cx - 17 : cx + 1) : side === 0 ? cx - 19 : cx + 3)
 
-/** lưng ghế sau lưng khách (x = góc trái khách, rộng 16) */
+/** ghế quán (x = góc trái khách, rộng 16): lưng thấp sau vai khách + chân doãng thò dưới gầm bàn */
 function drawChair(c: CanvasRenderingContext2D, x: number, ty: number, lv: number) {
-  const top = ty - 15, bot = ty + FLOOR
+  const top = ty - 9, bot = ty + FLOOR
   if (lv === 2) {
     // ghế bành nhung xanh rêu, lưng bo tròn, nút bọc, chân đồng
-    px(c, x + 1, top - 3, 14, 1, CZ.ink); px(c, x - 1, top - 2, 18, 1, CZ.ink); px(c, x - 2, top - 1, 20, ty - top + 5, CZ.ink)
-    px(c, x + 1, top - 2, 14, 1, CZ.t2); px(c, x - 1, top - 1, 18, ty - top + 3, CZ.t1)
-    px(c, x - 1, top - 1, 2, ty - top + 3, CZ.t2); px(c, x + 15, top - 1, 2, ty - top + 3, CZ.t0)
-    for (let r = 0; r < 3; r++) for (let k = 0; k < 3; k++) px(c, x + 3 + k * 5 + (r % 2) * 2, top + 2 + r * 5, 1, 1, CZ.t0)
-    px(c, x - 1, ty + 2, 18, 1, CZ.b1)
-    // tay vịn
-    if (!compact()) for (const ax of [x - 4, x + 16]) { px(c, ax, ty - 7, 5, 11, CZ.ink); px(c, ax + 1, ty - 6, 3, 9, CZ.t2); px(c, ax + 1, ty - 6, 3, 1, CZ.t3) }
-    px(c, x, bot - 4, 2, 4, CZ.b0); px(c, x + 14, bot - 4, 2, 4, CZ.b0)
+    px(c, x + 2, top - 3, 12, 1, CZ.ink); px(c, x, top - 2, 16, 1, CZ.ink); px(c, x - 1, top - 1, 18, ty - top + 6, CZ.ink)
+    px(c, x + 2, top - 2, 12, 1, CZ.t2); px(c, x, top - 1, 16, ty - top + 4, CZ.t1)
+    px(c, x, top - 1, 2, ty - top + 4, CZ.t2); px(c, x + 14, top - 1, 2, ty - top + 4, CZ.t0)
+    for (let k = 0; k < 3; k++) px(c, x + 4 + k * 4, top + 2, 1, 1, CZ.t0)
+    if (!compact()) for (const ax of [x - 3, x + 15]) { px(c, ax, ty - 4, 4, 9, CZ.ink); px(c, ax + 1, ty - 3, 2, 7, CZ.t2); px(c, ax + 1, ty - 3, 2, 1, CZ.t3) }
+    for (const lx of [x + 1, x + 13]) { px(c, lx, ty + 8, 2, bot - ty - 8, CZ.ink); px(c, lx, ty + 8, 1, bot - ty - 9, CZ.b1) }
     return
   }
-  const C = lv === 1 ? { post: CZ.w1, hi: CZ.w2, rail: CZ.w2 } : { post: CZ.w2, hi: CZ.w4, rail: CZ.w3 }
-  // 2 trụ lưng ghế chạy xuống thành chân sau
-  for (const px0 of [x - 1, x + 15]) { px(c, px0, top, 3, bot - top, CZ.ink); px(c, px0 + 1, top, 1, bot - top - 1, C.hi) }
-  // thanh ngang trên cong nhẹ
-  px(c, x - 1, top - 1, 19, 4, CZ.ink); px(c, x, top, 17, 2, C.rail); px(c, x, top, 17, 1, CZ.w5)
-  if (lv === 1) {
-    // đệm lưng đỏ có nút
-    px(c, x + 1, top + 3, 15, ty - top - 3, CZ.ink); px(c, x + 2, top + 3, 13, ty - top - 4, CZ.r1); px(c, x + 2, top + 3, 13, 1, CZ.r2)
-    px(c, x + 5, top + 7, 1, 1, CZ.r0); px(c, x + 11, top + 7, 1, 1, CZ.r0)
-  } else {
-    // nan dọc
-    for (const sx of [x + 4, x + 8, x + 12]) { px(c, sx, top + 3, 2, ty - top - 2, CZ.ink); px(c, sx, top + 3, 1, ty - top - 2, C.rail) }
-    px(c, x - 1, ty - 6, 19, 2, CZ.ink); px(c, x, ty - 6, 17, 1, C.rail)
-  }
+  // ghế bistro gỗ uốn: khung lưng tròn + nan dọc, chân doãng
+  const wood = lv === 1 ? CZ.w1 : CZ.w2, hi = lv === 1 ? CZ.w3 : CZ.w4
+  // vòng lưng ghế (bo 2 góc trên)
+  px(c, x + 2, top - 1, 12, 1, CZ.ink); px(c, x + 1, top, 14, 1, CZ.ink); px(c, x, top + 1, 16, ty - top, CZ.ink)
+  px(c, x + 2, top, 12, 1, hi); px(c, x + 1, top + 1, 14, 2, wood); px(c, x + 2, top + 1, 12, 1, hi)
+  px(c, x + 1, top + 3, 2, ty - top - 2, wood); px(c, x + 13, top + 3, 2, ty - top - 2, wood)
+  px(c, x + 3, top + 3, 10, ty - top - 2, lv === 1 ? CZ.r1 : '#e9d3b0') // đệm lưng (cấp 1 nhung đỏ) / mây đan
+  if (lv === 1) { px(c, x + 3, top + 3, 10, 1, CZ.r2); px(c, x + 7, top + 5, 2, 1, CZ.r0) }
+  else for (let yy = top + 4; yy < ty; yy += 2) for (let xx = x + 3 + ((yy >> 1) % 2); xx < x + 13; xx += 2) px(c, xx, yy, 1, 1, '#c9a878')
+  // mặt ngồi lộ 2 bên hông khách + chân doãng
+  px(c, x - 1, ty + 5, 18, 3, CZ.ink); px(c, x, ty + 5, 16, 2, wood); px(c, x, ty + 5, 16, 1, hi)
+  for (const [lx, d] of [[x + 1, -1], [x + 13, 1]] as const) for (let yy = ty + 8; yy < bot; yy++) { const k = Math.round(((yy - ty - 8) / (bot - ty - 8)) * 2 * d); px(c, lx + k, yy, 2, 1, CZ.ink); if (yy < bot - 1) px(c, lx + k + (d > 0 ? 0 : 1), yy, 1, 1, wood) }
+  px(c, x + 2, ty + 12, 12, 1, CZ.ink) // thanh giằng chân
 }
 
 /** khách ngồi sau bàn (vẽ trước mặt bàn – bàn che phần bụng) */
@@ -194,36 +191,41 @@ function mug(c: CanvasRenderingContext2D, x: number, y: number, t: number, steam
   if (steam) { const s = Math.floor(t * 3) % 2; px(c, x + 1 + s, y - 4, 1, 2, 'rgba(255,255,255,0.85)'); px(c, x + 2 - s, y - 7, 1, 2, 'rgba(255,255,255,0.6)') }
 }
 
-/** bàn nhìn chếch: mặt bàn có bề dày, mép trước, chân, bóng sàn */
+/** hình elip pixel đặc: tâm (cx, cy), bán trục rx, ry; fill(dy, nửa rộng) cho từng hàng */
+function ell(cx: number, cy: number, rx: number, ry: number, row: (y: number, x0: number, w: number, dy: number) => void) {
+  for (let dy = -ry; dy <= ry; dy++) { const h = Math.round(rx * Math.sqrt(Math.max(0, 1 - (dy * dy) / ((ry + 0.5) * (ry + 0.5))))); row(cy + dy, cx - h, h * 2 + 1, dy) }
+}
+/** bàn tròn quán cà phê nhìn chếch: mặt elip có bề dày, trụ chân giữa, đế chữ thập, bóng sàn */
 function drawTable(c: CanvasRenderingContext2D, cx: number, ty: number, lv: number) {
-  const L = cx - TW, w = TW * 2
-  c.fillStyle = 'rgba(38,28,27,0.22)'; c.fillRect(L + 1, ty + FLOOR, w - 2, 2)
-  if (lv === 2) {
-    // mặt đá cẩm thạch, viền đồng, chân đồng
-    for (const lx of [L + 4, L + w - 6]) { px(c, lx, ty + 6, 2, FLOOR - 6, CZ.ink); px(c, lx, ty + 6, 1, FLOOR - 7, CZ.b1) }
-    px(c, L + 3, ty + FLOOR - 1, 5, 1, CZ.b0); px(c, L + w - 8, ty + FLOOR - 1, 5, 1, CZ.b0)
-    px(c, L - 1, ty - 1, w + 2, 8, CZ.ink)
-    px(c, L, ty, w, 4, '#f4f1ec'); px(c, L, ty, w, 1, '#ffffff')
-    px(c, L + 6, ty + 1, 7, 1, '#d8d2c8'); px(c, L + 12, ty + 2, 4, 1, '#d8d2c8'); px(c, L + 28, ty + 1, 9, 1, '#d8d2c8')
-    px(c, L, ty + 4, w, 2, CZ.b1); px(c, L, ty + 4, w, 1, CZ.b2)
-    return
-  }
-  // chân gỗ
-  for (const lx of [L + 2, L + w - 5]) { px(c, lx, ty + 6, 3, FLOOR - 6, CZ.ink); px(c, lx + 1, ty + 6, 1, FLOOR - 7, lv === 1 ? CZ.w2 : CZ.w3) }
-  px(c, L - 1, ty - 1, w + 2, 8, CZ.ink)
-  px(c, L, ty, w, 4, CZ.w4); px(c, L, ty, w, 1, CZ.w5)
-  for (let x = L + 3; x < L + w - 6; x += 13) px(c, x, ty + 2, 6, 1, CZ.w3) // vân gỗ
-  px(c, L, ty + 4, w, 2, CZ.w2); px(c, L, ty + 5, w, 1, CZ.w1)
+  const rx = TW - 2, ry = 5, cy = ty + 1
+  // bóng sàn + đế + trụ
+  c.fillStyle = 'rgba(38,28,27,0.22)'; ell(cx, ty + FLOOR, rx - 4, 2, (y, x0, w) => c.fillRect(x0, y, w, 1))
+  const leg = lv === 2 ? CZ.b1 : CZ.w1, legHi = lv === 2 ? CZ.b2 : CZ.w3
+  px(c, cx - 2, ty + 6, 5, FLOOR - 6, CZ.ink); px(c, cx - 1, ty + 6, 3, FLOOR - 7, leg); px(c, cx - 1, ty + 6, 1, FLOOR - 7, legHi)
+  px(c, cx - 9, ty + FLOOR - 2, 19, 3, CZ.ink); px(c, cx - 8, ty + FLOOR - 1, 17, 1, leg); px(c, cx - 4, ty + FLOOR - 3, 9, 1, CZ.ink)
   if (lv === 1) {
-    // khăn trải bàn caro đỏ rủ xuống, mép răng cưa
-    px(c, L - 1, ty - 1, w + 2, 12, CZ.ink)
-    for (let y = 0; y < 10; y++) for (let x = 0; x < w; x++) {
-      const on = ((x >> 1) + (y >> 1)) % 2 === 0
-      px(c, L + x, ty + y, 1, 1, y < 4 ? (on ? '#ffffff' : '#f2cfc8') : on ? '#ffffff' : CZ.r1)
+    // khăn trải bàn caro đỏ rủ quanh mép (che gần hết trụ)
+    ell(cx, cy + 6, rx + 1, ry + 1, (y, x0, w, dy) => { if (dy >= 0) px(c, x0 - 1, y, w + 2, 1, CZ.ink) })
+    for (let y = cy; y <= cy + 11; y++) {
+      const h = rx + 1
+      px(c, cx - h - 1, y, h * 2 + 3, 1, CZ.ink)
+      for (let x = -h; x <= h; x++) px(c, cx + x, y, 1, 1, (((x + 40) >> 1) + ((y - cy) >> 1)) % 2 ? CZ.r1 : '#fffaf2')
     }
-    px(c, L, ty, w, 1, '#ffffff')
-    for (let x = 0; x < w; x += 4) px(c, L + x + 1, ty + 10, 2, 1, CZ.ink)
+    for (let x = -rx; x <= rx; x += 3) px(c, cx + x, cy + 12, 2, 1, CZ.ink) // mép răng cưa
   }
+  // bề dày mặt bàn (mép trước)
+  ell(cx, cy + 2, rx, ry, (y, x0, w, dy) => { if (dy > 0) { px(c, x0 - 1, y, w + 2, 1, CZ.ink); px(c, x0, y, w, 1, lv === 2 ? CZ.b0 : CZ.w2) } })
+  // mặt bàn
+  ell(cx, cy, rx + 1, ry + 1, (y, x0, w) => px(c, x0, y, w, 1, CZ.ink))
+  const topC = lv === 2 ? '#f4f1ec' : lv === 1 ? '#fffaf2' : CZ.w4, topHi = lv === 2 ? '#ffffff' : lv === 1 ? '#ffffff' : CZ.w5
+  ell(cx, cy, rx, ry, (y, x0, w, dy) => {
+    px(c, x0, y, w, 1, topC)
+    if (dy === -ry + 1) px(c, x0 + 2, y, Math.max(1, w - 4), 1, topHi)
+    if (lv === 1) for (let x = x0; x < x0 + w; x++) if ((((x - cx + 40) >> 1) + ((y - cy + 10) >> 1)) % 2) px(c, x, y, 1, 1, '#f2cfc8')
+    if (lv === 0 && (y - cy) % 2 === 0) px(c, x0 + 3, y, Math.max(1, w - 6), 1, CZ.w3) // vân gỗ
+    if (lv === 2 && dy === 1) { px(c, x0 + 5, y, 6, 1, '#d8d2c8'); px(c, x0 + w - 12, y, 7, 1, '#d8d2c8') } // vân đá
+  })
+  if (lv === 2) ell(cx, cy, rx, ry, (y, x0, w, dy) => { if (Math.abs(dy) === ry) px(c, x0, y, w, 1, CZ.b1) }) // viền đồng
 }
 // ---------- Chỗ chưa mua bàn: đồ cũ trùm vải, bụi, mạng nhện ----------
 const SHEET = '#cdc2a9', SHEET_HI = '#dcd2bc', SHEET_LO = '#ab9d80', DUST = '#9a8d74', STAIN = '#b9a67e'
@@ -522,26 +524,39 @@ function waiterPos(w: { seat: number | null; t: number }, k: number) {
 }
 
 const WAITER_LOOKS: Look[] = [
-  { skin: '#f0c8a2', hair: '#2b1d16', style: 'short', shirt: '#2f7d6a', acc: ['blush'] },
-  { skin: '#e2b089', hair: '#6b4026', style: 'bun', shirt: '#2f7d6a', acc: ['blush'] },
+  { skin: '#f0c8a2', hair: '#2b1d16', style: 'short', shirt: '#fffaf2', acc: ['blush'] },
+  { skin: '#e2b089', hair: '#6b4026', style: 'bun', shirt: '#fffaf2', acc: ['blush'] },
 ]
+const VEST = CZ.t1, VEST_HI = CZ.t2, APRON = '#2b2f35'
+/** nhân viên phục vụ: sơ mi trắng, gile xanh rêu, nơ, tạp dề dài ngang hông, quần tối + giày; đi thì bưng khay, đứng lau thì cầm khăn */
 function drawWaiter(c: CanvasRenderingContext2D, x: number, y: number, t: number, k: number, walking: boolean, wiping: boolean) {
   const L = WAITER_LOOKS[k % WAITER_LOOKS.length]
   const step = walking ? Math.floor(t * 8) % 2 : 0
-  // chân
-  px(c, x + 4, y + 30, 3, 5 - step, '#3b2a20'); px(c, x + 9, y + 30, 3, 4 + step, '#3b2a20')
-  drawPerson(c, L, x, y - (walking ? step : 0), wiping ? 'happy' : 'neutral', Math.floor(t * 10 + k * 13) % 43 === 0)
-  // tạp dề
-  px(c, x + 3, y + 18, 10, 11, '#6f4e37'); px(c, x + 5, y + 16, 6, 2, '#6f4e37')
+  const by = y - (walking ? step : 0)
+  // chân (quần tối) + giày, bước luân phiên
+  for (const [lx, lift] of [[x + 4, step], [x + 9, 1 - step]] as const) {
+    px(c, lx - 1, y + 29, 5, 8 - lift, CZ.ink); px(c, lx, y + 29, 3, 7 - lift, '#3a3e45')
+    px(c, lx - 1, y + 36 - lift, 5, 2, CZ.ink); px(c, lx, y + 36 - lift, 3, 1, '#5a4a40')
+  }
+  drawPerson(c, L, x, by, wiping ? 'happy' : 'neutral', Math.floor(t * 10 + k * 13) % 43 === 0)
+  // gile 2 vạt (để lộ áo trắng ở giữa) + nơ + tạp dề dài ngang hông
+  px(c, x + 1, by + 15, 5, 14, VEST); px(c, x + 10, by + 15, 5, 14, VEST)
+  px(c, x + 1, by + 15, 1, 14, VEST_HI); px(c, x + 6, by + 16, 1, 12, CZ.ink); px(c, x + 9, by + 16, 1, 12, CZ.ink)
+  px(c, x + 7, by + 15, 2, 1, '#d8333a'); px(c, x + 6, by + 14, 1, 2, '#d8333a'); px(c, x + 9, by + 14, 1, 2, '#d8333a') // nơ đỏ
+  px(c, x + 1, by + 24, 14, 11, CZ.ink); px(c, x + 2, by + 24, 12, 10, APRON); px(c, x + 2, by + 24, 12, 1, '#4a4f57')
+  px(c, x + 8, by + 26, 3, 3, '#4a4f57') // túi tạp dề
   if (wiping) {
-    // lau bàn: tay cầm khăn qua lại
+    // lau bàn: tay đưa khăn qua lại trước người
     const sw = Math.round(Math.sin(t * 14) * 3)
-    const hx = x + 6 + sw
-    px(c, hx, y + 26, 3, 2, L.skin); px(c, hx - 1, y + 28, 6, 2, '#7fb8d9')
-    if (Math.floor(t * 6) % 2) px(c, hx + 6, y + 21, 1, 1, '#ffffff')
+    px(c, x + 5 + sw, by + 24, 4, 3, CZ.ink); px(c, x + 6 + sw, by + 24, 2, 2, L.skin)
+    px(c, x + 3 + sw, by + 27, 8, 3, CZ.ink); px(c, x + 4 + sw, by + 27, 6, 2, '#9fd3ea')
+    if (Math.floor(t * 6) % 2) px(c, x + 12 + sw, by + 22, 1, 1, '#ffffff')
   } else {
-    // khay tròn trên tay
-    px(c, x + 13, y + 20, 3, 3, L.skin); px(c, x + 11, y + 19, 8, 1, '#c9ced6')
+    // bưng khay tròn trên tay phải, có 1 ly
+    px(c, x + 13, by + 18, 4, 6, CZ.ink); px(c, x + 14, by + 19, 2, 4, '#fffaf2') // tay áo
+    px(c, x + 14, by + 16, 4, 3, CZ.ink); px(c, x + 15, by + 16, 2, 2, L.skin) // bàn tay
+    px(c, x + 10, by + 14, 12, 2, CZ.ink); px(c, x + 11, by + 14, 10, 1, '#c9ced6')
+    px(c, x + 14, by + 10, 4, 4, CZ.ink); px(c, x + 15, by + 11, 2, 3, '#fffaf2'); px(c, x + 15, by + 11, 2, 1, '#6f4630')
   }
 }
 
