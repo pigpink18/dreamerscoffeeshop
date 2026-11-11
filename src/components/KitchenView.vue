@@ -197,6 +197,7 @@ function stationOf(food: string, step: KStep | null): Station {
   if (food === 'miTronCay') return step === 'mi' || step === 'luoc' ? 'pot' : 'bowl'
   return step === 'dia' ? 'board' : 'waffle'
 }
+const STEEL = '#c3cad0', STEEL_D = '#8f979e', STEEL_L = '#eef2f4'
 let yenX: number = STATION_X.board, lastT = 0
 let seenDone = 0, carry: { step: KStep; until: number } | null = null // món vừa bỏ vào: Yến cầm trên tay một lúc
 /** cánh tay: vai (x0,y0) → bàn tay (x1,y1); nửa trên là tay áo */
@@ -315,27 +316,58 @@ function draw(t: number) {
     px(c, lx - 2, ly - 7, 6, 2, f!.filling!); px(c, lx + 4, ly - 3, 3, 1, f!.filling!)
   }
 
-  // tay Yến làm theo thao tác (vẽ đè lên quầy) + món đang cầm
+  // tay Yến làm theo thao tác (vẽ đè lên quầy) + dụng cụ cầm tay + nguyên liệu bay vào nồi/chảo
   {
+    const now = performance.now()
     const sy = 64 - yb, sl = yenX - 9, sr = yenX + 9
     const sleeve = look.shirt, skin = look.skin
+    const w = Math.sin(t * 14), slow = Math.sin(t * 3)
     let hl: [number, number] = [yenX - 9, 75], hr: [number, number] = [yenX + 9, 75]
-    const w = Math.sin(t * 14)
+    let tool: null | ((c: Ctx) => void) = null // dụng cụ vẽ sau tay (đè lên tay cho rõ)
     const nd = ck?.done.length ?? 0
-    if (nd > seenDone && ck) { const s = ck.done[nd - 1]; if (KSTEPS[s].kind !== 'act') carry = { step: s, until: performance.now() + 800 } }
+    if (nd > seenDone && ck) { const s = ck.done[nd - 1]; if (KSTEPS[s].kind !== 'act') carry = { step: s, until: now + 900 } }
     seenDone = nd
     if (!ck) carry = null
-    const carrying = !!carry && !doing && performance.now() < carry.until
-    if (carrying) { hl = [yenX - 5, 70]; hr = [yenX + 5, 70] }
-    else if (walking) { hl = [yenX - 11, 72 + Math.round(w)]; hr = [yenX + 11, 72 - Math.round(w)] }
-    else if (doing === 'chien') { const [x, y] = A('panIn'); hl = [x - 18 + jig, y]; hr = [x + 2 + jig + Math.round(w * 3), y - 6] }
-    else if (doing === 'luoc') { const [x, y] = A('potIn'); hr = [x + 7 + Math.round(w * 2), y - 9]; hl = [x - 13, y + 2]; px(c, hr[0] - 1, hr[1], 1, 12, '#c9875a'); px(c, hr[0] + 1, hr[1], 1, 12, '#c9875a') }
-    else if (doing === 'tron') { const [x, y] = A('bowl'); const ww = Math.round(Math.sin(t * 30) * 2); hr = [x + 1 + ww, y - 18]; hl = [x - 11, y - 2] }
-    else if (doing === 'nuong') { const [x, y] = A('waffle'); hr = [x + 19, y - 5]; hl = [x - 6, y - 14 + Math.round(w)] }
+    const cp = carry && !doing && now < carry.until ? 1 - (carry.until - now) / 900 : -1 // 0..1: cầm → ném vào
+    if (cp >= 0 && cp < 0.5) { hl = [yenX - 7, 77 - Math.round(cp * 4)]; hr = [yenX + 7, 77 - Math.round(cp * 4)] }
+    else if (walking) { hl = [yenX - 11, 72 + Math.round(w * 2)]; hr = [yenX + 11, 72 - Math.round(w * 2)] }
+    else if (doing === 'chien') {
+      // tay trái lắc cán chảo, tay phải cầm xẻng đảo
+      const [x, y] = A('panIn'); hl = [x - 18 + jig, y]; hr = [x + 6 + Math.round(w * 4), y - 9]
+      tool = (c) => { px(c, hr[0] - 1, hr[1], 2, 8, '#7a4429'); box(c, hr[0] - 4, hr[1] + 7, 8, 3, STEEL_D) }
+    } else if (doing === 'luoc') {
+      // tay trái giữ quai nồi, tay phải cầm đũa dài khuấy vòng
+      const [x, y] = A('potIn'); const a = t * 8
+      hl = [x - 13, y + 2]; hr = [x + 2 + Math.round(Math.cos(a) * 5), y - 12 + Math.round(Math.sin(a) * 2)]
+      tool = (c) => { for (const d of [-1, 1]) for (let k = 0; k < 14; k++) px(c, hr[0] + d + Math.round(((x - hr[0]) * k) / 14), hr[1] + k, 1, 1, '#c9875a') }
+    } else if (doing === 'tron') {
+      // tay trái giữ tô, tay phải đảo đũa nhanh
+      const [x, y] = A('bowl'); const ww = Math.round(Math.sin(t * 30) * 3); hr = [x + 1 + ww, y - 19]; hl = [x - 12, y - 2]
+    } else if (doing === 'nuong') {
+      // ấn nắp khuôn, tay kia giữ tay cầm
+      const [x, y] = A('waffle'); hr = [x + 19, y - 5]; hl = [x - 4, y - 15 + Math.round(Math.abs(w) * 2)]
+    } else if (!ck) {
+      // rảnh tay: thái rau trên thớt (dao lên xuống)
+      const [x, y] = A('plate'); const up = Math.abs(Math.sin(t * 9)) * 6
+      hl = [x - 6, y - 2]; hr = [x + 8, Math.round(y - 4 - up)]
+      tool = (c) => { px(c, hr[0] + 2, hr[1] - 1, 4, 2, '#7a4429'); px(c, hr[0] - 8, hr[1] + 1, 10, 2, STEEL); px(c, hr[0] - 8, hr[1] + 1, 10, 1, STEEL_L) }
+      for (let k = 0; k < 4; k++) px(c, x - 4 + k * 3, y - 1, 2, 1, k % 2 ? '#7fb34d' : '#e8703a')
+    } else {
+      // chờ bước tiếp: tay đặt sẵn ở chỗ nấu, đung đưa nhẹ
+      hl = [yenX - 8, 74 + Math.round(slow)]; hr = [yenX + 8, 74 - Math.round(slow)]
+    }
     arm(c, sl, sy, hl[0], hl[1], skin, sleeve)
     arm(c, sr, sy, hr[0], hr[1], skin, sleeve)
-    // nguyên liệu / dụng cụ vừa lấy: cầm trên tay một lúc
-    if (carrying && DRAW16[carry!.step]) { c.save(); c.translate(Math.round(yenX) - 8, 58); DRAW16[carry!.step](c as any); c.restore() }
+    tool?.(c)
+    // nguyên liệu vừa lấy: cầm trước ngực rồi ném theo đường vòng vào chảo / nồi / tô / khuôn
+    if (cp >= 0 && carry && DRAW16[carry.step] && f) {
+      const st2 = stationOf(f.id, carry.step)
+      const [tx, ty] = st2 === 'pan' ? A('panIn') : st2 === 'pot' ? A('potIn') : st2 === 'bowl' ? A('bowl') : st2 === 'waffle' ? A('waffle') : A('plate')
+      const k = Math.max(0, (cp - 0.5) / 0.5)
+      const ix = yenX + (tx - yenX) * k, iy = 62 - (cp < 0.5 ? cp * 4 : 2) + (ty - 8 - 62) * k - Math.sin(k * Math.PI) * 5
+      c.save(); c.translate(Math.round(ix), Math.round(iy)); const sc = 1 - k * 0.5; c.scale(sc, sc); c.translate(-8, 0)
+      DRAW16[carry.step](c as any); c.restore()
+    }
   }
   // món vừa ra: loé sáng cả bếp
   const sv = kitchen.served
@@ -361,7 +393,15 @@ const waiting = computed(() => ui.queue.length)
       <canvas ref="cv" class="pixel" />
       <div class="ktitle"><PixelIcon name="house" :size="2" /> BẾP</div>
       <button v-if="!staffAll && waiting && kitchenOpen()" class="counter-chip" @click="ui.page = 0">Quầy nước: {{ waiting }} khách ›</button>
-      <!-- mini-game thao tác nấu -->
+      <div v-if="!kitchenOpen()" class="kclosed">
+        <b>KHU BẾP CÒN ĐÓNG CỬA</b>
+        <span>Mở bếp để bán kèm bánh mì chảo, mì trộn cay và waffle nhiều loại nhân. Tặng sẵn 1 gói mỗi nguyên liệu.</span>
+        <button class="btn sm accent" :disabled="save.money < KITCHEN_COST" @click="unlockKitchen">MỞ BẾP · {{ moneyShort(KITCHEN_COST) }}</button>
+      </div>
+    </div>
+
+    <template v-if="kitchenOpen()">
+      <!-- mini-game thao tác nấu: nằm dưới cảnh (không che Yến đang nấu), tạm thế chỗ thanh phiếu đơn -->
       <div v-if="mini && miniInfo && gauge" class="mini" :class="mini.step">
         <div class="mt"><b>{{ miniInfo.title }}</b><small>{{ miniInfo.tip }}</small></div>
         <div class="gauge" :class="gauge.kind">
@@ -376,16 +416,8 @@ const waiting = computed(() => ui.queue.length)
         </div>
         <button class="mbtn" :class="{ hold: holding }" @pointerdown.prevent="miniDown" @pointerup.prevent="miniUp" @pointerleave="miniUp" @pointercancel="miniUp" @contextmenu.prevent>{{ miniInfo.btn }}</button>
       </div>
-      <div v-if="!kitchenOpen()" class="kclosed">
-        <b>KHU BẾP CÒN ĐÓNG CỬA</b>
-        <span>Mở bếp để bán kèm bánh mì chảo, mì trộn cay và waffle nhiều loại nhân. Tặng sẵn 1 gói mỗi nguyên liệu.</span>
-        <button class="btn sm accent" :disabled="save.money < KITCHEN_COST" @click="unlockKitchen">MỞ BẾP · {{ moneyShort(KITCHEN_COST) }}</button>
-      </div>
-    </div>
-
-    <template v-if="kitchenOpen()">
       <!-- phiếu đơn treo trên thanh -->
-      <div class="rail">
+      <div v-else class="rail">
         <span v-if="!kitchen.tickets.length" class="muted small empty">Chưa có đơn bếp – khách gọi kèm món sẽ hiện phiếu ở đây</span>
         <button v-for="tk in kitchen.tickets" :key="tk.id" class="ticket" :class="{ on: cook?.ticketId === tk.id, low: ticketPct(tk.id) < 30, dis: !canCook(tk.food) }" @pointerdown.prevent="startCook(tk.id)">
           <img :src="iconUrl(tk.food)" class="pix" alt="" />
@@ -447,7 +479,7 @@ const waiting = computed(() => ui.queue.length)
 .kclosed > span { font-size: 12px; font-weight: 700; text-shadow: 0 1px 0 #3b2a20; }
 
 .mini {
-  position: absolute; left: 4%; right: 4%; bottom: 5px; z-index: 5;
+  position: relative; margin: 10px 3px 0; z-index: 5;
   display: flex; flex-direction: column; gap: 5px; padding: 6px 8px 8px; line-height: 1.2;
   background: rgba(255, 250, 240, 0.96); box-shadow: 0 0 0 3px #3b2a20, 0 4px 0 3px rgba(0, 0, 0, 0.3);
   animation: miniIn 0.18s cubic-bezier(.3, 1.5, .5, 1);
