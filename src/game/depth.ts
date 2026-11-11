@@ -185,7 +185,7 @@ const WALLS = [
 ]
 const HZ = 38 // đường chân trời (mắt người xem)
 /** y của 1 đường ngang trên tường sau (yBack) khi kéo ra tường hông, theo độ gần d ∈ [0..1] (1 = sát người xem) */
-const persp = (yBack: number, d: number) => HZ + (yBack - HZ) * (1 + 0.45 * d)
+export const persp = (yBack: number, d: number) => HZ + (yBack - HZ) * (1 + 0.45 * d)
 
 export function drawSideWalls(c: Ctx, ox: number, premise: number, dayFrac: number) {
   const W = WALLS[premise] ?? WALLS[0]
@@ -224,7 +224,7 @@ export function drawSideWalls(c: Ctx, ox: number, premise: number, dayFrac: numb
   sideRect(ox, 1, 6, 18, 25, 31, (x, y0, y1, u) => { if ((u * 4) % 1 < 0.55) px(c, x, y0 + 1, 1, y1 - y0 - 1, ['#fbf6ec', '#f2c14e', '#e8506a', '#7fb34d'][Math.floor(u * 4) % 4]) })
 }
 /** vẽ 1 hình chữ nhật dán trên tường hông (i0..i1 = khoảng cách từ góc tường, yTop/yBot đo trên tường sau) */
-function sideRect(ox: number, side: 0 | 1, i0: number, i1: number, yTop: number, yBot: number, col: (x: number, y0: number, y1: number, u: number) => void) {
+export function sideRect(ox: number, side: 0 | 1, i0: number, i1: number, yTop: number, yBot: number, col: (x: number, y0: number, y1: number, u: number) => void) {
   for (let i = i0; i < Math.min(i1, ox); i++) {
     const d = (i + 1) / ox
     const x = side === 0 ? ox - 1 - i : ox + SCENE_W + i
