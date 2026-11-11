@@ -10,6 +10,8 @@ initMeta()
 initStory() // sau initMeta: bọc thêm vào các hook của meta
 initKitchen()
 createApp(App).mount('#app')
+// chạy local: ?dev=bep vào thẳng bếp (src/game/devtools.ts) – bản build bỏ hẳn đoạn này
+if (import.meta.env.DEV) import('./game/devtools').then((m) => m.devBoot())
 
 // Trình duyệt chỉ cho phát âm thanh sau lần chạm đầu tiên
 document.addEventListener('pointerdown', unlockAudio, { passive: true })
