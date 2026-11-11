@@ -11,7 +11,7 @@ import { sfx } from '../game/audio'
 import { CAST } from '../game/story'
 import {
   kitchen, kitchenOpen, unlockKitchen, startCook, cookStep, trashCook, foodById, foodStock, canCook,
-  KSTEPS, FOOD_INGS, KITCHEN_TOOLS, KITCHEN_ACTIONS, KITCHEN_COST, FOODS, finishMini, type KStep, type FoodIng,
+  KSTEPS, FOOD_INGS, KITCHEN_COST, FOODS, finishMini, type KStep, type FoodIng,
 } from '../game/kitchen'
 import PixelIcon from './ui/PixelIcon.vue'
 
@@ -26,7 +26,19 @@ const cook = computed(() => kitchen.cook)
 const food = computed(() => (cook.value ? foodById[cook.value.food] : null))
 const curStep = computed(() => (cook.value && food.value ? food.value.steps[cook.value.done.length] ?? null : null))
 // khay: chỉ nguyên liệu + dụng cụ mà thực đơn bếp dùng
-const tray = computed<KStep[]>(() => [...FOOD_INGS.map((i) => i.id), ...KITCHEN_TOOLS])
+// khay THEO MÓN: chỉ hiện đúng dụng cụ / nguyên liệu / thao tác của món đang nấu (5–6 nút to thay vì 19 nút)
+const groups = computed(() => {
+  const f = food.value
+  if (!f) return []
+  const uniq = [...new Set(f.steps)]
+  const remain = cook.value ? f.steps.slice(cook.value.done.length) : f.steps
+  const item = (s: KStep) => ({ s, used: !remain.includes(s) })
+  return ([['tool', 'Dụng cụ'], ['ing', 'Nguyên liệu'], ['act', 'Thao tác']] as const)
+    .map(([k, title]) => ({ k, title, items: uniq.filter((s) => KSTEPS[s].kind === k).map(item) }))
+    .filter((g) => g.items.length)
+})
+// chưa nấu: tồn kho nguyên liệu bếp (xem nhanh, không bấm)
+const stockList = computed(() => FOOD_INGS.map((i) => ({ id: i.id, n: foodStock(i.id) })))
 const label = (s: KStep) => KSTEPS[s].label
 const stockOf = (s: KStep) => (KSTEPS[s].kind === 'ing' ? foodStock(s as FoodIng) : null)
 const shaking = ref(false)
@@ -430,22 +442,29 @@ const waiting = computed(() => ui.queue.length)
             </span>
           </div>
         </template>
-        <span v-else class="muted hint">{{ staffAll ? 'Nhân viên lo quầy nước – bạn chạm phiếu đơn để nấu' : 'Chạm 1 phiếu đơn để bắt đầu nấu' }}</span>
+        <span v-else class="muted hint">{{ staffAll ? 'Nhân viên lo quầy nước – bạn chỉ việc nấu' : kitchen.tickets.length ? 'Chọn món để nấu' : 'Chưa có đơn bếp' }}</span>
       </div>
 
-      <div class="tray">
-        <button v-for="s in tray" :key="s" class="item" :class="{ out: (stockOf(s) ?? 1) < 1, tool: KSTEPS[s].kind === 'tool' }" @pointerdown.prevent="cookStep(s)">
-          <img :src="iconUrl(s)" class="pix ic" alt="" />
-          <span class="lbl">{{ label(s) }}</span>
-          <span v-if="stockOf(s) !== null" class="qty">{{ stockOf(s) }}</span>
-        </button>
+      <!-- bàn nấu: chỉ đồ của món đang nấu, chia nhóm, bước kế tiếp sáng lên -->
+      <div v-if="food && cook" class="board">
+        <div v-for="g in groups" :key="g.k" class="grp" :class="g.k">
+          <span class="gt">{{ g.title }}</span>
+          <div class="gitems">
+            <button v-for="it in g.items" :key="it.s" class="kbtn" :class="{ next: it.s === curStep, used: it.used, out: (stockOf(it.s) ?? 1) < 1 }" @pointerdown.prevent="cookStep(it.s)">
+              <img :src="iconUrl(it.s)" class="pix" alt="" />
+              <span class="kl">{{ label(it.s) }}</span>
+              <span v-if="stockOf(it.s) !== null" class="kq">{{ stockOf(it.s) }}</span>
+            </button>
+          </div>
+        </div>
+        <button class="trash-btn" @pointerdown.prevent="act('trash')"><img :src="iconUrl('trash')" class="pix" alt="" /> Đổ bỏ làm lại</button>
       </div>
-
-      <div class="actions">
-        <button v-for="a in KITCHEN_ACTIONS" :key="a" class="action" @pointerdown.prevent="act(a)">
-          <img :src="iconUrl(a)" class="pix aic" alt="" /><span>{{ label(a) }}</span>
-        </button>
-        <button class="action trash" @pointerdown.prevent="act('trash')"><img :src="iconUrl('trash')" class="pix aic" alt="" /><span>Đổ bỏ</span></button>
+      <div v-else class="board idle">
+        <b>Chạm 1 phiếu đơn ở trên để bắt đầu nấu</b>
+        <span class="muted small">Nấu món nào, bàn nấu chỉ hiện đúng đồ của món đó.</span>
+        <div class="stock">
+          <span v-for="x in stockList" :key="x.id" class="sk" :class="{ low: x.n < 3 }"><img :src="iconUrl(x.id)" class="pix" alt="" />{{ x.n }}</span>
+        </div>
       </div>
     </template>
     <div v-else class="menu-preview">
@@ -525,26 +544,37 @@ const waiting = computed(() => ui.queue.length)
 .st.done { background: #c9f0d8; box-shadow: 0 0 0 2px #2f9e6b; opacity: 0.6; }
 .st.now { background: #f2c14e; box-shadow: 0 0 0 2px #3b2a20, inset 0 -2px 0 #d99a2b; }
 
-.tray { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.06) 0 2px, transparent 2px 8px), #a06c46; padding: 5px; margin: 6px 3px 0; box-shadow: var(--px-border), inset 0 3px 0 #b98a62, inset 0 -4px 0 #7a4e33; }
-.item { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fffaf2; min-height: 40px; box-shadow: var(--px-border-2), inset 0 -3px 0 #e6d6c2, 0 3px 0 rgba(59, 42, 32, 0.5); }
-.item.tool { background: #e8eef0; }
-.item:active { transform: translateY(3px); box-shadow: var(--px-border-2); }
-.item.out { opacity: 0.45; }
-.ic { width: 24px; height: 24px; }
-.lbl { font-size: 9px; font-weight: 800; white-space: nowrap; }
-.qty { position: absolute; top: 1px; right: 3px; font-size: 9px; font-weight: 900; color: #8a7566; }
-.actions { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 8px 3px 0; }
-.action { display: flex; flex-direction: column; align-items: center; gap: 1px; background: #f2c14e; padding: 3px 0 5px; font-size: 11px; font-weight: 900; box-shadow: var(--px-border-2), inset 0 -4px 0 #d99a2b, inset 0 2px 0 #fff1a8, 0 4px 0 rgba(59, 42, 32, 0.5); }
-.action:active { transform: translateY(3px); box-shadow: var(--px-border-2); }
-.action.trash { background: #f1e2cf; box-shadow: var(--px-border-2), inset 0 -4px 0 #d8bf9f, 0 4px 0 rgba(59, 42, 32, 0.5); }
-.aic { width: 24px; height: 24px; }
+.board { margin: 6px 3px 0; padding: 7px; display: flex; flex-direction: column; gap: 6px; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.06) 0 2px, transparent 2px 8px), #a06c46; box-shadow: var(--px-border), inset 0 3px 0 #b98a62, inset 0 -4px 0 #7a4e33; }
+.grp { display: flex; align-items: stretch; gap: 6px; }
+.gt { flex: none; width: 46px; align-self: center; font-size: 9px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; color: #ffe8c8; line-height: 1.15; }
+.gitems { flex: 1; display: flex; gap: 6px; flex-wrap: wrap; }
+.kbtn { position: relative; flex: 1 1 0; min-width: 60px; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: #fffaf2; box-shadow: var(--px-border-2), inset 0 -3px 0 #e6d6c2, 0 3px 0 rgba(59, 42, 32, 0.5); }
+.kbtn img { width: 30px; height: 30px; }
+.kl { font-size: 11px; font-weight: 900; white-space: nowrap; }
+.kq { position: absolute; top: 2px; right: 4px; font-size: 10px; font-weight: 900; color: #8a7566; }
+.grp.tool .kbtn { background: #e8eef0; }
+.grp.act .kbtn { background: #f2c14e; box-shadow: var(--px-border-2), inset 0 -4px 0 #d99a2b, inset 0 2px 0 #fff1a8, 0 3px 0 rgba(59, 42, 32, 0.5); }
+.kbtn:active { transform: translateY(3px); box-shadow: var(--px-border-2); }
+.kbtn.next { outline: 3px solid #fff3a8; outline-offset: 1px; animation: nextPulse 0.9s ease-in-out infinite; }
+@keyframes nextPulse { 50% { outline-color: #ff9a3c; transform: translateY(-2px); } }
+.kbtn.used { opacity: 0.4; }
+.kbtn.out { opacity: 0.4; filter: grayscale(0.8); }
+.trash-btn { align-self: flex-end; display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; font-size: 11px; font-weight: 900; background: #f1e2cf; box-shadow: var(--px-border-2); }
+.trash-btn img { width: 16px; height: 16px; }
+.board.idle { align-items: center; text-align: center; color: #fff4dc; padding: 10px 8px; }
+.board.idle b { font-size: 13px; }
+.board.idle .muted { color: #f1d9b8; }
+.stock { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-top: 4px; }
+.sk { display: inline-flex; align-items: center; gap: 2px; padding: 2px 5px 2px 2px; font-size: 11px; font-weight: 900; color: #3b2a20; background: #fffaf2; box-shadow: 0 0 0 2px #3b2a20; }
+.sk img { width: 18px; height: 18px; }
+.sk.low { background: #ffd9d2; color: #b8262c; }
 .menu-preview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 3px 0; }
 .mp { display: flex; align-items: center; gap: 5px; background: #fffaf0; padding: 5px; box-shadow: var(--px-border-2); font-size: 11px; font-weight: 800; line-height: 1.2; }
 .mp img { width: 26px; height: 26px; }
 .mp small { display: block; color: var(--good); }
 @media (max-height: 720px) {
-  .item { min-height: 34px; }
-  .ic, .aic { width: 20px; height: 20px; }
+  .kbtn { min-height: 48px; }
+  .kbtn img { width: 24px; height: 24px; }
   .rail { min-height: 44px; margin-top: 6px; }
   .ticket img { width: 20px; height: 20px; }
 }
