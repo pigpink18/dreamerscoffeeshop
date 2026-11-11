@@ -14,6 +14,7 @@ import {
   KSTEPS, KITCHEN_COST, FOODS, finishMini, type KStep, type FoodIng,
 } from '../game/kitchen'
 import PixelIcon from './ui/PixelIcon.vue'
+import PixelNum from './ui/PixelNum.vue'
 
 const root = ref<HTMLDivElement>()
 const cv = ref<HTMLCanvasElement>()
@@ -477,22 +478,25 @@ const waiting = computed(() => ui.queue.length)
         <button class="trash-btn" @pointerdown.prevent="act('trash')"><img :src="iconUrl('trash')" class="pix" alt="" /> Đổ bỏ làm lại</button>
       </div>
       <!-- chưa nấu: thực đơn bếp – còn nấu được bao nhiêu phần, món nào đang có đơn (bấm để nấu luôn) -->
+      <!-- chưa nấu: thực đơn bếp – dùng đúng bộ khung của game (nhãn gỗ, thẻ giấy, nhãn vuông, số pixel) -->
       <div v-else class="kmenu">
         <div class="kmh">
-          <b>THỰC ĐƠN BẾP</b>
-          <span>Hôm nay: <em>{{ ui.stats.foodSold ?? 0 }}</em> món · <em>{{ moneyShort(ui.stats.foodRev ?? 0) }}</em></span>
+          <span class="section-title">Món bếp</span>
+          <span class="kms">Hôm nay {{ ui.stats.foodSold ?? 0 }} món · <PixelNum :text="moneyShort(ui.stats.foodRev ?? 0)" :size="2" color="#2f9e6b" /></span>
         </div>
-        <div class="kmgrid">
-          <button v-for="m in menuCards" :key="m.id" class="kmc" :class="{ wait: m.wait > 0, none: m.can < 1 }" @pointerdown.prevent="m.ticket && startCook(m.ticket)">
-            <span v-if="m.wait" class="kmw">{{ m.wait }} đơn</span>
-            <img :src="iconUrl(m.id)" class="pix" alt="" />
-            <span class="kmt">
-              <span class="kmn">{{ m.name }}</span>
-              <span class="kmp">{{ moneyShort(m.price) }} · <span class="kmc-can">{{ m.can < 1 ? 'hết NL' : `còn ${m.can}` }}</span></span>
+        <div class="card kml">
+          <button v-for="m in menuCards" :key="m.id" class="kr" :class="{ wait: m.wait > 0, none: m.can < 1 }" @pointerdown.prevent="m.ticket && startCook(m.ticket)">
+            <span class="kslot"><img :src="iconUrl(m.id)" class="pix" alt="" /></span>
+            <span class="grow">
+              <span class="kn">{{ m.name }}</span>
+              <PixelNum :text="moneyShort(m.price)" :size="2" color="#2f9e6b" />
             </span>
+            <span v-if="m.wait" class="pxtag warn">{{ m.wait }} đơn</span>
+            <span v-else-if="m.can < 1" class="pxtag bad">Hết</span>
+            <span v-else class="kc">×{{ m.can }}</span>
           </button>
         </div>
-        <span v-if="staffAll" class="kmnote">Nhân viên lo quầy nước – bạn chỉ việc nấu</span>
+        <p v-if="staffAll" class="muted small knote">Nhân viên lo quầy nước – bạn chỉ việc nấu</p>
       </div>
     </template>
     <div v-else class="menu-preview">
@@ -574,24 +578,22 @@ const waiting = computed(() => ui.queue.length)
 .ticket.dis { opacity: 0.6; }
 .ticket.dis .tstate { background: #e6d6c2; color: #8a7566; }
 /* thực đơn bếp (chưa nấu) */
-.kmenu { margin: 8px 3px 0; padding: 6px 7px 7px; background: #2c4a40; box-shadow: var(--px-border), inset 0 0 0 3px #603b25, inset 0 0 0 5px #3d2c16; color: #eef2ea; }
-.kmh { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; padding: 1px 3px 5px; }
-.kmh b { font-size: 12px; font-weight: 900; letter-spacing: 0.14em; color: #f2c14e; }
-.kmh span { font-size: 10px; font-weight: 800; color: #cfe0d6; }
-.kmh em { font-style: normal; color: #fff3b0; }
-.kmgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px 5px; padding-top: 3px; }
-.kmc { position: relative; display: flex; align-items: center; gap: 4px; padding: 4px 4px; text-align: left; background: rgba(255, 255, 255, 0.06); box-shadow: 0 0 0 2px rgba(238, 242, 234, 0.25); color: inherit; }
-.kmc img { flex: none; width: 22px; height: 22px; }
-.kmt { min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
-.kmn { font-size: 10px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.kmp { font-size: 10px; font-weight: 900; color: #f2c14e; }
-.kmc-can { font-weight: 700; color: #cfe0d6; }
-.kmc.none { opacity: 0.5; }
-.kmc.none .kmc-can { color: #ff9a8a; }
-.kmc.wait { background: rgba(242, 193, 78, 0.18); box-shadow: 0 0 0 2px #f2c14e; animation: kmw 0.9s ease-in-out infinite; }
-@keyframes kmw { 50% { transform: translateY(-2px); } }
-.kmw { position: absolute; top: -9px; right: -3px; z-index: 1; font-size: 8px; line-height: 11px; font-weight: 900; padding: 0 3px; background: #d9534f; color: #fff; box-shadow: 0 0 0 2px #3b2a20; }
-.kmnote { display: block; margin-top: 6px; text-align: center; font-size: 10px; font-weight: 800; color: #cfe0d6; }
+.kmenu { margin-top: 8px; }
+.kmh { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-right: 6px; }
+.kmh .section-title { margin: 0 6px 8px; }
+.kms { display: inline-flex; align-items: center; gap: 5px; margin-bottom: 8px; font-size: 11px; font-weight: 800; color: #8a7566; }
+.kml { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px; }
+.kr { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 4px; text-align: left; color: var(--ink); background: #fffaf2; box-shadow: var(--px-border-2), inset 0 -3px 0 #e6d6c2; }
+.kr:active { transform: translateY(2px); }
+.kslot { flex: none; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: #f1e2cf; box-shadow: var(--px-border-2), inset 0 -2px 0 #e0c8a8; }
+.kslot img { width: 22px; height: 22px; }
+.kr .grow { display: flex; flex-direction: column; gap: 2px; }
+.kn { font-size: 11px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kc { flex: none; font-size: 11px; font-weight: 900; color: #8a7566; }
+.kr .pxtag { flex: none; font-size: 10px; padding: 1px 5px; }
+.kr.wait { background: #fff1c2; box-shadow: 0 0 0 2px #d99a2b, inset 0 -3px 0 #f2c14e; }
+.kr.none { opacity: 0.55; }
+.knote { margin: 6px 6px 0; }
 
 .recipe { display: flex; flex-wrap: wrap; align-items: center; align-content: center; gap: 6px 8px; min-height: 50px; margin: 6px 3px 0; }
 .rhead { display: flex; flex: 1 1 0; align-items: baseline; gap: 8px; min-width: 0; }
