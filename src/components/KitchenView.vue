@@ -26,7 +26,6 @@ const cssW = ref(0)
 const cook = computed(() => kitchen.cook)
 const food = computed(() => (cook.value ? foodById[cook.value.food] : null))
 const curStep = computed(() => (cook.value && food.value ? food.value.steps[cook.value.done.length] ?? null : null))
-// khay: chỉ nguyên liệu + dụng cụ mà thực đơn bếp dùng
 // thực đơn bếp (khi chưa nấu): số phần còn nấu được theo kho + số đơn đang chờ
 const menuCards = computed(() => FOODS.map((f) => {
   const need: Record<string, number> = {}
@@ -35,21 +34,23 @@ const menuCards = computed(() => FOODS.map((f) => {
   const tks = kitchen.tickets.filter((t) => t.food === f.id)
   return { id: f.id, name: f.name, price: f.price, can, wait: tks.length, ticket: tks[0]?.id ?? 0 }
 }))
-// khay THEO MÓN: chỉ hiện đúng dụng cụ / nguyên liệu / thao tác của món đang nấu (5–6 nút to thay vì 19 nút)
-const groups = computed(() => {
+// bàn nấu: dụng cụ + thao tác của món, xếp ĐÚNG THỨ TỰ LÀM (đọc trái → phải là ra quy trình); nguyên liệu Yến tự bỏ
+const ops = computed(() => {
   const f = food.value
   if (!f) return []
-  const uniq = [...new Set(f.steps)]
   const remain = cook.value ? f.steps.slice(cook.value.done.length) : f.steps
-  const item = (s: KStep) => ({ s, used: !remain.includes(s) })
-  // nguyên liệu tự bỏ vào → bàn nấu chỉ còn dụng cụ + thao tác
-  return ([['tool', 'Dụng cụ'], ['act', 'Thao tác']] as const)
-    .map(([k, title]) => ({ k, title, items: uniq.filter((s) => KSTEPS[s].kind === k).map(item) }))
-    .filter((g) => g.items.length)
+  const out: { s: KStep; n: number[]; act: boolean; used: boolean }[] = []
+  f.steps.forEach((st, i) => {
+    if (KSTEPS[st].kind === 'ing') return
+    const o = out.find((x) => x.s === st)
+    if (o) o.n.push(i + 1)
+    else out.push({ s: st, n: [i + 1], act: KSTEPS[st].kind === 'act', used: false })
+  })
+  for (const o of out) o.used = !remain.includes(o.s)
+  return out
 })
 
 const label = (s: KStep) => KSTEPS[s].label
-const stockOf = (s: KStep) => (KSTEPS[s].kind === 'ing' ? foodStock(s as FoodIng) : null)
 const shaking = ref(false)
 watch(() => cook.value?.shake, (n, o) => { if (n && n !== o) { shaking.value = true; setTimeout(() => (shaking.value = false), 300) } })
 
@@ -464,18 +465,16 @@ const waiting = computed(() => ui.queue.length)
       </div>
 
       <!-- bàn nấu: chỉ đồ của món đang nấu, chia nhóm, bước kế tiếp sáng lên -->
-      <div v-if="food && cook" class="board">
-        <div v-for="g in groups" :key="g.k" class="grp" :class="g.k">
-          <span class="gt">{{ g.title }}</span>
-          <div class="gitems">
-            <button v-for="it in g.items" :key="it.s" class="kbtn" :class="{ next: it.s === curStep, used: it.used, out: (stockOf(it.s) ?? 1) < 1 }" @pointerdown.prevent="cookStep(it.s)">
-              <img :src="iconUrl(it.s)" class="pix" alt="" />
-              <span class="kl">{{ label(it.s) }}</span>
-              <span v-if="stockOf(it.s) !== null" class="kq">{{ stockOf(it.s) }}</span>
-            </button>
-          </div>
-        </div>
-        <button class="trash-btn" @pointerdown.prevent="act('trash')"><img :src="iconUrl('trash')" class="pix" alt="" /> Đổ bỏ làm lại</button>
+      <div v-if="food && cook" class="ktray" :style="{ '--n': ops.length + 1 }" :class="{ busy: cook.auto }">
+        <button v-for="o in ops" :key="o.s" class="op" :class="{ act: o.act, next: o.s === curStep, used: o.used }" @pointerdown.prevent="cookStep(o.s)">
+          <i class="stepn">{{ o.n.join('·') }}</i>
+          <img :src="iconUrl(o.s)" class="pix" alt="" />
+          <span>{{ label(o.s) }}</span>
+        </button>
+        <button class="op trash" @pointerdown.prevent="act('trash')">
+          <img :src="iconUrl('trash')" class="pix" alt="" />
+          <span>Đổ bỏ</span>
+        </button>
       </div>
       <!-- chưa nấu: thực đơn bếp – còn nấu được bao nhiêu phần, món nào đang có đơn (bấm để nấu luôn) -->
       <!-- chưa nấu: thực đơn bếp – dùng đúng bộ khung của game (nhãn gỗ, thẻ giấy, nhãn vuông, số pixel) -->
@@ -608,30 +607,31 @@ const waiting = computed(() => ui.queue.length)
 .st.done { background: #c9f0d8; box-shadow: 0 0 0 2px #2f9e6b; opacity: 0.6; }
 .st.now { background: #f2c14e; box-shadow: 0 0 0 2px #3b2a20, inset 0 -2px 0 #d99a2b; }
 
-.board { margin: 6px 3px 0; padding: 7px; display: flex; flex-direction: column; gap: 6px; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.06) 0 2px, transparent 2px 8px), #a06c46; box-shadow: var(--px-border), inset 0 3px 0 #b98a62, inset 0 -4px 0 #7a4e33; }
-.grp { display: flex; align-items: stretch; gap: 6px; }
-.gt { flex: none; width: 46px; align-self: center; font-size: 9px; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; color: #ffe8c8; line-height: 1.15; }
-.gitems { flex: 1; display: flex; gap: 6px; flex-wrap: wrap; }
-.kbtn { position: relative; flex: 1 1 0; min-width: 60px; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: #fffaf2; box-shadow: var(--px-border-2), inset 0 -3px 0 #e6d6c2, 0 3px 0 rgba(59, 42, 32, 0.5); }
-.kbtn img { width: 30px; height: 30px; }
-.kl { font-size: 11px; font-weight: 900; white-space: nowrap; }
-.kq { position: absolute; top: 2px; right: 4px; font-size: 10px; font-weight: 900; color: #8a7566; }
-.grp.tool .kbtn { background: #e8eef0; }
-.grp.act .kbtn { background: #f2c14e; box-shadow: var(--px-border-2), inset 0 -4px 0 #d99a2b, inset 0 2px 0 #fff1a8, 0 3px 0 rgba(59, 42, 32, 0.5); }
-.kbtn:active { transform: translateY(3px); box-shadow: var(--px-border-2); }
-.kbtn.next { outline: 3px solid #fff3a8; outline-offset: 1px; animation: nextPulse 0.9s ease-in-out infinite; }
-@keyframes nextPulse { 50% { outline-color: #ff9a3c; transform: translateY(-2px); } }
-.kbtn.used { opacity: 0.4; }
-.kbtn.out { opacity: 0.4; filter: grayscale(0.8); }
-.trash-btn { align-self: flex-end; display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; font-size: 11px; font-weight: 900; background: #f1e2cf; box-shadow: var(--px-border-2); }
-.trash-btn img { width: 16px; height: 16px; }
+/* bàn nấu: khay gỗ + nút khối giống quầy pha nước (dụng cụ = ô kem, thao tác = nút vàng, đổ bỏ = nút be) */
+.ktray { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 6px; margin: 8px 3px 0; padding: 6px;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,0.06) 0 2px, transparent 2px 8px), #a06c46;
+  box-shadow: var(--px-border), inset 0 3px 0 #b98a62, inset 0 -4px 0 #7a4e33; }
+.op { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 62px; padding: 4px 2px 6px;
+  font-size: 12px; font-weight: 900; color: var(--ink); background: #fffaf2;
+  box-shadow: var(--px-border-2), inset 0 -3px 0 #e6d6c2, 0 4px 0 rgba(59, 42, 32, 0.5); transition: transform 0.06s; }
+.op img { width: 32px; height: 32px; }
+.op.act { background: #f2c14e; box-shadow: var(--px-border-2), inset 0 -4px 0 #d99a2b, inset 0 2px 0 #fff1a8, 0 4px 0 rgba(59, 42, 32, 0.5); }
+.op.trash { background: #f1e2cf; box-shadow: var(--px-border-2), inset 0 -4px 0 #d8bf9f, 0 4px 0 rgba(59, 42, 32, 0.5); font-size: 11px; }
+.op.trash img { width: 24px; height: 24px; }
+.op:active { transform: translateY(3px); box-shadow: var(--px-border-2); }
+.stepn { position: absolute; top: 2px; left: 3px; font-style: normal; font-size: 9px; font-weight: 900; color: #8a7566; }
+.op.act .stepn { color: #7a5200; }
+.op.used { opacity: 0.4; }
+.op.next { animation: opNext 0.8s steps(2) infinite; }
+@keyframes opNext { 50% { transform: translateY(-3px); box-shadow: 0 0 0 3px #fff, 0 0 0 5px #3b2a20, 0 7px 0 rgba(59, 42, 32, 0.5); } }
+.ktray.busy .op:not(.trash) { filter: saturate(0.6); }
 .menu-preview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 3px 0; }
 .mp { display: flex; align-items: center; gap: 5px; background: #fffaf0; padding: 5px; box-shadow: var(--px-border-2); font-size: 11px; font-weight: 800; line-height: 1.2; }
 .mp img { width: 26px; height: 26px; }
 .mp small { display: block; color: var(--good); }
 @media (max-height: 720px) {
-  .kbtn { min-height: 48px; }
-  .kbtn img { width: 24px; height: 24px; }
+  .op { min-height: 52px; }
+  .op img { width: 26px; height: 26px; }
   .rail { min-height: 70px; margin-top: 6px; }
 }
 </style>
