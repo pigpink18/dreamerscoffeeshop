@@ -495,7 +495,7 @@ const waiting = computed(() => ui.queue.length)
             <span v-else class="kc">×{{ m.can }}</span>
           </button>
         </div>
-        <p v-if="staffAll" class="muted small knote">Nhân viên lo quầy nước – bạn chỉ việc nấu</p>
+        <!-- <p v-if="staffAll" class="muted small knote">Nhân viên lo quầy nước – bạn chỉ việc nấu</p> -->
       </div>
     </template>
     <div v-else class="menu-preview">
