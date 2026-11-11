@@ -1,14 +1,13 @@
 <script setup lang="ts">
 // Khay nguyên liệu + nút thao tác (chiết xuất, lắc, xay, khuấy, đổ bỏ)
 import { ref, computed } from 'vue'
-import { ui, save, brewStep, cancelBrew, startBrew, canMake, giveAddon, tutOn, staffAll, staffServeTime } from '../game/store'
+import { ui, save, brewStep, cancelBrew, startBrew, canMake, giveAddon, tutOn, staffAll } from '../game/store'
 import { kitchen, kitchenOpen } from '../game/kitchen'
 import { GOODS, goodUnlocked } from '../game/metaData'
 import { recipeById, STEPS, type StepId, type IngredientId } from '../game/data'
-import { iconUrl, IMG_URL, baristaLook, BARISTA_NAMES } from '../game/pixel'
+import { iconUrl, IMG_URL } from '../game/pixel'
 import PixelIcon from './ui/PixelIcon.vue'
-import PersonPortrait from './ui/PersonPortrait.vue'
-import DrinkIcon from './ui/DrinkIcon.vue'
+import StaffBoard from './StaffBoard.vue'
 
 const showOrders = ref(false)
 // kệ hàng bán kèm (bánh / lưu niệm) – hiện khi đã thuê mặt bằng có bán
@@ -72,22 +71,8 @@ function pickOrder(id: number) {
 <template>
   <!-- có nhân viên pha chế: họ lo hết quầy nước, bạn chỉ xem & vào bếp -->
   <div v-if="staffAll" class="panel staff-panel">
-    <!-- quầy do nhân viên lo: thẻ nhân viên kiểu game (chân dung pixel, ly đang pha, thanh 10 ô) -->
-    <div class="sp-top">
-      <span class="section-title">Quầy pha chế</span>
-      <span class="sp-hint">Nhân viên lo hết · bạn vào bếp</span>
-    </div>
-    <div class="card sp-card">
-      <div v-for="(p, i) in ui.staffProgress" :key="i" class="sp-row" :class="{ busy: !!ui.staffRecipe[i] }">
-        <span class="sp-face"><PersonPortrait :look="baristaLook(i)" :mood="ui.staffRecipe[i] ? 'happy' : 'neutral'" :scale="2" /></span>
-        <span class="grow sp-info">
-          <span class="sp-name">{{ BARISTA_NAMES[i % 3] }} <i class="pxtag" :class="{ on: !!ui.staffRecipe[i] }">{{ ui.staffRecipe[i] ? 'Đang pha' : 'Rảnh' }}</i></span>
-          <span class="sp-job">{{ ui.staffRecipe[i] ? ui.staffJob[i] : 'Lau quầy, chờ khách…' }}</span>
-          <span class="sp-cells"><i v-for="k in 10" :key="k" :class="{ on: ui.staffRecipe[i] && k <= Math.ceil(Math.min(1, p / staffServeTime) * 10) }" /></span>
-        </span>
-        <span class="sp-cup"><DrinkIcon v-if="ui.staffRecipe[i]" :id="ui.staffRecipe[i]!" :scale="2" /></span>
-      </div>
-    </div>
+    <!-- quầy do nhân viên lo: cảnh pixel dãy quầy sau, nhân viên pha + bóng thoại ly đang pha -->
+    <StaffBoard />
     <div v-if="shelf.length" class="shelf">
       <span class="sh-lbl">KỆ</span>
       <button v-for="g in shelf" :key="g.id" class="good" :class="{ want: wanted === g.id, out: (save.meta.goods[g.id] ?? 0) < 1 }" @pointerdown.prevent="giveAddon(g.id)">
@@ -265,22 +250,6 @@ function pickOrder(id: number) {
   .aic { width: 22px; height: 22px; }
 }
 .staff-panel { display: flex; flex-direction: column; gap: 8px; }
-.sp-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-right: 6px; }
-.sp-top .section-title { margin: 6px 6px 2px; }
-.sp-hint { font-size: 11px; font-weight: 800; color: #8a7566; }
-.sp-card { display: flex; flex-direction: column; gap: 6px; padding: 8px; }
-.sp-row { display: flex; align-items: center; gap: 8px; padding: 5px 6px; background: #fffaf2; box-shadow: var(--px-border-2), inset 0 -3px 0 #e6d6c2; }
-.sp-row.busy { background: #f1fbf4; }
-.sp-face { flex: none; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; background: #f1e2cf; box-shadow: var(--px-border-2), inset 0 -3px 0 #e0c8a8; }
-.sp-info { display: flex; flex-direction: column; gap: 3px; }
-.sp-name { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 900; }
-.sp-name .pxtag { font-style: normal; font-size: 10px; padding: 1px 5px; }
-.sp-name .pxtag.on { background: #c9f0d8; color: #1d6b47; }
-.sp-job { font-size: 11px; font-weight: 700; color: #6f4e37; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sp-cells { display: flex; gap: 2px; }
-.sp-cells i { width: 9px; height: 6px; background: #e6d6c2; box-shadow: 0 0 0 1px #3b2a20; }
-.sp-cells i.on { background: #3fd18b; }
-.sp-cup { flex: none; width: 32px; height: 44px; display: flex; align-items: center; justify-content: center; }
 .go-kitchen .pxtag { margin-left: 4px; font-size: 12px; letter-spacing: 0; }
 .tut { flex-basis: 100%; margin-top: 4px; padding: 4px 7px; font-size: 12px; font-weight: 700; color: #3b2a20; background: #ffe9a8; box-shadow: 0 0 0 2px #d99a2b; animation: tutIn 0.3s ease-out; }
 .tut b { font-size: 10px; letter-spacing: 1px; color: #fff; background: #d8333a; padding: 1px 4px; margin-right: 4px; }
