@@ -13,7 +13,7 @@ const shelf = computed(() => GOODS.filter((g) => goodUnlocked(g, save.meta.premi
 import InstallHint from './InstallHint.vue'
 import CounterScene from './CounterScene.vue'
 import SeatingScene from './SeatingScene.vue'
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { dirtySeats } from '../game/store'
 import WorkPanel from './WorkPanel.vue'
 import KitchenView from './KitchenView.vue'
@@ -66,6 +66,23 @@ function swUp(e: PointerEvent) {
 /** 3 trang khi đang bán: quầy pha chế · khu khách ngồi · bếp */
 const PAGES = 3
 function swCancel() { tracking = false; drag.value = 0 }
+// Trang quầy: khung cảnh luôn full ngang. Không đủ chiều cao → khay pha chế gọn lại (tight);
+// gọn rồi vẫn thiếu → trang cuộn nhẹ (overflow-y: auto). Có ngưỡng trễ để không bật/tắt qua lại.
+const counterPage = ref<HTMLDivElement>()
+const tight = ref(false)
+let looseNeed = 0 // chiều cao cần khi chưa gọn (đo lúc chuyển sang gọn)
+function fitCounter() {
+  const p = counterPage.value
+  if (!p) return
+  if (!tight.value && p.scrollHeight > p.clientHeight + 2) { looseNeed = p.scrollHeight; tight.value = true }
+  else if (tight.value && p.clientHeight >= looseNeed + 4) tight.value = false
+}
+let fitRo: ResizeObserver | null = null
+onMounted(() => {
+  fitRo = new ResizeObserver(() => requestAnimationFrame(fitCounter))
+  watch(counterPage, (p) => { fitRo?.disconnect(); if (p) { fitRo!.observe(p); for (const ch of Array.from(p.children)) fitRo!.observe(ch) } }, { immediate: true })
+})
+onBeforeUnmount(() => fitRo?.disconnect())
 // máy tính: phím ← → cũng chuyển trang
 function onKey(e: KeyboardEvent) {
   if (ui.phase !== 'open' || ui.tab !== 'shop' || (e.target as HTMLElement)?.closest?.('input, textarea')) return
@@ -209,9 +226,9 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
     <!-- Vuốt ngang: trang 1 = quầy pha chế · trang 2 = khu khách ngồi -->
     <div class="pager" @pointerdown="swDown" @pointermove="swMove" @pointerup="swUp" @pointercancel="swCancel" @dragstart.prevent>
       <div class="track" :class="{ dragging: drag !== 0 }" :style="{ transform: `translateX(calc(${(-ui.page * 100) / PAGES}% + ${drag}px))` }">
-        <div class="page">
+        <div ref="counterPage" class="page counter-page">
           <div class="scene-box"><CounterScene /></div>
-          <WorkPanel />
+          <WorkPanel :class="{ tight }" />
         </div>
         <div class="page seat-page">
           <SeatingScene />
@@ -295,7 +312,9 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 .track.dragging { transition: none; }
 .page { width: 33.3334%; height: 100%; min-height: 0; display: flex; flex-direction: column; }
 .page > * { flex: none; }
-.page > .scene-box { flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; padding: 2px 0 8px; } /* cảnh khoá kích thước, nằm giữa; khay pha chế luôn ở dưới cho dễ bấm */
+.counter-page { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.counter-page::-webkit-scrollbar { display: none; }
+.page > .scene-box { flex: 1 0 auto; min-height: 0; display: flex; justify-content: center; align-items: center; padding: 2px 0 8px; } /* cảnh khoá kích thước, nằm giữa; khay pha chế luôn ở dưới cho dễ bấm */
 .seat-page { padding: 10px 3px 12px; }
 .seat-page > * { flex: 1 1 0; min-height: 0; } /* khu ngồi phủ hết chiều cao trang, chừa đều 2 bên */
 .dots { display: flex; justify-content: center; gap: 6px; padding: 5px 0 1px; }

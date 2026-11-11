@@ -401,25 +401,11 @@ const geoTick = ref(0) // đổi khi khung đổi → toạ độ các lớp ph�
 let locked: { vw: number; vh: number; bh: number; w: number; top: number; H: number } | null = null
 
 function measure(): { w: number; top: number; H: number } {
+  // khung LUÔN full chiều ngang (tối đa 488px), không bao giờ thu nhỏ theo chiều cao:
+  // thiếu chỗ thì khay pha chế tự gọn lại, vẫn không đủ thì trang quầy cuộn nhẹ (ShopView)
   const el = wrap.value!
-  const box = el.parentElement
-  const pw = box?.clientWidth || el.clientWidth
-  const cs = box ? getComputedStyle(box) : null
-  // chiều cao còn trống = cả trang trừ các phần khác (bảng pha chế…) – không đo theo chính khung cảnh
-  const page = box?.parentElement
-  let ph = Infinity
-  if (box && page && cs) {
-    let others = 0
-    for (const ch of Array.from(page.children) as HTMLElement[]) {
-      if (ch === box) continue
-      const st = getComputedStyle(ch)
-      others += ch.getBoundingClientRect().height + parseFloat(st.marginTop) + parseFloat(st.marginBottom)
-    }
-    ph = page.clientHeight - others - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - parseFloat(cs.marginTop) - parseFloat(cs.marginBottom) - 8
-  }
-  let w = Math.min(SCENE_PREF_W, pw)
-  if (ph > 60 && (w * SCENE_FULL_H) / CW > ph) w = (ph * CW) / SCENE_FULL_H // màn quá thấp: thu nhỏ cả khung (giữ tỉ lệ)
-  return { w, top: 0, H: SCENE_FULL_H }
+  const pw = el.parentElement?.clientWidth || el.clientWidth
+  return { w: Math.min(SCENE_PREF_W, pw), top: 0, H: SCENE_FULL_H }
 }
 
 function resize(force: boolean | Event = false) {

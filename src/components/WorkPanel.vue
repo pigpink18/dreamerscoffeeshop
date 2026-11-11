@@ -230,6 +230,16 @@ function pickOrder(id: number) {
   .tray { margin-top: 6px; }
   .actions { margin-top: 8px; }
 }
+/* thiếu chỗ (ShopView thêm class tight): khay gọn lại – nút thấp hơn, icon nhỏ hơn */
+.panel.tight .recipe { min-height: 40px; }
+.panel.tight .tray { gap: 3px; padding: 3px; margin-top: 4px; }
+.panel.tight .item { min-height: 32px; }
+.panel.tight .ic { width: 20px; height: 20px; }
+.panel.tight .lbl { font-size: 8px; }
+.panel.tight .actions { margin-top: 5px; gap: 4px; }
+.panel.tight .action { padding: 1px 0 3px; font-size: 10px; }
+.panel.tight .aic { width: 18px; height: 18px; }
+.panel.tight .shelf { margin-top: 4px; padding: 2px 6px; }
 @media (max-height: 600px) {
   .lbl, .action small { display: none; }
   .item { min-height: 34px; }
