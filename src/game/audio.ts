@@ -25,7 +25,7 @@ export const MUSIC_FILES: Record<TrackId, string> = {
   lyDenDa: 'bossa-ly-den-da',
   boss: 'boss-out-of-time', // nhạc kịch tính (tuỳ chọn)
   bossSoft: 'boss-hoi-hop', // nhạc boss mặc định: hồi hộp vừa phải
-  report: 'mappy', // nhạc màn tổng kết cuối ngày (file do chủ game thêm)
+  report: 'mappy', // nhạc màn tổng kết cuối ngày – file thật chọn trong Cài đặt (audio.reportTrack)
 }
 /** Thứ tự phát luân phiên */
 const ALL_TRACKS: TrackId[] = ['lastXmas', 'feliz', 'somMai', 'muaPhun', 'hemNho', 'chieuHien', 'lyDenDa']
@@ -44,20 +44,29 @@ const ALL_TRACK_LIST: { id: TrackChoice; name: string; icon: string; desc: strin
   { id: 'chieuHien', name: 'Chiều hiên', icon: '', desc: 'Thong thả buổi chiều' },
   { id: 'lyDenDa', name: 'Ly đen đá', icon: '', desc: 'Giọng thứ, hơi hoài niệm' },
 ]
+/** nhạc màn tổng kết cuối ngày (chọn trong Cài đặt) – các file trong public/assets/music */
+export const REPORT_TRACKS: { file: string; name: string }[] = [
+  { file: 'penguin-town', name: 'Penguin Town' },
+  { file: 'rabbit-town', name: 'Rabbit Town' },
+  { file: 'three-red-hearts', name: 'Three Red Hearts' },
+  { file: 'puzzle-pieces', name: 'Puzzle Pieces' },
+  { file: 'sanctuary', name: 'Sanctuary' },
+  { file: 'mappy', name: 'Mappy (cũ)' },
+]
 export const TRACK_LIST = ALL_TRACK_LIST.filter((t) => t.id === 'auto' || PLAYLIST.includes(t.id))
-export const audio = reactive({ music: true, sfx: true, volume: 0.7, unlocked: false, track: 'auto' as TrackChoice, playing: '' as TrackId | '', bossMusic: 'off' as BossMusic }) // không đổi nhạc & không kêu báo khi boss tới
+export const audio = reactive({ music: true, sfx: true, volume: 0.7, unlocked: false, track: 'auto' as TrackChoice, playing: '' as TrackId | '', bossMusic: 'off' as BossMusic, reportTrack: 'penguin-town' }) // không đổi nhạc & không kêu báo khi boss tới
 try {
   const s = JSON.parse(localStorage.getItem(KEY) || 'null')
-  if (s) { audio.music = !!s.music; audio.sfx = !!s.sfx; if (typeof s.volume === 'number') audio.volume = Math.min(1, Math.max(0, s.volume)); if (s.track === 'auto' || (s.track in MUSIC_FILES && !isBossTrack(s.track) && s.track !== 'report')) audio.track = s.track }
+  if (s) { audio.music = !!s.music; audio.sfx = !!s.sfx; if (typeof s.volume === 'number') audio.volume = Math.min(1, Math.max(0, s.volume)); if (s.track === 'auto' || (s.track in MUSIC_FILES && !isBossTrack(s.track) && s.track !== 'report')) audio.track = s.track; if (REPORT_TRACKS.some((r) => r.file === s.reportTrack)) audio.reportTrack = s.reportTrack }
 } catch { /* bỏ qua */ }
 /** Âm lượng tổng: thanh trượt 0..1 -> mức thật (mặc định 0.7 ≈ nhỏ vừa phải) */
 function masterLevel() { return 0.6 * audio.volume * audio.volume + 0.05 * audio.volume }
 watch(() => audio.volume, () => {
-  try { localStorage.setItem(KEY, JSON.stringify({ music: audio.music, sfx: audio.sfx, track: audio.track, volume: audio.volume, bossMusic: audio.bossMusic })) } catch { /* bỏ qua */ }
+  try { localStorage.setItem(KEY, JSON.stringify({ music: audio.music, sfx: audio.sfx, track: audio.track, volume: audio.volume, bossMusic: audio.bossMusic, reportTrack: audio.reportTrack })) } catch { /* bỏ qua */ }
   if (ctx) master.gain.setTargetAtTime(masterLevel(), ctx.currentTime, 0.05)
 })
-watch(() => [audio.music, audio.sfx, audio.track, audio.bossMusic], () => {
-  try { localStorage.setItem(KEY, JSON.stringify({ music: audio.music, sfx: audio.sfx, track: audio.track, volume: audio.volume, bossMusic: audio.bossMusic })) } catch { /* bỏ qua */ }
+watch(() => [audio.music, audio.sfx, audio.track, audio.bossMusic, audio.reportTrack], () => {
+  try { localStorage.setItem(KEY, JSON.stringify({ music: audio.music, sfx: audio.sfx, track: audio.track, volume: audio.volume, bossMusic: audio.bossMusic, reportTrack: audio.reportTrack })) } catch { /* bỏ qua */ }
   if (audio.music) startMusic(); else stopMusic()
 })
 
@@ -253,20 +262,22 @@ export function sfx(name: Sfx) {
 // ---------- Nhạc nền quán (file nhạc CC0, phát lặp liền mạch bằng Web Audio) ----------
 const base = import.meta.env.BASE_URL
 const canOgg = (() => { try { return new Audio().canPlayType('audio/ogg; codecs="vorbis"') !== '' } catch { return false } })()
-const buffers: Partial<Record<TrackId, AudioBuffer>> = {}
-const loading: Partial<Record<TrackId, Promise<AudioBuffer | null>>> = {}
+const buffers: Partial<Record<string, AudioBuffer>> = {}
+const loading: Partial<Record<string, Promise<AudioBuffer | null>>> = {}
 
 function loadTrack(id: TrackId): Promise<AudioBuffer | null> {
-  if (buffers[id]) return Promise.resolve(buffers[id]!)
-  if (!loading[id]) {
-    const url = `${base}assets/music/${MUSIC_FILES[id]}.${canOgg ? 'ogg' : 'm4a'}`
-    loading[id] = fetch(url)
+  const file = id === 'report' ? audio.reportTrack : MUSIC_FILES[id]
+  const key = id === 'report' ? `report:${file}` : id
+  if (buffers[key]) return Promise.resolve(buffers[key]!)
+  if (!loading[key]) {
+    const url = `${base}assets/music/${file}.${canOgg ? 'ogg' : 'm4a'}`
+    loading[key] = fetch(url)
       .then((r) => r.arrayBuffer())
       .then((ab) => ctx!.decodeAudioData(ab))
-      .then((b) => { buffers[id] = b; return b })
+      .then((b) => { buffers[key] = b; return b })
       .catch(() => null)
   }
-  return loading[id]!
+  return loading[key]!
 }
 
 // Thời gian trong ngày (0..1) — giữ lại cho các phần khác gọi tới
@@ -286,15 +297,27 @@ export function setBossMode(on: boolean) {
 }
 
 // Màn tổng kết cuối ngày: phát nhạc riêng (lặp) tới khi sang ngày mới
-let reportMode = false
-export function setReportMode(on: boolean) {
+let reportMode = false, gameReport = false, previewing = false
+function applyReport(on: boolean) {
   if (reportMode === on) return
   reportMode = on
   // đổi nhạc NGAY khi màn tổng kết hiện (không chờ chu kỳ kiểm tra 1.5 giây)
   if (timer) tickMusic()
 }
+export function setReportMode(on: boolean) { gameReport = on; applyReport(on || previewing) }
 /** Tải sẵn nhạc tổng kết từ đầu ngày để lúc hết ngày phát được ngay, khớp với màn tổng kết */
 export function preloadReport() { if (ctx) void loadTrack('report') }
+/** Cài đặt: nghe thử nhạc tổng kết vài giây rồi trở lại nhạc quán */
+let previewTimer = 0
+export function previewReport(file: string) {
+  audio.reportTrack = file
+  if (!audio.music) return
+  clearTimeout(previewTimer)
+  applyReport(false) // đổi bài đang thử → phát lại từ đầu bài mới
+  previewing = true
+  applyReport(true)
+  previewTimer = window.setTimeout(() => { previewing = false; applyReport(gameReport) }, 9000)
+}
 function bossTrack(): TrackId | null { return audio.bossMusic === 'drama' ? 'boss' : audio.bossMusic === 'soft' ? 'bossSoft' : null }
 function pickWanted(): TrackId {
   if (reportMode) return 'report'

@@ -115,6 +115,7 @@ export function buyFoodPack(id: FoodIng, packs = 1) {
 // ---------- Nấu ----------
 export function startCook(ticketId: number) {
   if (kitchen.cook) return
+  if (ui.closing) { toast('Quán đã đóng cửa – không nấu thêm món mới', 'info', 1600); return }
   const tk = kitchen.tickets.find((x) => x.id === ticketId)
   if (!tk) return
   if (!canCook(tk.food)) {
@@ -275,5 +276,6 @@ export function initKitchen() {
       }
     }
   }
+  hooks.kitchenBusy = () => !!kitchen.cook
   hooks.kitchenReset = () => { kitchen.tickets = []; kitchen.cook = null; kitchen.served = null }
 }

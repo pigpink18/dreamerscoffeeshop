@@ -16,7 +16,7 @@ import { moneyShort } from '../game/data'
 import { recipeById, REGULARS, NEEDY, BOND_LEVELS, bondLevel, STEPS, GUEST_GROUPS, type StepId } from '../game/data'
 import {
   SCENE_W, SCENE_H, LAYOUT, COUNTER_Y, images, loadImages, drawRoom, drawCounter, drawCup, drawPerson, iconUrl,
-  emptyCup, px, box, OUT, espressoKey, drawPlant, drawLights, drawBunting, drawOpenSign, drawPoster, drawCat, drawFridge, drawSack, drawGreen, drawScooter, drawBarista, drawCorgi,
+  emptyCup, px, box, OUT, CZ, espressoKey, drawPlant, drawLights, drawBunting, drawOpenSign, drawPoster, drawCat, drawFridge, drawSack, drawGreen, drawScooter, drawBarista, drawCorgi,
   type CupLook, type Mood,
 } from '../game/pixel'
 import { isXmasSeason, drawXmasTree } from '../game/xmas'
@@ -189,6 +189,8 @@ function drawPresent() {
 /** chỗ đứng (x người) cho từng bước: máy espresso · chỗ đặt ly · shaker · máy xay */
 const STAFF_AT: Partial<Record<StepId, number>> = { chiet: 16, lac: 50, xay: 98 }
 const STAFF_CUP_X = 30
+/** Cáo trên sàn (quán mở rộng): x lệch khỏi đệm, đích đi tới, hướng mặt, trạng thái */
+const cao = { x: 0, target: 0, dir: 1, mode: 'lie' as 'lie' | 'stand' | 'walk', until: 0, last: 0 }
 let staffX = 49, staffLastT = 0
 function staffAnim() {
   if (ui.phase !== 'open' || !staffAll.value || ui.brew) return null
@@ -275,9 +277,9 @@ function draw(now: number) {
   drawCeiling(c, geo.top, P0, now / 1000, isXmasSeason(), CW) // trần (khi quán mở rộng: có nhân viên, không còn khay pha)
   drawFloor(c, geo.top + SCENE_H, floorH, P0, CW) // sàn trải hết bề ngang (cả 2 tường hông)
   c.setTransform(scale, 0, 0, scale, 0, geo.top * scale)
-  drawSideWalls(c, OX, P0, ui.phase === 'open' ? ui.time / DAY_LENGTH : 0.15) // tường hông 2 bên (phối cảnh)
+  drawSideWalls(c, OX, P0, ui.phase === 'open' ? Math.min(1, ui.time / DAY_LENGTH) : 0.15) // tường hông 2 bên (phối cảnh)
   c.setTransform(scale, 0, 0, scale, OX * scale, geo.top * scale) // cảnh gốc nằm giữa
-  const dayFrac = ui.phase === 'open' ? ui.time / DAY_LENGTH : 0.15
+  const dayFrac = ui.phase === 'open' ? Math.min(1, ui.time / DAY_LENGTH) : 0.15
   const U = save.upgrades
   const P = save.meta.premise
   if (P === 2) drawRoomBig(c, dayFrac, save.weather, t)
@@ -344,7 +346,7 @@ function draw(now: number) {
   if (U.green && P === 0) drawGreen(c, 101, COUNTER_Y + 10)
   // Cáo – corgi đồng sáng lập: ngủ khi quán đóng, đứng vẫy đuôi khi có khách vui
   const corgi = () => drawCorgi(c, P === 2 ? 78 : 2, SCENE_H - 18, t, ui.phase !== 'open' ? 'lie' : actor && (actor.mood === 'happy' || actor.mood === 'love') ? 'stand' : 'sit', !!actor && actor.mood !== 'angry', xmas && !save.meta.wear.neck ? { ...save.meta.wear, neck: 'scarf' } : save.meta.wear)
-  corgi()
+  if (floorH < 60) corgi() // quán mở rộng: Cáo có đệm nằm riêng trên sàn (vẽ ở phần sàn bên dưới)
   if (staffN >= 3) { px(c, 2, COUNTER_Y - 6, 9, 5, '#fffaf2'); px(c, 3, COUNTER_Y - 5, 7, 3, '#6f4e37') }
 
   // máy espresso + ly shot
@@ -428,8 +430,37 @@ function draw(now: number) {
   if (wide) {
     const yb = SCENE_H + Math.round(floorH * 0.3), yf = SCENE_H + Math.round(floorH * 0.86), yt = SCENE_H + Math.round(floorH * 0.66)
     const shadow = (x: number, y: number, w: number) => { c.fillStyle = 'rgba(38, 28, 27, 0.18)'; c.fillRect(Math.round(x - w / 2), Math.round(y - 1), w, 3) }
-    // hàng sau (sát quầy): hộp cây bên trái, bonsai bên phải
-    shadow(-6, yb, 40); x2(-26, yb, () => { const im = images.planter; if (im) c.drawImage(im, 0, -im.height) })
+    // hàng sau (sát quầy) bên trái: đệm nằm của Cáo – Cáo nằm thở, thỉnh thoảng đứng dậy đi tới đi lui rồi về nằm
+    {
+      const bedX = -2, bedY = yb + 2
+      shadow(bedX, bedY + 2, 50)
+      x2(bedX - 24, bedY - 12, () => {
+        // đệm tròn: viền dày nâu đỏ, lòng đệm kem, xương gặm
+        box(c, 0, 4, 24, 8, '#b23a32'); px(c, 1, 5, 22, 1, '#d9574a')
+        px(c, 3, 6, 18, 4, CZ.ink); px(c, 4, 6, 16, 3, '#f2e3c4'); px(c, 4, 6, 16, 1, '#fff6e0')
+        px(c, 18, 9, 5, 2, CZ.ink); px(c, 18, 9, 4, 1, '#fbf8f2') // xương
+      })
+      const now2 = t
+      if (!cao.until) cao.until = now2 + 6
+      const happyCust = !!actor && (actor.mood === 'happy' || actor.mood === 'love')
+      if (cao.mode === 'lie' && (now2 > cao.until || happyCust)) { cao.mode = 'stand'; cao.until = now2 + 1.2; cao.target = happyCust ? 30 : Math.round(-6 + Math.random() * 60) }
+      else if (cao.mode === 'stand' && now2 > cao.until) { cao.mode = Math.abs(cao.x - cao.target) > 1 ? 'walk' : 'lie'; cao.until = now2 + 12 + Math.random() * 13 }
+      else if (cao.mode === 'walk') {
+        const d = cao.target - cao.x
+        if (Math.abs(d) <= 0.5) { cao.x = cao.target; cao.mode = 'stand'; cao.until = now2 + 1.5; if (cao.target !== 0) cao.target = 0 }
+        else { cao.dir = Math.sign(d); cao.x += cao.dir * Math.min(Math.abs(d), 22 * Math.max(0, Math.min(0.1, now2 - cao.last))) }
+      }
+      cao.last = now2
+      const lying = cao.mode === 'lie' && Math.abs(cao.x) < 1
+      const pose = lying ? 'lie' : 'stand'
+      const wearC = xmas && !save.meta.wear.neck ? { ...save.meta.wear, neck: 'scarf' } : save.meta.wear
+      const cx0 = bedX + cao.x, cy0 = bedY - 34 + (lying ? 0 : 2)
+      if (!lying) shadow(cx0, bedY + 2, 30)
+      c.save(); c.translate(Math.round(cx0), Math.round(cy0)); c.scale(2 * (cao.dir < 0 && !lying ? -1 : 1), 2)
+      drawCorgi(c, -12, 0, t, pose, cao.mode === 'walk' || happyCust, wearC)
+      c.restore()
+    }
+    // bonsai góc phải (hết mùa Noel)
     if (!xmas) { shadow(140, yb, 22); x2(140, yb, () => potted('bonsai')) } // mùa Noel: góc phải nhường cho cây thông
     // cây thông to (x2) đứng sàn bên phải
     if (xmas) { shadow(130, yt + 12, 90); x2(79, yt - 160 + 12, () => drawXmasTree(c, 0, 0, t, 'xxl')) } // cây thông to cao (x2 cỡ xxl ≈ 160 điểm ảnh)

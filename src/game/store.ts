@@ -372,6 +372,7 @@ export const ui = reactive({
   orders: [] as Order[],
   shippers: [] as Shipper[],
   staffProgress: [] as number[],
+  closing: false, // đã tới giờ đóng cửa: không nhận khách/đơn mới, làm nốt việc đang dở rồi tổng kết
   staffJob: [] as (string | null)[], // nhân viên đang làm gì (hiện trên màn hình)
   staffRecipe: [] as (RecipeId | null)[], // món nhân viên đang pha (cảnh quầy diễn từng bước theo tiến độ)
   seats: [] as Seat[], // bàn ở khu khách ngồi
@@ -405,7 +406,7 @@ export function persist() {
 // Lưu chung save + trạng thái ngày bán trong 1 khoá để luôn khớp nhau. Ghi mỗi 2 giây khi đang bán
 // và ngay khi người chơi rời app / đóng tab / tải lại trang. Mở lại sẽ vào đúng chỗ cũ (đang tạm dừng).
 const SESSION_KEY = 'coffee-tycoon-session-v1'
-const SESSION_UI = ['phase', 'tab', 'view', 'time', 'speed', 'queue', 'orders', 'shippers', 'staffProgress', 'brew', 'talk', 'stats', 'report', 'present', 'seats', 'waiters', 'combo', 'rush'] as const
+const SESSION_UI = ['phase', 'tab', 'view', 'time', 'speed', 'queue', 'orders', 'shippers', 'staffProgress', 'brew', 'talk', 'stats', 'report', 'present', 'seats', 'waiters', 'combo', 'rush', 'closing'] as const
 export function saveSession() {
   try {
     if (ui.phase !== 'open' && ui.phase !== 'report') { localStorage.removeItem(SESSION_KEY); return }
@@ -518,7 +519,7 @@ export const appRating = computed(() => {
 })
 
 export const clock = computed(() => {
-  const hours = OPEN_HOUR + (ui.time / DAY_LENGTH) * (CLOSE_HOUR - OPEN_HOUR)
+  const hours = OPEN_HOUR + Math.min(1, ui.time / DAY_LENGTH) * (CLOSE_HOUR - OPEN_HOUR)
   const h = Math.floor(hours)
   const m = Math.floor((hours - h) * 60 / 10) * 10
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
@@ -668,6 +669,7 @@ export function openShop() {
   ui.tab = 'shop'
   ui.view = 'counter'
   ui.time = 0
+  ui.closing = false
   ui.paused = false
   ui.queue = []
   ui.orders = []
@@ -779,15 +781,15 @@ function endRush() {
 
 function tick(dt: number) {
   ui.time += dt
-  setDayFrac(ui.time / DAY_LENGTH)
-  const raw = rushCurve(ui.time / DAY_LENGTH)
+  setDayFrac(Math.min(1, ui.time / DAY_LENGTH))
+  const raw = rushCurve(Math.min(1, ui.time / DAY_LENGTH))
   const curve = raw / CURVE_AVG
   const tut = tutOn.value
 
   if (tut) {
     // hướng dẫn: chỉ 1 khách, tới ngay, đứng chờ không giận
     if (!ui.queue.length && ui.time > 1.2) spawnCustomer()
-  } else {
+  } else if (!ui.closing) {
     // Khách mới đến quán
     if (Math.random() < (expectedCustomers() / DAY_LENGTH) * curve * dt) spawnCustomer()
     // Đơn mới trên app
@@ -798,7 +800,7 @@ function tick(dt: number) {
   // Khách mất kiên nhẫn
   for (let i = ui.queue.length - 1; i >= 0; i--) {
     const c = ui.queue[i]
-    if (tut) continue
+    if (tut || ui.closing) continue // đã đóng cửa: khách còn lại đứng chờ, không giận
     c.patience -= dt
     if (!c.line && c.needy === undefined && c.patience / c.maxPatience < 0.5) c.line = voice(pick(groupById(c.group)?.impatient ?? LINES.impatient), c.p)
     if (c.patience <= 0 && !isBrewing('cust', c.id)) {
@@ -845,7 +847,8 @@ function tick(dt: number) {
     const order = cust ? undefined : ords[s - custs.length]
     ui.staffJob[s] = cust ? `${recipeById[cust.recipe].name} cho ${cust.name ?? 'khách'}` : order ? `đơn app của ${order.name}` : null
     ui.staffRecipe[s] = cust?.recipe ?? order?.recipe ?? null
-    if (!cust && !order) { ui.staffProgress[s] = 0; continue }
+    // đã đóng cửa: nhân viên chỉ làm nốt ly đang pha dở, không nhận ly mới
+    if (!cust && !order || (ui.closing && !(ui.staffProgress[s] > 0))) { ui.staffProgress[s] = 0; ui.staffJob[s] = null; ui.staffRecipe[s] = null; continue }
     ui.staffProgress[s] += dt
     if (ui.staffProgress[s] >= staffServeTime.value) {
       ui.staffProgress[s] = 0
@@ -878,7 +881,20 @@ function tick(dt: number) {
   tickSeating(dt)
   hooks.kitchenTick?.(dt)
 
-  if (ui.time >= DAY_LENGTH) endDay()
+  // Hết giờ: đóng cửa (không nhận khách / đơn mới) nhưng LÀM NỐT việc đang dở – ly đang pha, ly đang trao,
+  // món bếp đang nấu, ly nhân viên đang pha – xong hết mới tổng kết. Tối đa thêm 60 giây phòng kẹt.
+  if (ui.time >= DAY_LENGTH) {
+    if (!ui.closing) {
+      ui.closing = true
+      ui.rush = null
+      if (workLeft()) toast('Tới giờ đóng cửa – làm nốt đơn đang dở rồi tổng kết nhé', 'info', 3200)
+    }
+    if (!workLeft() || ui.time >= DAY_LENGTH + 60) endDay()
+  }
+}
+/** còn việc đang làm dở không (để chờ trước khi tổng kết ngày) */
+function workLeft() {
+  return !!ui.brew || !!ui.present || pendingFinish || !!hooks.kitchenBusy?.() || ui.staffProgress.some((p) => p > 0)
 }
 
 function chooseRecipe() {
@@ -1193,6 +1209,7 @@ export function stepMs(step: StepId) {
 
 export function startBrew(target: 'cust' | 'order', id: number) {
   if (ui.brew || ui.present) return
+  if (ui.closing) { toast('Quán đã đóng cửa – không nhận thêm order', 'info', 1600); return }
   if (staffAll.value) { toast('Nhân viên đang lo quầy pha chế – bạn vào Bếp nấu món nhé', 'info', 1800); return }
   const recipe = target === 'cust' ? ui.queue.find((c) => c.id === id)?.recipe : ui.orders.find((o) => o.id === id && o.state === 'new')?.recipe
   if (!recipe) return
@@ -1439,6 +1456,7 @@ function endDay() {
   ui.waiters = []
   ui.rush = null
   ui.combo = 0
+  ui.closing = false
   hooks.kitchenReset?.()
   // Xong 1 ngày → mở khoá món mới
   const nr = unlockNextRecipe()

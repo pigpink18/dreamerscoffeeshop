@@ -39,4 +39,6 @@ export const hooks: {
   foodFor?: (name: string) => string | null // khu bếp: khách gọi kèm món bếp? (tạo phiếu đơn, trả id món)
   kitchenTick?: (dt: number) => void
   kitchenReset?: () => void
+  /** bếp còn món đang nấu dở (hết giờ thì chờ nấu xong mới tổng kết) */
+  kitchenBusy?: () => boolean
 } = {}

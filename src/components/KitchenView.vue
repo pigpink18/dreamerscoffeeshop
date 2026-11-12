@@ -242,7 +242,7 @@ function draw(t: number) {
   const act = ck?.action && KSTEPS[ck.action].kind === 'act' ? ck.action : null
   const done = new Set(ck?.done ?? [])
   const f = ck ? foodById[ck.food] : null
-  const dayFrac = ui.phase === 'open' ? ui.time / DAY_LENGTH : 0.15
+  const dayFrac = ui.phase === 'open' ? Math.min(1, ui.time / DAY_LENGTH) : 0.15
   drawKitchenBack(c, dayFrac, save.weather === 'rainy')
 
   // Yến: đi tới chỗ của bước đang làm / bước kế tiếp

@@ -3,7 +3,7 @@ import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { save, ui, clock, resetGame } from '../game/store'
 import { money, moneyShort } from '../game/data'
 import { fxPrefs } from '../game/fx'
-import { audio, unlockAudio, TRACK_LIST, type TrackChoice } from '../game/audio'
+import { audio, unlockAudio, TRACK_LIST, REPORT_TRACKS, previewReport, type TrackChoice } from '../game/audio'
 import PixelIcon from './ui/PixelIcon.vue'
 import PixelNum from './ui/PixelNum.vue'
 import logoUrl from '../assets/logo.png'
@@ -12,7 +12,7 @@ function toggle(k: 'music' | 'sfx') { unlockAudio(); audio[k] = !audio[k] }
 const menu = ref(false)
 const BUILD = __BUILD__
 function choose(id: TrackChoice) { unlockAudio(); audio.track = id; audio.music = true; menu.value = false }
-const playingName = () => (audio.playing === 'report' ? 'Mappy (tổng kết ngày)' : TRACK_LIST.find((t) => t.id === audio.playing)?.name ?? '')
+const playingName = () => (audio.playing === 'report' ? `${REPORT_TRACKS.find((r) => r.file === audio.reportTrack)?.name ?? ''} (tổng kết ngày)` : TRACK_LIST.find((t) => t.id === audio.playing)?.name ?? '')
 
 // ---- số tiền chạy dần tới giá trị mới + ô tiền nảy khi đồng xu bay tới ----
 const shownMoney = ref(save.money)
@@ -91,6 +91,9 @@ const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, 
         <div class="mm-head"><b>CÀI ĐẶT</b><button class="sw" @click="settings = false">ĐÓNG</button></div>
         <div class="srow"><span>Nhạc nền</span><button class="sw" :class="{ on: audio.music }" @click="toggle('music')">{{ audio.music ? 'BẬT' : 'TẮT' }}</button></div>
         <div class="srow"><span>Âm thanh hiệu ứng</span><button class="sw" :class="{ on: audio.sfx }" @click="toggle('sfx')">{{ audio.sfx ? 'BẬT' : 'TẮT' }}</button></div>
+        <div class="srow col"><span>Nhạc tổng kết ngày<small>chạm để nghe thử vài giây</small></span>
+          <div class="rpick"><button v-for="r in REPORT_TRACKS" :key="r.file" class="sw" :class="{ on: audio.reportTrack === r.file }" @click="unlockAudio(); previewReport(r.file)">{{ r.name }}</button></div>
+        </div>
         <div class="srow"><span>Hiệu ứng màn hình<small>tiền bay, lấp lánh, chớp sáng</small></span><button class="sw" :class="{ on: fxPrefs.on }" @click="fxPrefs.on = !fxPrefs.on">{{ fxPrefs.on ? 'BẬT' : 'TẮT' }}</button></div>
         <label class="vol">
           <PixelIcon :name="audio.volume > 0 ? 'speaker' : 'speakerOff'" :size="2" />
@@ -157,6 +160,9 @@ const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, 
 .srow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 2px; font-size: 13px; font-weight: 800; }
 .srow span { display: flex; flex-direction: column; }
 .srow small { font-size: 10px; font-weight: 600; color: var(--muted); }
+.srow.col { flex-direction: column; align-items: stretch; }
+.rpick { display: flex; flex-wrap: wrap; gap: 5px; }
+.rpick .sw { font-size: 11px; padding: 4px 7px; }
 .srow.debt b { color: #c0392b; }
 .wide { width: 100%; margin-top: 6px; }
 .label { font-size: 10px; font-weight: 900; letter-spacing: 0.16em; color: #e6c79c; }
