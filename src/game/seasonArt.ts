@@ -31,7 +31,15 @@ export function drawCenterpiece(c: Ctx, x: number, y: number, t: number, size: T
 }
 
 /** cây mai vàng trong chậu men đỏ – bloom 0..1 (nụ xanh → hoa nở), lixi = treo bao lì xì */
-export function drawMai(c: Ctx, x: number, y: number, t: number, w: number, h: number, bloom: number, lixi: boolean) {
+/** cây đào hồng (Tết miền Bắc) – cùng dáng cây mai, hoa hồng */
+export function drawDao(c: Ctx, x: number, y: number, t: number, size: TreeSize = 'lg') {
+  const [w, h] = PIECE[size]
+  const s = season()
+  drawMai(c, x, y, t, w, h, s === 'tet' ? 1 : 0.15 + 0.85 * (SEASON?.bloom ?? 1), s === 'tet', true)
+}
+
+export function drawMai(c: Ctx, x: number, y: number, t: number, w: number, h: number, bloom: number, lixi: boolean, dao = false) {
+  const PET = dao ? '#ff9ac1' : GOLD, PET2 = dao ? '#ffd0e2' : '#fff1a8', HEART = dao ? '#d84a7a' : '#f08a24'
   const cx = x + Math.floor(w / 2)
   // chậu men đỏ viền vàng
   const pw = Math.max(7, Math.round(w * 0.34)), ph = Math.max(5, Math.round(h * 0.12))
@@ -50,7 +58,7 @@ export function drawMai(c: Ctx, x: number, y: number, t: number, w: number, h: n
     px(c, cx + off - Math.floor(tw / 2), yy, tw, 1, '#5a3a24')
   }
   // cành toả ra
-  const R = rng(w * 131 + h)
+  const R = rng(w * 131 + h + (dao ? 977 : 0))
   const tips: [number, number][] = []
   const nB = Math.max(4, Math.round(w / 4))
   for (let i = 0; i < nB; i++) {
@@ -72,8 +80,8 @@ export function drawMai(c: Ctx, x: number, y: number, t: number, w: number, h: n
     if (fy > py - 2) continue
     if (R() < bloom) {
       const big = w >= 30 && R() < 0.5
-      if (big) { px(c, fx - 1, fy, 3, 1, GOLD); px(c, fx, fy - 1, 1, 3, GOLD); px(c, fx, fy, 1, 1, '#f08a24') }
-      else { px(c, fx, fy, 2, 2, GOLD); px(c, fx, fy, 1, 1, '#fff1a8') }
+      if (big) { px(c, fx - 1, fy, 3, 1, PET); px(c, fx, fy - 1, 1, 3, PET); px(c, fx, fy, 1, 1, HEART) }
+      else { px(c, fx, fy, 2, 2, PET); px(c, fx, fy, 1, 1, PET2) }
     } else px(c, fx, fy, 1, 1, '#7bb662')
   }
   // bao lì xì đỏ treo cành

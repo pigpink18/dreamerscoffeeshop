@@ -20,7 +20,7 @@ import {
   type CupLook, type Mood,
 } from '../game/pixel'
 import { season } from '../game/season'
-import { drawCenterpiece, drawSeasonCeiling, drawSeasonWallTop } from '../game/seasonArt'
+import { drawCenterpiece, drawDao, drawSeasonCeiling, drawSeasonWallTop } from '../game/seasonArt'
 import { drawCeiling, drawFloor, drawFloorProps, drawSideWalls, drawCounterWings } from '../game/depth'
 import { foodById, type FoodId } from '../game/kitchen'
 import { drawRoomMid, drawRoomBig, drawCounterMid, drawCounterBig, drawStools, drawDecorItems, drawSouvenirShelf } from '../game/rooms'
@@ -343,6 +343,7 @@ function draw(now: number) {
   c.setTransform(scale, 0, 0, scale, OX * scale, geo.top * scale)
   // đồ trên mặt quầy / thân quầy
   if (U.decor >= 1) drawPlant(c, 67, COUNTER_Y - 13)
+  const tet = season() === 'tetwait' || season() === 'tet'
   const xmas = season() !== null // đang có sự kiện mùa: góc phải nhường cho cây thông / bóng bay / cây mai
   if (U.decor >= 3 && P === 0 && !xmas) drawPlant(c, 112, COUNTER_Y + 12, true) // mùa Noel: cây thông đứng chỗ này
   if (U.decor >= 4) drawCat(c, 96, COUNTER_Y - 7, t)
@@ -483,11 +484,12 @@ function draw(now: number) {
       })
     }
     // hàng trước (gần người xem nhất): dương xỉ trái, xương rồng phải
-    shadow(-8, yf, 26); x2(-8, yf, () => potted('fern'))
+    if (tet) { shadow(2, yf, 44); x2(-17, yf - 62, () => drawDao(c, 0, 0, t, 'md')) } // Tết: cây đào hồng bên trái
+    else { shadow(-8, yf, 26); x2(-8, yf, () => potted('fern')) }
     if (!xmas) { shadow(140, yf, 26); x2(140, yf, () => potted('cactus')) } // mùa Noel: góc phải là cây thông
   }
   if (treeOnFloor && !wide) {
-    if (floorH >= 44) drawCenterpiece(c, 92, SCENE_H + Math.round(floorH * 0.6) - 57, t, 'xl')
+    if (floorH >= 30) drawCenterpiece(c, 92, SCENE_H + Math.round(floorH * 0.7) - 80, t, 'xxl')
     else drawCenterpiece(c, 101, SCENE_H + Math.min(floorH - 3, 26) - 40, t, 'lg')
   } else if (xmas && !treeOnFloor) {
     const [tx, ty] = XMAS_SPOT[P] ?? XMAS_SPOT[0]
@@ -535,7 +537,8 @@ function measure(): { w: number; top: number; H: number } {
   return { w, top, H }
 }
 
-watch([staffAll, () => ui.phase], () => nextTick(() => requestAnimationFrame(() => resize(true))))
+watch([staffAll, () => ui.phase], () => nextTick(() => requestAnimationFrame(() => { resize(true); setTimeout(() => !ui.brew && !ui.present && resize(true), 900) })))
+watch(() => ui.page, (p) => { if (p === 0) nextTick(() => requestAnimationFrame(() => !ui.brew && !ui.present && resize(true))) }) // quay lại quầy: đo lại ngay
 function resize(force: boolean | Event = false) {
   const el = wrap.value, canvas = cv.value
   if (!el || !canvas) return
@@ -544,7 +547,9 @@ function resize(force: boolean | Event = false) {
   const bh = el.parentElement?.clientHeight ?? 0
   // (không đo lại khi đang pha / đang trao ly – tránh cảnh xê dịch ngay lúc đang bấm)
   const busy = !!ui.brew || !!ui.present
-  const big = !locked || vw !== locked.vw || Math.abs(vh - locked.vh) > 120 || (!busy && Math.abs(bh - locked.bh) > 40)
+  // quán mở rộng: chiều cao màn hình đổi chút xíu cũng đo lại (iPhone lúc mới mở app báo thiếu chiều cao → sàn thấp, cây nhỏ)
+  const vhTol = staffAll.value && ui.phase === 'open' ? 8 : 120
+  const big = !locked || vw !== locked.vw || (!busy && Math.abs(vh - locked.vh) > vhTol) || (!busy && Math.abs(bh - locked.bh) > 40)
   if (force === true || big) locked = { vw, vh, bh, ...measure() }
   const { w, top, H } = locked!
   sceneW.value = w
