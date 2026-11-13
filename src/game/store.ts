@@ -9,7 +9,7 @@ import {
 } from './data'
 import { voice, voiceTopic, type Gender, type Persona } from './voice'
 import { sfx, comboSfx, setDayFrac, setReportMode, preloadReport, audio } from './audio'
-import { isXmasSeason } from './season'
+import { isXmasSeason, season, SEASON } from './season'
 import { HAT_STYLES } from './pixel'
 import type { FoodIng } from './kitchen'
 import { hooks, type MetaDayResult } from './hooks'
@@ -486,20 +486,26 @@ function finishTutorial() {
 }
 
 // ---------- SỰ KIỆN THEO MÙA (season.ts) ----------
-const XMAS_RECIPES = RECIPES.filter((r) => r.season === 'xmas').map((r) => r.id)
-/** Bật món Noel trong mùa (tặng nguyên liệu 1 lần), hết mùa gỡ khỏi menu */
+/** món theo mùa đang bật: Noel → món Noel, Tết Tây → món năm mới, chờ Tết + Tết → món Tết */
+const SEASON_KEY = { xmas: 'xmas', newyear: 'newyear', tetwait: 'tet', tet: 'tet' } as const
+const SEASON_GIFT: Record<string, IngredientId[]> = { xmas: ['cacao', 'kemTuoi', 'suaTuoi', 'syrup'], newyear: ['dao', 'syrup', 'da'], tet: ['dua', 'suaDac', 'tra', 'syrup', 'kem'] }
+/** Bật món theo mùa (tặng nguyên liệu 1 lần mỗi mùa), hết mùa gỡ khỏi menu */
 export function syncSeason() {
-  if (isXmasSeason()) {
-    for (const id of XMAS_RECIPES) {
-      if (!save.unlocked.includes(id)) save.unlocked.push(id)
-      if (!Number.isFinite(save.prices[id])) save.prices[id] = recipeById[id].fairPrice
+  const s = season()
+  const key = s ? SEASON_KEY[s] : null
+  const on = RECIPES.filter((r) => r.season && r.season === key).map((r) => r.id)
+  const off = RECIPES.filter((r) => r.season && r.season !== key).map((r) => r.id)
+  for (const id of on) {
+    if (!save.unlocked.includes(id)) save.unlocked.push(id)
+    if (!Number.isFinite(save.prices[id])) save.prices[id] = recipeById[id].fairPrice
+  }
+  if (save.unlocked.some((id) => off.includes(id))) save.unlocked = save.unlocked.filter((id) => !off.includes(id))
+  if (key && SEASON) {
+    const ev = key === 'xmas' && SEASON.year === 2027 ? 'xmas2026' : `${key}${SEASON.year}`
+    if (!save.events[ev]) {
+      save.events[ev] = true
+      for (const ing of SEASON_GIFT[key]) if (ing in save.stock) save.stock[ing] += ingredientById[ing].packSize
     }
-    if (!save.events.xmas2026) {
-      save.events.xmas2026 = true
-      for (const ing of ['cacao', 'kemTuoi', 'suaTuoi', 'syrup'] as IngredientId[]) save.stock[ing] += ingredientById[ing].packSize
-    }
-  } else if (save.unlocked.some((id) => XMAS_RECIPES.includes(id))) {
-    save.unlocked = save.unlocked.filter((id) => !XMAS_RECIPES.includes(id))
   }
 }
 syncSeason()
@@ -921,7 +927,8 @@ function spawnCustomer() {
   const push = (c: Customer) => {
     const a = hooks.pickAddon?.(); if (a) c.addon = a
     // mùa Noel: ~40% khách đội mũ Noel (copy ngoại hình, không sửa ngoại hình gốc của nhân vật)
-    if (isXmasSeason() && Math.random() < 0.4 && !HAT_STYLES.includes(c.look.style)) c.look = { ...c.look, acc: [...(c.look.acc ?? []), 'santa'] }
+    const hat = isXmasSeason() ? 'santa' : season() === 'newyear' ? 'party' : null // Noel: mũ Noel, Tết Tây: mũ tiệc
+    if (hat && Math.random() < 0.4 && !HAT_STYLES.includes(c.look.style)) c.look = { ...c.look, acc: [...(c.look.acc ?? []), hat] }
     // khu bếp: gọi kèm món ăn → phiếu đơn vào bếp
     if (c.needy === undefined) { const f = hooks.foodFor?.(c.name ?? REGULARS.find((r) => r.id === c.regular)?.name ?? L('Khách', 'Guest')); if (f) c.food = f }
     ui.queue.push(c)

@@ -3,7 +3,8 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { ui, save, bus, cleanSeat, maxTables, dirtySeats, toast, CLEAN_TAPS, DAY_LENGTH, type GameEvent } from '../game/store'
 import { moneyShort } from '../game/data'
-import { isXmasSeason, drawXmasTree } from '../game/xmas'
+import { season } from '../game/season'
+import { drawCenterpiece, drawSeasonWallTop, drawCouplet } from '../game/seasonArt'
 import { SCENE_W, SCENE_H, px, box, sky, mixWeighted, drawPerson, drawPlant, CZ, woodFrame, brassLamp } from '../game/pixel'
 import type { Look } from '../game/data'
 import PixelIcon from './ui/PixelIcon.vue'
@@ -423,8 +424,10 @@ function draw(now: number) {
   if (abandoned) drawAbandoned(c, t)
   else {
   drawPlant(c, 1, 22)
-  if (isXmasSeason()) drawXmasTree(c, SCENE_W - 21, 2, t, 'md') // mùa Noel: cây thông đứng góc phải thay chậu cây
+  if (season()) drawCenterpiece(c, SCENE_W - 21, 2, t, 'md') // sự kiện mùa: cây thông / bóng bay / cây mai đứng góc phải thay chậu cây
   else drawPlant(c, SCENE_W - 13, 22)
+  if (season()) drawSeasonWallTop(c, t, SCENE_W) // đèn lồng / kim tuyến
+  if (season() === 'tet') { drawCouplet(c, 12, 4, 18); drawCouplet(c, SCENE_W - 28, 4, 18) } // câu đối đỏ
   // thảm lớn dưới khu bàn + chậu cây 2 góc dưới (cho khung cao đỡ trống)
   {
     const first = slot(0), last = slot(Math.max(0, maxTables.value - 1))

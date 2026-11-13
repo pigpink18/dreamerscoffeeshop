@@ -42,6 +42,10 @@ export interface Chapter {
   lines: Line[]
   /** mục tiêu / gợi ý hiện ở màn chuẩn bị sau chương này */
   goal: string
+  /** chương chung kết của một phần truyện (xem xong → tính cái kết + thưởng) */
+  finale?: boolean
+  /** phần truyện (1 = mùa đầu: hợp đồng 28 ngày). Mặc định 1 */
+  arc?: number
   /** hiệu ứng lên cơ chế khi xem xong */
   after?: () => void
 }
@@ -139,19 +143,23 @@ export const CHAPTERS: Chapter[] = [
     ],
   },
   {
-    id: 'c6', at: 16, title: L('Chương 6 · Cáo đánh hơi bí mật', 'Chapter 6 · Cáo sniffs out a secret'), bg: 'night', cast: ['yen', 'cao'],
-    goal: L('Lựa chọn của bạn đang lan trên mạng. Giữ danh tiếng thật vững.', 'Your choice is spreading online. Keep your reputation rock solid.'),
+    id: 'c6', at: 16, title: L('Chương 6 · Chuyến xe lúc nửa đêm', 'Chapter 6 · The midnight delivery'), bg: 'night', cast: ['yen', 'cao'],
+    goal: L('Lựa chọn của bạn đang lan khắp phố. Giữ danh tiếng thật vững.', 'Word of your choice is spreading. Keep your reputation rock solid.'),
     lines: [
-      { who: 'none', text: L('Đêm. Cáo biến mất. {name} đi tìm, thấy bé đang bới thùng rác sau quán MÂY.', 'Night. Cáo is missing. {name} finds him digging through the bins behind MÂY.') },
-      { who: 'cao', text: L('Gâu gâu! (Cáo tha về một cái bao to: “BỘT HƯƠNG CÀ PHÊ – 3 TRONG 1 – 25KG”.)', 'Woof woof! (Cáo drags back a huge sack: “COFFEE-FLAVORED POWDER – 3-IN-1 – 25KG”.)') },
+      { who: 'none', text: L('Gần nửa đêm. {name} đang lau quầy, Cáo ngủ gật trên đệm thì một chiếc xe tải nhỏ đỗ xịch trước cửa.', 'Almost midnight. {name} is wiping the counter and Cáo is dozing on his cushion when a small truck pulls up outside.') },
+      { who: 'none', text: L('Anh tài xế mặc áo đồng phục MÂY gõ cửa: “Quán còn mở hông em? Cho anh ly phin nóng, ly thật nha.”', 'A driver in a MÂY uniform knocks: “Still open? One hot phin coffee, please. A real one.”') },
+      { who: 'yen', text: L('Anh chở hàng cho MÂY mà qua đây uống cà phê ạ?', 'You deliver for MÂY… but come here for coffee?'), mood: 'neutral' },
+      { who: 'none', text: L('Anh gãi đầu cười: “Chở cho tụi nó cả tháng mà anh chưa dám uống ly nào.”', 'He scratches his head: “I’ve hauled their stuff for a month and never dared drink a cup.”') },
+      { who: 'cao', text: L('Gâu? (Cáo tỉnh dậy, chạy ra hít hít thùng xe rồi sủa một tràng vào mấy cái bao chất đầy.)', 'Woof? (Cáo wakes up, sniffs the truck, then barks at the pile of sacks inside.)') },
+      { who: 'none', text: L('Trên bao in to đùng: “BỘT HƯƠNG CÀ PHÊ – 3 TRONG 1 – 25KG”.', 'Printed huge on every sack: “COFFEE-FLAVORED POWDER – 3-IN-1 – 25KG”.') },
       { who: 'yen', text: L('Trời đất… “Cà phê chọn bởi thuật toán” là cái này hả?', 'Oh my god… THIS is the “algorithm-selected coffee”?'), mood: 'angry' },
-      { who: 'yen', text: L('Mình làm gì với cái bao này đây Cáo?', 'So what do we do with this, Cáo?'), choices: [
+      { who: 'yen', text: L('Giờ mình tính sao đây Cáo?', 'So what do we do now, Cáo?'), choices: [
         { text: L('Chụp hình đăng lên group Đà Lạt Review.', 'Snap a pic and post it to the Da Lat Review group.'), sassy: true, set: 'exposed', support: 3, rep: 4, reply: [
           { who: 'none', text: L('Bài đăng đạt 12 nghìn lượt chia sẻ sau một đêm. Comment top: “Cloud gì mà cloud 3 trong 1”.', '12,000 shares overnight. Top comment: “So the cloud is… 3-in-1?”') },
         ] },
-        { text: L('Mang trả lại. Mình thắng bằng ly cà phê của mình thôi.', 'Give it back. We’ll win with our own coffee.'), set: 'kind', support: 5, reply: [
-          { who: 'none', text: L('{name} để cái bao trước cửa MÂY, kèm mẩu giấy: “Rơi đồ nè anh. – Dreamers”.', '{name} leaves the sack at MÂY’s door with a note: “You dropped this. – Dreamers”.') },
-          { who: 'cao', text: L('Gâu. (Cáo có vẻ không đồng ý lắm.)', 'Woof. (Cáo does not seem to agree.)') },
+        { text: L('Thôi, pha cho anh ấy một ly thật ngon. Mình thắng bằng ly cà phê của mình.', 'Let it go. Brew him a great cup. We’ll win with our own coffee.'), set: 'kind', support: 5, reply: [
+          { who: 'none', text: L('Anh tài xế nhấp một ngụm, lặng đi một lúc: “Mai anh kể sếp nghe… cà phê thật nó khác lắm.”', 'The driver takes a sip and goes quiet. “Tomorrow I’m telling the boss… real coffee is something else.”') },
+          { who: 'cao', text: L('Gâu. (Cáo có vẻ vẫn muốn cắn cái bao hơn.)', 'Woof. (Cáo clearly still wants to bite the sack.)') },
         ] },
       ] },
     ],
@@ -188,7 +196,7 @@ export const CHAPTERS: Chapter[] = [
     ],
   },
   {
-    id: 'c9', at: 27, title: L('Chung kết · Hội Barista Phố Núi', 'Finals · Hill Town Barista Fest'), bg: 'stage', cast: ['tu', 'thang'],
+    id: 'c9', at: 27, finale: true, title: L('Chung kết · Hội Barista Phố Núi', 'Finals · Hill Town Barista Fest'), bg: 'stage', cast: ['tu', 'thang'],
     goal: '',
     lines: [
       { who: 'none', text: L('Sân khấu dựng giữa chợ Đà Lạt. Ban giám khảo: bà Tư, một nghệ nhân rang xay và… Linh Livestream.', 'A stage stands in the middle of Da Lat market. The judges: Mrs. Tư, a master roaster and… Linh Livestream.') },
@@ -198,6 +206,23 @@ export const CHAPTERS: Chapter[] = [
       { who: 'tu', text: L('Bà đã quyết rồi.', 'I’ve made my decision.') },
     ],
   },
+  // ================= PHẦN 2 (viết tiếp ở đây) =================
+  // Chương mới chỉ cần thêm vào cuối mảng này, `at` > 27 (tính theo ngày từ lúc bắt đầu cốt truyện).
+  // Người chơi đã xem chung kết sẽ gặp chương mới ngay khi tới ngày; người chơi mới đi lần lượt từ chương 1.
+  // Mẫu:
+  // {
+  //   id: 'p2c1', arc: 2, at: 30, title: L('Phần 2 · Chương 1 · …', 'Part 2 · Chapter 1 · …'), bg: 'shop', cast: ['yen', 'cao'],
+  //   goal: L('Mục tiêu hiện ở màn chuẩn bị', 'Goal shown on the prep screen'),
+  //   lines: [
+  //     { who: 'none', text: L('Lời kể…', 'Narration…') },
+  //     { who: 'yen', text: L('{name} nói…', '…'), mood: 'happy' },
+  //     { who: 'yen', text: L('Câu hỏi?', 'Question?'), choices: [
+  //       { text: L('Lựa chọn A', 'Choice A'), set: 'coCoA', support: 3, reply: [{ who: 'none', text: L('…', '…') }] },
+  //       { text: L('Lựa chọn B', 'Choice B'), set: 'coCoB', rep: 2 },
+  //     ] },
+  //   ],
+  //   after: () => { /* thưởng tiền, mở khoá… khi xem xong */ },
+  // },
 ]
 
 // ---------- cái kết ----------
@@ -207,7 +232,7 @@ export function endingLines(): Line[] {
   const k = endingKind()
   const tail: Line[] = []
   if (flag('exposed')) tail.push({ who: 'linh', text: L('Cả nhà ơi, Linh xin lỗi vì quảng cáo bột 3 trong 1 nha. Linh về phe Dreamers!', 'Fam, I’m sorry for hyping 3-in-1 powder. Linh is Team Dreamers now!'), mood: 'sad' })
-  if (flag('kind')) tail.push({ who: 'thang', text: L('Cái bao bột hôm trước… cảm ơn em. Không ai từng trả đồ cho anh.', 'That sack the other night… thank you. Nobody’s ever given anything back to me.'), mood: 'sad' })
+  if (flag('kind')) tail.push({ who: 'thang', text: L('Tài xế của anh kể hết rồi… ly phin đêm đó, và chuyện em không bóc phốt. Cảm ơn em.', 'My driver told me everything… that phin coffee, and how you kept quiet. Thank you.'), mood: 'sad' })
   if (k === 'great') return [...tail,
     { who: 'tu', text: L('Con dốc này không bán. Bà cho Dreamers thuê tiếp, năm năm, giá cũ.', 'This slope is not for sale. Dreamers keeps the lease. Five years, same rent.'), mood: 'love' },
     { who: 'thang', text: L('Ok… MÂY sẽ pivot. Bọn anh chuyển sang bán khoá học “Làm giàu từ cà phê”.', 'Fine… MÂY will pivot. We’re launching a course: “Get Rich With Coffee”.'), mood: 'grumpy' },
@@ -238,8 +263,9 @@ export const pendingChapter = computed(() => {
   if (!save.introSeen || ui.phase !== 'prep' || ui.report) return null
   return CHAPTERS.find((ch) => !save.story.seen.includes(ch.id) && save.day >= chapterDay(ch)) ?? null
 })
-export const finaleDay = computed(() => chapterDay(CHAPTERS[CHAPTERS.length - 1]))
-export const storyDone = computed(() => save.story.seen.includes(CHAPTERS[CHAPTERS.length - 1].id))
+const FINALE = CHAPTERS.find((c) => c.finale)!
+export const finaleDay = computed(() => chapterDay(FINALE))
+export const storyDone = computed(() => save.story.seen.includes(FINALE.id))
 /** chương gần nhất đã xem (để hiện mục tiêu) */
 export const currentChapter = computed(() => [...CHAPTERS].reverse().find((ch) => save.story.seen.includes(ch.id)) ?? null)
 
@@ -253,7 +279,7 @@ export function applyChoice(c: Choice) {
 export function finishChapter(ch: Chapter) {
   if (!save.story.seen.includes(ch.id)) save.story.seen.push(ch.id)
   ch.after?.()
-  if (ch.id === CHAPTERS[CHAPTERS.length - 1].id) {
+  if (ch.id === FINALE.id) {
     save.story.ending = endingKind()
     const bonus = { great: 2_000_000, good: 1_000_000, retry: 300_000 }[save.story.ending]
     save.money += bonus

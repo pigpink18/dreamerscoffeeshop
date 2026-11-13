@@ -4,7 +4,7 @@ import {
   save, ui, weather, forecast, wages, expectedCustomers, expectedOrders, portionsLeft, canMake,
   openShop, togglePause, cycleSpeed, featuredGroup, DAY_LENGTH, clock,
 } from '../game/store'
-import { recipeById, money, moneyShort } from '../game/data'
+import { recipeById, money, moneyShort, type RecipeId } from '../game/data'
 import { rentToday, premise } from '../game/store'
 import { myRank, isContestDay } from '../game/meta'
 import { GOODS, goodUnlocked } from '../game/metaData'
@@ -22,12 +22,15 @@ import { currentChapter, finaleDay, storyDone, endingScore, ENDING_TITLE } from 
 import PixelIcon from './ui/PixelIcon.vue'
 import DrinkIcon from './ui/DrinkIcon.vue'
 import PersonPortrait from './ui/PersonPortrait.vue'
-import { isXmasSeason, XMAS_END } from '../game/season'
+import { isXmasSeason, daysLeft, seasonCard, season } from '../game/season'
 import { L, isEn } from '../game/i18n'
 
 // sự kiện Giáng Sinh: còn bao nhiêu ngày (đồng hồ thật)
 const xmas = isXmasSeason()
-const xmasDays = Math.max(0, Math.ceil((XMAS_END - Date.now()) / 86_400_000))
+const xmasDays = daysLeft()
+// Tết Tây / chờ Tết / Tết: thẻ sự kiện + món theo mùa
+const sCard = !xmas ? seasonCard() : null
+const sDrinks = (season() === 'newyear' ? ['sodaDao'] : ['tetDua', 'traSenTet']) as RecipeId[]
 
 // đoàn khách nổi bật hôm nay: 3 gương mặt tiêu biểu của nhóm
 const guestFaces = computed(() => Array.from({ length: 3 }, () => featuredGroup.value.look()))
@@ -122,8 +125,16 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
       <div class="tiny sk">{{ L(`SỰ KIỆN GIÁNG SINH · còn ${xmasDays} ngày`, `CHRISTMAS EVENT · ${xmasDays} days left`) }}</div>
       <div class="xm-row">
         <DrinkIcon id="latteNoel" :scale="2" /><DrinkIcon id="cacaoNoel" :scale="2" />
-        <div v-if="isEn" class="grow small">New <b>Cinnamon Noel Latte</b> &amp; <b>Christmas Hot Cocoa</b> are on the menu, and guests order more. Guests wear Santa hats, Cáo sports a red scarf. Event ends Jan 3.</div>
-        <div v-else class="grow small">Món mới <b>Latte quế Noel</b> &amp; <b>Cacao nóng Giáng Sinh</b> đã lên menu, khách gọi nhiều hơn. Khách đội mũ Noel, Cáo quàng khăn đỏ. Hết sự kiện vào ngày 3/1.</div>
+        <div v-if="isEn" class="grow small">New <b>Cinnamon Noel Latte</b> &amp; <b>Christmas Hot Cocoa</b> are on the menu, and guests order more. Guests wear Santa hats, Cáo sports a red scarf. Then New Year &amp; Lunar New Year events follow!</div>
+        <div v-else class="grow small">Món mới <b>Latte quế Noel</b> &amp; <b>Cacao nóng Giáng Sinh</b> đã lên menu, khách gọi nhiều hơn. Khách đội mũ Noel, Cáo quàng khăn đỏ. Sau Noel là Tết Tây rồi tới Tết!</div>
+      </div>
+    </div>
+
+    <div v-if="sCard" class="card season-card" :class="sCard.tone">
+      <div class="tiny sk">{{ sCard.title }}</div>
+      <div class="xm-row">
+        <DrinkIcon v-for="d in sDrinks" :key="d" :id="d" :scale="2" />
+        <div class="grow small">{{ sCard.text }}</div>
       </div>
     </div>
 
@@ -132,8 +143,9 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
     </div>
 
     <div v-if="currentChapter" class="card story-card">
-      <div class="tiny sk"><PixelIcon name="star" :size="2" /> {{ storyDone ? L('CỐT TRUYỆN ĐÃ XONG', 'STORY COMPLETE') : currentChapter.title.toUpperCase() }}</div>
-      <template v-if="!storyDone">
+      <div class="tiny sk"><PixelIcon name="star" :size="2" /> {{ currentChapter.finale ? L('CỐT TRUYỆN ĐÃ XONG', 'STORY COMPLETE') : currentChapter.title.toUpperCase() }}</div>
+      <b v-if="storyDone && !currentChapter.finale">{{ currentChapter.goal }}</b>
+      <template v-else-if="!storyDone">
         <b>{{ currentChapter.goal }}</b>
         <div class="srow">
           <span class="pxtag warn">{{ L(`Còn ${Math.max(0, finaleDay - save.day)} ngày tới chung kết`, `${Math.max(0, finaleDay - save.day)} days to the finale`) }}</span>
@@ -479,6 +491,11 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 .xmas-card { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; background: linear-gradient(#fff, #fff) padding-box, repeating-linear-gradient(45deg, #d8333a 0 8px, #fbf6ec 8px 16px, #2f6b4a 16px 24px, #fbf6ec 24px 32px) border-box; border: 4px solid transparent; }
+.season-card { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; border: 4px solid transparent; }
+.season-card.newyear { background: linear-gradient(#fff, #fff) padding-box, repeating-linear-gradient(45deg, #f2c14e 0 8px, #fbf6ec 8px 16px, #b8c2cc 16px 24px, #fbf6ec 24px 32px) border-box; }
+.season-card.tetwait, .season-card.tet { background: linear-gradient(#fff8e8, #fff8e8) padding-box, repeating-linear-gradient(45deg, #c8262c 0 8px, #f2c14e 8px 12px) border-box; }
+.season-card .sk { font-weight: 900; letter-spacing: 0.1em; color: #b8262c; }
+.season-card.newyear .sk { color: #8a5a12; }
 .xmas-card .sk { font-weight: 900; letter-spacing: 0.1em; color: #b8262c; }
 .xm-row { display: flex; align-items: center; gap: 6px; }
 .xm-row .small { line-height: 1.4; }

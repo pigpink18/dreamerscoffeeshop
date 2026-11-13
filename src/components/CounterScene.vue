@@ -19,7 +19,8 @@ import {
   emptyCup, px, box, OUT, CZ, espressoKey, drawPlant, drawLights, drawBunting, drawOpenSign, drawPoster, drawCat, drawFridge, drawSack, drawGreen, drawScooter, drawBarista, drawCorgi,
   type CupLook, type Mood,
 } from '../game/pixel'
-import { isXmasSeason, drawXmasTree } from '../game/xmas'
+import { season } from '../game/season'
+import { drawCenterpiece, drawSeasonCeiling, drawSeasonWallTop } from '../game/seasonArt'
 import { drawCeiling, drawFloor, drawFloorProps, drawSideWalls, drawCounterWings } from '../game/depth'
 import { foodById, type FoodId } from '../game/kitchen'
 import { drawRoomMid, drawRoomBig, drawCounterMid, drawCounterBig, drawStools, drawDecorItems, drawSouvenirShelf } from '../game/rooms'
@@ -275,7 +276,8 @@ function draw(now: number) {
   // không gian thêm: trần phía trên + sàn trước quầy (depth.ts), rồi dịch cảnh gốc xuống dưới trần
   const P0 = save.meta.premise
   const floorH = geo.H - geo.top - SCENE_H
-  drawCeiling(c, geo.top, P0, now / 1000, isXmasSeason(), CW) // trần (khi quán mở rộng: có nhân viên, không còn khay pha)
+  drawCeiling(c, geo.top, P0, now / 1000, season() === 'xmas', CW) // trần (khi quán mở rộng: có nhân viên, không còn khay pha)
+  if (geo.top > 0) drawSeasonCeiling(c, geo.top, now / 1000, CW) // Tết Tây: kim tuyến · Tết: đèn lồng, dây pháo
   drawFloor(c, geo.top + SCENE_H, floorH, P0, CW) // sàn trải hết bề ngang (cả 2 tường hông)
   c.setTransform(scale, 0, 0, scale, 0, geo.top * scale)
   drawSideWalls(c, OX, P0, ui.phase === 'open' ? Math.min(1, ui.time / DAY_LENGTH) : 0.15) // tường hông 2 bên (phối cảnh)
@@ -286,6 +288,7 @@ function draw(now: number) {
   if (P === 2) drawRoomBig(c, dayFrac, save.weather, t)
   else if (P === 1) drawRoomMid(c, dayFrac, save.weather, t)
   else drawRoom(c, dayFrac, save.weather, t, U.freezer ? 3 : 5)
+  if (geo.top <= 0) drawSeasonWallTop(c, t, SCENE_W) // quán chưa có trần: đèn lồng / kim tuyến ở mép trên tường
   // ---- nâng cấp hiện ra trong quán ----
   if (U.decor >= 2 && P !== 2) drawLights(c, t)
   if (U.sign >= 2 && P === 0) drawBunting(c)
@@ -340,7 +343,7 @@ function draw(now: number) {
   c.setTransform(scale, 0, 0, scale, OX * scale, geo.top * scale)
   // đồ trên mặt quầy / thân quầy
   if (U.decor >= 1) drawPlant(c, 67, COUNTER_Y - 13)
-  const xmas = isXmasSeason()
+  const xmas = season() !== null // đang có sự kiện mùa: góc phải nhường cho cây thông / bóng bay / cây mai
   if (U.decor >= 3 && P === 0 && !xmas) drawPlant(c, 112, COUNTER_Y + 12, true) // mùa Noel: cây thông đứng chỗ này
   if (U.decor >= 4) drawCat(c, 96, COUNTER_Y - 7, t)
   if (U.farmer && P !== 2) drawSack(c, 22, COUNTER_Y + 13)
@@ -464,7 +467,7 @@ function draw(now: number) {
     // bonsai góc phải (hết mùa Noel)
     if (!xmas) { shadow(140, yb, 22); x2(140, yb, () => potted('bonsai')) } // mùa Noel: góc phải nhường cho cây thông
     // cây thông to (x2) đứng sàn bên phải
-    if (xmas) { shadow(130, yt + 12, 90); x2(79, yt - 160 + 12, () => drawXmasTree(c, 0, 0, t, 'xxl')) } // cây thông to cao (x2 cỡ xxl ≈ 160 điểm ảnh)
+    if (xmas) { shadow(130, yt + 12, 90); x2(season() === 'xmas' ? 79 : 58, yt - 160 + 12, () => drawCenterpiece(c, 0, 0, t, 'xxl')) } // cây thông to cao (x2 cỡ xxl ≈ 160 điểm ảnh)
     // khách đang chờ xếp hàng trên sàn (x2: gần người xem nên to hơn khách ở quầy)
     if (ui.phase === 'open') {
       ui.queue.slice(1, 3).forEach((q, i) => {
@@ -484,11 +487,11 @@ function draw(now: number) {
     if (!xmas) { shadow(140, yf, 26); x2(140, yf, () => potted('cactus')) } // mùa Noel: góc phải là cây thông
   }
   if (treeOnFloor && !wide) {
-    if (floorH >= 44) drawXmasTree(c, 92, SCENE_H + Math.round(floorH * 0.6) - 57, t, 'xl')
-    else drawXmasTree(c, 101, SCENE_H + Math.min(floorH - 3, 26) - 40, t, 'lg')
+    if (floorH >= 44) drawCenterpiece(c, 92, SCENE_H + Math.round(floorH * 0.6) - 57, t, 'xl')
+    else drawCenterpiece(c, 101, SCENE_H + Math.min(floorH - 3, 26) - 40, t, 'lg')
   } else if (xmas && !treeOnFloor) {
     const [tx, ty] = XMAS_SPOT[P] ?? XMAS_SPOT[0]
-    drawXmasTree(c, tx, ty, t, 'lg')
+    drawCenterpiece(c, tx, ty, t, 'lg')
     if (P === 1) corgi() // cây đứng chỗ Cáo nằm → vẽ lại Cáo ngồi trước gốc cây
   }
 }

@@ -489,6 +489,7 @@ export function drawPerson(c: Ctx, L: Look, x: number, y: number, mood: Mood, bl
     px(c, x + 4, y - 1, 8, 1, '#ffe08a'); px(c, x + 5, y, 1, 1, '#d8333a'); px(c, x + 8, y, 1, 1, '#3fa9f5'); px(c, x + 10, y, 1, 1, '#d8333a')
   }
   if (acc.includes('santa') && !HAT_STYLES.includes(L.style) && !acc.includes('crown')) drawSantaHat(c, x, y) // mùa Noel
+  if (acc.includes('party') && !HAT_STYLES.includes(L.style) && !acc.includes('crown')) drawPartyHat(c, x, y) // Tết Tây
   if (acc.includes('headphones')) { // tai nghe chụp to (đeo đè lên mũ)
     const hc = L.accent ?? '#5b8bd9'
     px(c, x + 4, y - 3, 8, 2, OUT); px(c, x + 2, y - 2, 2, 2, OUT); px(c, x + 12, y - 2, 2, 2, OUT); px(c, x + 1, y, 2, 6, OUT); px(c, x + 13, y, 2, 6, OUT)
@@ -498,6 +499,17 @@ export function drawPerson(c: Ctx, L: Look, x: number, y: number, mood: Mood, bl
   }
 }
 /** Mũ Noel đội lên đầu nhân vật drawPerson (x, y = góc trên trái của nhân vật) */
+/** mũ tiệc năm mới: nón giấy sọc xanh-vàng, quả bông hồng */
+export function drawPartyHat(c: Ctx, x: number, y: number) {
+  const cx = x + 8
+  for (let r = 0; r < 8; r++) {
+    const hw = Math.floor(r / 2)
+    px(c, cx - hw - 1, y - 6 + r, hw * 2 + 3, 1, OUT)
+    px(c, cx - hw, y - 6 + r, hw * 2 + 1, 1, r % 3 === 1 ? '#f2c14e' : '#5b8bd9')
+  }
+  px(c, cx - 1, y - 8, 3, 2, '#ff9ac1')
+  px(c, cx - 5, y + 2, 11, 1, '#f2c14e')
+}
 export function drawSantaHat(c: Ctx, x: number, y: number) {
   // chóp mũ đỏ gập sang phải
   box(c, x + 2, y - 2, 12, 5, '#d8333a')

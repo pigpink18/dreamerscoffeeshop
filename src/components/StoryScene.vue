@@ -6,7 +6,7 @@ import { save } from '../game/store'
 import { unlockAudio, sfx } from '../game/audio'
 import { px, drawRoom, drawCounter, drawPerson, drawCorgi, drawLights, CZ, SCENE_W, SCENE_H, COUNTER_Y, loadImages, type Ctx } from '../game/pixel'
 import {
-  CAST, CHAPTERS, ENDING_TITLE, applyChoice, endingKind, endingLines, endingScore, finishChapter, speakerName, visibleLines,
+  CAST, ENDING_TITLE, applyChoice, endingKind, endingLines, endingScore, finishChapter, speakerName, visibleLines,
   type Chapter, type Choice, type Line, type Speaker,
 } from '../game/story'
 import TypeText from './TypeText.vue'
@@ -15,7 +15,7 @@ import PixelIcon from './ui/PixelIcon.vue'
 
 const props = defineProps<{ chapter: Chapter }>()
 const ch = props.chapter
-const isFinale = ch.id === CHAPTERS[CHAPTERS.length - 1].id
+const isFinale = !!ch.finale
 
 const queue = ref<Line[]>(visibleLines(ch.lines))
 const i = ref(0)
