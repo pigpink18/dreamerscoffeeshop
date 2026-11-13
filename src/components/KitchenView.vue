@@ -165,31 +165,40 @@ const gauge = computed(() => {
 // ---- kích thước ----
 // Cảnh bếp pixel 2D (kitchenArt.ts) trong không gian KART_W x KART_H. Mỗi điểm ảnh = kscale điểm ảnh màn hình (số nguyên → nét).
 // Màn hình dư chỗ: bếp MỞ RỘNG theo chiều dọc (thêm trần phía trên + sàn phía dưới), không phóng to – giống quầy nước.
-const kg = { top: 0, bot: 0 }
+const kg = { top: 0, bot: 0, w: 0 } // w: bề rộng khung (thu nhỏ khi màn hình thấp)
 const kH = () => KART_H + kg.top + kg.bot
+const COOK_UI_H = 132 // chiều cao dòng công thức (50+6) + khay nấu (65+8) khi đang nấu + dư
 function measure(w: number) {
   const el = root.value!, page = el.parentElement, scene = el.firstElementChild as HTMLElement | null
-  if (ui.phase !== 'open' || !page || !scene) return { top: 0, bot: 0 }
+  if (ui.phase !== 'open' || !page || !scene) return { top: 0, bot: 0, w }
   let others = parseFloat(getComputedStyle(el).paddingTop) + 7 + 6 // + bóng đổ dưới khung + chừa chút dư
   for (const ch of Array.from(el.children) as HTMLElement[]) {
     if (ch === scene) continue
     const st = getComputedStyle(ch)
-    others += ch.getBoundingClientRect().height + parseFloat(st.marginTop) + parseFloat(st.marginBottom)
+    const h = ch.getBoundingClientRect().height
+    // menu món (lúc rảnh, chỉ để xem – được phép cuộn) bị thay bằng dòng công thức + khay nấu khi nấu
+    // → chỉ chừa đủ chỗ cho khay nấu: lúc nấu mọi nút đều nằm trong màn hình, không phải kéo xuống
+    others += (ch.classList.contains('kmenu') ? COOK_UI_H : h) + parseFloat(st.marginTop) + parseFloat(st.marginBottom)
   }
-  const H = Math.floor(((page.clientHeight - others) * KART_W) / w)
-  // luôn rộng thêm tối thiểu ~30 điểm ảnh (trần + sàn) cho bếp thoáng; dư chỗ thì lấp hết (tối đa 170)
-  const extra = Math.max(30, Math.min(170, H - KART_H))
+  const avail = page.clientHeight - others // chiều cao còn lại cho khung bếp (px)
+  const baseH = (w * KART_H) / KART_W
+  // màn thấp: thu nhỏ khung (giữ tỉ lệ) để khay nấu luôn nằm trong màn hình, không phải cuộn
+  if (avail < baseH) return { top: 0, bot: 0, w: Math.max(Math.min(w, 220), Math.floor((avail * KART_W) / KART_H)) }
+  // dư chỗ: mở rộng thêm trần + sàn (tối đa 170 điểm ảnh)
+  const extra = Math.min(170, Math.floor((avail * KART_W) / w) - KART_H)
+  if (extra < 8) return { top: 0, bot: 0, w }
   const top = Math.min(44, Math.round(extra * 0.4))
-  return { top, bot: extra - top }
+  return { top, bot: extra - top, w }
 }
 function resize() {
   const el = root.value, c = cv.value
   if (!el || !c) return
-  const w = Math.min(488, el.clientWidth - 6)
-  if (w < 50) return
-  cssW.value = w
+  const full = Math.min(488, el.clientWidth - 6)
+  if (full < 50) return
   // đang nấu (khay nấu thay cho menu, cao thấp khác nhau): giữ nguyên khung, không đo lại
-  if (!kitchen.cook) Object.assign(kg, measure(w))
+  if (!kitchen.cook || !kg.w) Object.assign(kg, measure(full))
+  const w = Math.min(full, kg.w || full)
+  cssW.value = w
   const H = kH()
   const dpr = window.devicePixelRatio || 1
   scale = Math.max(1, Math.ceil((w * dpr) / KART_W))
@@ -215,7 +224,7 @@ function frame(now: number) {
 onMounted(() => {
   resize()
   requestAnimationFrame(resize)
-  ro = new ResizeObserver(resize)
+  ro = new ResizeObserver(() => requestAnimationFrame(resize)) // đổi cỡ ở khung hình sau – tránh vòng lặp ResizeObserver
   if (root.value) ro.observe(root.value)
   raf = requestAnimationFrame(frame)
 })
@@ -249,10 +258,10 @@ function stationOf(food: string, step: KStep | null): Station {
   return step === 'dia' ? 'board' : 'waffle'
 }
 const YEN_Y = 34 // đỉnh đầu (giống khách ở quầy) – toạ độ thân Yến chưa phóng to
-// Yến vẽ to hơn cảnh ~1.5 lần cho dễ thấy thao tác: phóng quanh mép quầy (YEN_AY) với hệ số sao cho
+// Yến vẽ to hơn cảnh ~1.25 lần cho dễ thấy thao tác: phóng quanh mép quầy (YEN_AY) với hệ số sao cho
 // mỗi điểm ảnh của Yến = số nguyên điểm ảnh màn hình (nét, không nhoè). Thân vẽ trước lớp quầy → vẫn đứng sau quầy.
 const YEN_AY = 62
-const yenS = () => Math.max(scale, Math.round(scale * 1.5)) / scale
+const yenS = () => Math.max(scale, Math.round(scale * 1.25)) / scale // chỉ nhỉnh hơn cảnh chút: cân với tủ lạnh, bếp
 /** chạy fn trong hệ toạ độ đã phóng của Yến (gốc = (ax, YEN_AY)) */
 function inYen(c: Ctx, ax: number, fn: () => void) {
   const S = yenS()

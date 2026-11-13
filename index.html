@@ -25,7 +25,7 @@
           el.textContent += (el.textContent ? '\n' : 'LỖI (chạm để ẩn):\n') + String(msg).slice(0, 400)
         } catch (e) {}
       }
-      window.addEventListener('error', function (e) { window.__showErr(e.message + ' @ ' + String(e.filename || '').split('/').pop() + ':' + e.lineno + ':' + e.colno) })
+      window.addEventListener('error', function (e) { if (/ResizeObserver loop/.test(e.message || '')) return; window.__showErr(e.message + ' @ ' + String(e.filename || '').split('/').pop() + ':' + e.lineno + ':' + e.colno) })
       window.addEventListener('unhandledrejection', function (e) { window.__showErr('Promise: ' + String((e.reason && e.reason.stack) || e.reason)) })
     </script>
   </head>
