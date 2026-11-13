@@ -614,7 +614,7 @@ export function unlockRecipe(id: RecipeId) {
   save.money -= r.unlockCost
   save.unlocked.push(id)
   toast(L(`Đã thêm ${r.name} vào menu!`, `Added ${r.name} to the menu!`), 'good')
-  sfx('done')
+  sfx('buy'); setTimeout(() => sfx('done'), 280)
   vibrate([10, 30, 10])
 }
 
@@ -629,7 +629,7 @@ export function buyUpgrade(id: UpgradeId) {
   if (id === 'staff' && ui.phase === 'open') ui.staffProgress.push(0)
   if (id === 'shipper' && ui.phase === 'open') addShipper(save.upgrades.shipper - 1)
   toast(L(`${u.name} → cấp ${save.upgrades[id]}`, `${u.name} → level ${save.upgrades[id]}`), 'good')
-  sfx(u.social ? 'heart' : 'done')
+  sfx('buy'); setTimeout(() => sfx(u.social ? 'heart' : 'done'), 280)
   vibrate([10, 30, 10])
 }
 
@@ -1423,7 +1423,7 @@ export function buyTables() {
   save.seating.tables = n + 2
   if (ui.phase === 'open') for (let k = 0; k < 2 * SEATS_PER_TABLE; k++) ui.seats.push(newSeat())
   toast(n === 0 ? L('Quét sạch mạng nhện, kê 2 bàn đầu tiên! Khách đã có chỗ ngồi lại', 'Cobwebs swept, first 2 tables set! Guests can sit again') : L(`Kê thêm 2 bàn → ${save.seating.tables} bàn`, `2 more tables → ${save.seating.tables} tables`), 'good')
-  sfx('done'); vibrate([10, 30, 10])
+  sfx('buy'); setTimeout(() => sfx('done'), 280); vibrate([10, 30, 10])
 }
 
 export function upgradeTables() {
@@ -1434,7 +1434,7 @@ export function upgradeTables() {
   save.money -= cost
   save.seating.level = lv + 1
   toast(L(`Đổi sang ${TABLE_LEVELS[lv + 1].name}!`, `Upgraded to ${TABLE_LEVELS[lv + 1].name}!`), 'good')
-  sfx('done'); vibrate([10, 30, 10])
+  sfx('buy'); setTimeout(() => sfx('done'), 280); vibrate([10, 30, 10])
 }
 
 export function hireWaiter() {
@@ -1446,7 +1446,7 @@ export function hireWaiter() {
   save.seating.waiter = n + 1
   if (ui.phase === 'open') ui.waiters.push({ seat: null, t: 0, x: 100 - n * 14 })
   toast(L(`Thuê phục vụ thứ ${n + 1} · lương ${moneyShort(WAITER_WAGE)}/ngày`, `Hired server #${n + 1} · wage ${moneyShort(WAITER_WAGE)}/day`), 'good')
-  sfx('done'); vibrate([10, 30, 10])
+  sfx('buy'); setTimeout(() => sfx('done'), 280); vibrate([10, 30, 10])
 }
 
 export function togglePause() { if (ui.resumed) { resumeSession(); sfx('tap'); return } ui.paused = !ui.paused; sfx('tap') }

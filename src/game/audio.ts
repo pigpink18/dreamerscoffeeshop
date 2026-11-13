@@ -153,6 +153,20 @@ function noise(t: number, dur: number, opts: { type?: BiquadFilterType; freq?: n
   s.start(t, Math.random() * 1.5); s.stop(t + dur + 0.05)
 }
 
+/** 1 đồng xu kim loại chạm nhau: các hoạ âm lệch (không hài hoà) tắt nhanh + tiếng "tách" ngắn */
+function coinClink(t: number, f: number, vol: number) {
+  tone(f, t, 0.32, { vol: vol * 0.55 })
+  tone(f * 2.76, t, 0.2, { vol: vol * 0.32 })
+  tone(f * 5.4, t, 0.1, { vol: vol * 0.16 })
+  tone(f * 1.51, t, 0.24, { vol: vol * 0.22 })
+  noise(t, 0.035, { type: 'highpass', freq: 5000, vol: vol * 0.9, attack: 0.002 })
+}
+/** vài đồng xu rơi leng keng vào khay (mua hàng / trả tiền) */
+function coinJingle(t: number) {
+  const hits = [0, 0.055, 0.1, 0.17, 0.26]
+  hits.forEach((d, i) => coinClink(t + d + Math.random() * 0.015, 2300 + Math.random() * 900, 0.2 * (1 - i * 0.13)))
+}
+
 // ---------- Hiệu ứng âm thanh ----------
 export type Sfx = 'boss' | 'bossWin' | 'bossLose' | 'tap' | 'cup' | 'ice' | 'pour' | 'drip' | 'squeeze' | 'stir' | 'plop' | 'shake' | 'blend' | 'coin' | 'wrong' | 'horn' | 'angry' | 'bell' | 'done' | 'heart' | 'dayEnd' | 'buy' | 'comboBreak' | 'rush' | 'whoosh'
 
@@ -212,7 +226,7 @@ export function sfx(name: Sfx) {
     case 'bossWin': [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, t + i * 0.09, 0.4, { vol: 0.14, type: 'square', filter: 3000 })); break
     case 'bossLose': [392, 330, 262, 196].forEach((f, i) => tone(f, t + i * 0.16, 0.35, { vol: 0.15, type: 'triangle' })); break
     case 'tap': tone(900, t, 0.05, { vol: 0.12, type: 'triangle' }); break
-    case 'buy': tone(660, t, 0.08, { vol: 0.15, type: 'triangle' }); tone(990, t + 0.06, 0.1, { vol: 0.12, type: 'triangle' }); break
+    case 'buy': coinJingle(t); break
     case 'cup': noise(t, 0.08, { freq: 500, q: 2, vol: 0.4 }); tone(220, t, 0.1, { vol: 0.2, type: 'triangle', to: 160 }); break
     case 'ice':
       for (let i = 0; i < 5; i++) {

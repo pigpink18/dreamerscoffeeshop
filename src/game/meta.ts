@@ -233,7 +233,7 @@ export function rentPremise(id: number) {
   M().premise = id
   giftStarterGoods()
   toast(L(`Chuyển về ${p.name}! Khách đông hơn, tiền thuê ${Math.round(p.rent / 1000)}k/ngày`, `Moved to ${p.name}! More guests, rent ${Math.round(p.rent / 1000)}k/day`), 'heart', 3200)
-  sfx('bossWin'); vibrate([20, 40, 20])
+  sfx('buy'); setTimeout(() => sfx('bossWin'), 300); vibrate([20, 40, 20])
   checkAch()
 }
 export function buyOutfit(id: string) {

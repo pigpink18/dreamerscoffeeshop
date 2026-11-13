@@ -98,7 +98,7 @@ export function unlockKitchen() {
   // quà khai trương bếp: mỗi nguyên liệu 1 gói
   for (const i of FOOD_INGS) addStock(i.id, i.packSize)
   toast(L('Khu bếp đã mở! Khách bắt đầu gọi kèm bánh mì chảo, mì trộn cay, waffle. Tặng mỗi nguyên liệu 1 gói.', "The kitchen is open! Guests will start ordering skillet bánh mì, spicy noodles and waffles. Here's a free pack of every ingredient."), 'heart', 4200)
-  sfx('heart'); vibrate([20, 40, 20])
+  sfx('buy'); setTimeout(() => sfx('heart'), 280); vibrate([20, 40, 20])
   persist()
 }
 
