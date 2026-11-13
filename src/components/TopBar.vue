@@ -101,6 +101,7 @@ const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, 
           <b>{{ Math.round(audio.volume * 100) }}</b>
         </label>
         <div v-if="save.debt > 0" class="srow debt"><span>Đang nợ<small>tự trả 30% lợi nhuận mỗi ngày</small></span><b>{{ moneyShort(save.debt) }}</b></div>
+        <button class="btn sm ghost wide" :disabled="ui.phase === 'open'" @click="settings = false; ui.showSetup = true">HỒ SƠ CHỦ QUÁN · NGÔN NGỮ</button>
         <button class="btn sm ghost wide" :disabled="ui.phase === 'open'" @click="replayIntro">XEM LẠI TRUYỆN MỞ ĐẦU</button>
         <button class="btn sm ghost wide" :class="{ danger: confirmReset }" :disabled="ui.phase === 'open'" @click="onReset">
           {{ confirmReset ? 'CHẠM LẦN NỮA ĐỂ XOÁ DỮ LIỆU' : 'CHƠI LẠI TỪ ĐẦU' }}

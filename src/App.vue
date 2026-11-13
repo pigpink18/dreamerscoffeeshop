@@ -12,6 +12,7 @@ import Toasts from './components/Toasts.vue'
 import BookView from './components/BookView.vue'
 import CompeteView from './components/CompeteView.vue'
 import IntroStory from './components/IntroStory.vue'
+import SetupView from './components/SetupView.vue'
 import StoryScene from './components/StoryScene.vue'
 import { pendingChapter } from './game/story'
 
@@ -40,10 +41,13 @@ const views = { shop: ShopView, stock: StockView, menu: MenuView, compete: Compe
       <DayReport v-if="ui.report" />
     </Transition>
     <Transition name="sheet">
-      <StoryScene v-if="pendingChapter && !ui.showIntro" :key="pendingChapter.id" :chapter="pendingChapter" />
+      <StoryScene v-if="pendingChapter && !ui.showIntro && save.setupDone" :key="pendingChapter.id" :chapter="pendingChapter" />
     </Transition>
     <Transition name="sheet">
-      <IntroStory v-if="!save.introSeen || ui.showIntro" />
+      <IntroStory v-if="save.setupDone && (!save.introSeen || ui.showIntro)" />
+    </Transition>
+    <Transition name="sheet">
+      <SetupView v-if="!save.setupDone || ui.showSetup" />
     </Transition>
   </div>
 </template>

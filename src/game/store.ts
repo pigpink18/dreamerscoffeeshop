@@ -1,3 +1,4 @@
+import { DEFAULT_NAME, GENDER } from './i18n'
 import { noEmoji } from './text'
 import { reactive, computed, watch } from 'vue'
 import {
@@ -47,6 +48,7 @@ export interface SaveData {
   player: string // tên chủ quán (mỗi máy/trình duyệt một bản lưu riêng)
   playerId: string // mã ngẫu nhiên của bản lưu trên máy này
   introSeen: boolean // đã xem truyện mở đầu
+  setupDone: boolean // đã chọn giới tính / tên / ngôn ngữ ở màn thiết lập
   createdAt: number
   meta: MetaSave // mặt bằng, đối thủ, nhiệm vụ, album, đồ cho Cáo…
   seating: Seating // khu khách ngồi: số bàn, loại bàn, nhân viên phục vụ
@@ -252,9 +254,10 @@ function newSave(): SaveData {
     suspended: 0,
     impact: { given: 0, donated: 0, plastic: 0, farmerKg: 0 },
     bonds: {},
-    player: 'Yến',
+    player: DEFAULT_NAME[GENDER],
     playerId: newPlayerId(),
     introSeen: false,
+    setupDone: false,
     createdAt: Date.now(),
     meta: newMeta(),
     seating: { tables: 0, level: 0, waiter: 0 }, // khu ngồi bỏ hoang, phải dọn dẹp mới có bàn
@@ -389,6 +392,7 @@ export const ui = reactive({
   rush: null as null | { done: number; lost: number }, // đang giờ cao điểm: mốc số khách lúc bắt đầu
   resumed: false, // vừa khôi phục ca bán dở từ lần mở trước
   showIntro: false, // xem lại truyện mở đầu
+  showSetup: false, // mở lại màn thiết lập (đổi tên / giới tính / ngôn ngữ)
 })
 
 let uid = 1

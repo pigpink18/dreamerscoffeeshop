@@ -8,6 +8,7 @@ import { unlockAudio, sfx } from '../game/audio'
 import { px, shade, drawPerson, drawCorgi, CZ, rivet, woodFrame, spr, loadImages, type Ctx } from '../game/pixel'
 import type { Look } from '../game/data'
 import TypeText from './TypeText.vue'
+import { ownerLook, G } from '../game/i18n'
 import PixelIcon from './ui/PixelIcon.vue'
 import logoUrl from '../assets/logo.png'
 
@@ -242,9 +243,7 @@ function chapterPlate(c: Ctx, t: number) {
 }
 
 // ---------- nhân vật ----------
-// Yến: tóc đen ngang vai
-const girl = (shirt: string): Look => ({ skin: '#f3c9a6', hair: '#1f1a1c', style: 'shoulder', shirt, acc: ['blush'] })
-const OFFICE = girl('#6c7a99'), TRAVEL = girl(CZ.r2), BARISTA = girl(CZ.t2)
+const OFFICE = ownerLook('#6c7a99'), TRAVEL = ownerLook(CZ.r2), BARISTA = ownerLook(CZ.t2)
 
 /** cô gái đứng nguyên người: thân trên (drawPerson) + quần + giày */
 function standGirl(c: Ctx, L: Look, x: number, y: number, mood: Parameters<typeof drawPerson>[4], walk = 0, blink = false) {
@@ -450,7 +449,7 @@ function sceneBus(c: Ctx, t: number, l: number, lt: number) {
     px(c, bx + 1, by + 13, 54, 5, CZ.t1); px(c, bx + 1, by + 13, 54, 1, CZ.t2)
     for (let i = 0; i < 5; i++) { px(c, bx + 4 + i * 9, by + 3, 8, 8, CZ.ink); px(c, bx + 5 + i * 9, by + 4, 6, 6, '#bfe3f5'); px(c, bx + 5 + i * 9, by + 4, 2, 2, '#ffffff') }
     // Yến tựa cửa sổ, tóc đen ngang vai
-    px(c, bx + 32, by + 5, 6, 5, '#1f1a1c'); px(c, bx + 34, by + 6, 3, 4, '#f3c9a6'); px(c, bx + 36, by + 7, 1, 1, CZ.ink); px(c, bx + 35, by + 9, 1, 1, '#ff9aa8')
+    px(c, bx + 32, by + 5, 6, G(5, 2), '#1f1a1c'); px(c, bx + 34, by + 6, 3, 4, '#f3c9a6'); px(c, bx + 36, by + 7, 1, 1, CZ.ink); if (G(true, false)) px(c, bx + 35, by + 9, 1, 1, '#ff9aa8')
     px(c, bx + 50, by + 3, 5, 10, CZ.ink); px(c, bx + 51, by + 4, 3, 8, '#bfe3f5')
     px(c, bx + 54, by + 15, 2, 2, '#fff3b0') // đèn pha
     for (const wx of [bx + 7, bx + 41]) {

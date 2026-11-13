@@ -1,6 +1,7 @@
 // Cốt truyện chính "28 ngày giữ dốc": chuỗi MÂY Coffee muốn mua cả con dốc, bà Tư chủ nhà sẽ quyết định
 // cho ai thuê tiếp vào ngày chung kết Hội Barista Phố Núi. Mỗi chương là 1 cảnh hội thoại hiện đầu ngày,
 // lựa chọn trong cảnh để lại cờ (flags) ảnh hưởng lượng khách, danh tiếng, tiền và cái kết.
+import { ownerLook, G } from './i18n'
 import { computed, watch } from 'vue'
 import { save, ui, toast, persist } from './store'
 import { hooks } from './hooks'
@@ -48,7 +49,7 @@ export interface Chapter {
 // ---------- nhân vật ----------
 const girl = (shirt: string): Look => ({ skin: '#f3c9a6', hair: '#1f1a1c', style: 'shoulder', shirt, acc: ['blush'] })
 export const CAST: Record<Exclude<Speaker, 'none' | 'cao'>, { name: string; look: Look; pitch: number }> = {
-  yen: { name: 'Yến', look: girl('#3f7a73'), pitch: 640 },
+  yen: { name: 'Yến', look: ownerLook('#3f7a73'), pitch: G(640, 470) },
   tu: { name: 'Bà Tư chủ nhà', look: { skin: '#e2b089', hair: '#d9d4cb', style: 'bun', shirt: '#7a4f8a', acc: ['glasses'] }, pitch: 420 },
   thang: { name: 'Thắng “Nhân Rộng” · CEO MÂY Coffee', look: { skin: '#f0c8a0', hair: '#2a2220', style: 'slick', shirt: '#24242b', accent: '#f4f4f0', acc: ['shades', 'chain'] }, pitch: 330 },
   me: { name: 'Mẹ', look: { skin: '#efc39c', hair: '#3a2c28', style: 'bob', shirt: '#b8484a', acc: ['glasses', 'earring'] }, pitch: 520 },
