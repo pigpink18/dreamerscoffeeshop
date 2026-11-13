@@ -62,6 +62,8 @@ const ALL_TRACK_LIST: { id: TrackChoice; name: string; icon: string; desc: strin
 ]
 /** nhạc màn tổng kết cuối ngày (chọn trong Cài đặt) – các file trong public/assets/music */
 export const REPORT_TRACKS: { file: string; name: string }[] = [
+  { file: 'report-dong-cua', name: L('Đóng cửa quán', 'Closing Time') }, // bossa chậm êm (tools/bossa.py) – mặc định
+  { file: 'report-den-vang', name: L('Đèn vàng', 'Warm Lights') },
   { file: 'penguin-town', name: 'Penguin Town' },
   { file: 'rabbit-town', name: 'Rabbit Town' },
   { file: 'three-red-hearts', name: 'Three Red Hearts' },
@@ -70,19 +72,19 @@ export const REPORT_TRACKS: { file: string; name: string }[] = [
   { file: 'mappy', name: L('Mappy (cũ)', 'Mappy (classic)') },
 ]
 export const TRACK_LIST = ALL_TRACK_LIST.filter((t) => t.id === 'auto' || PLAYLIST.includes(t.id))
-export const audio = reactive({ music: true, sfx: true, volume: 0.7, unlocked: false, track: 'auto' as TrackChoice, playing: '' as TrackId | '', bossMusic: 'off' as BossMusic, reportTrack: 'penguin-town' }) // không đổi nhạc & không kêu báo khi boss tới
+export const audio = reactive({ music: true, sfx: true, volume: 0.7, unlocked: false, track: 'auto' as TrackChoice, playing: '' as TrackId | '', bossMusic: 'off' as BossMusic, reportTrack: 'report-dong-cua' }) // không đổi nhạc & không kêu báo khi boss tới
 try {
   const s = JSON.parse(localStorage.getItem(KEY) || 'null')
-  if (s) { audio.music = !!s.music; audio.sfx = !!s.sfx; if (typeof s.volume === 'number') audio.volume = Math.min(1, Math.max(0, s.volume)); if (s.track === 'auto' || (s.track in MUSIC_FILES && !isBossTrack(s.track) && s.track !== 'report')) audio.track = s.track; if (REPORT_TRACKS.some((r) => r.file === s.reportTrack)) audio.reportTrack = s.reportTrack }
+  if (s) { audio.music = !!s.music; audio.sfx = !!s.sfx; if (typeof s.volume === 'number') audio.volume = Math.min(1, Math.max(0, s.volume)); if (s.track === 'auto' || (s.track in MUSIC_FILES && !isBossTrack(s.track) && s.track !== 'report')) audio.track = s.track; if ((s.rv ?? 0) >= 2 && REPORT_TRACKS.some((r) => r.file === s.reportTrack)) audio.reportTrack = s.reportTrack } // rv<2: nhạc tổng kết cũ (chiptune) → đổi sang bài êm mới
 } catch { /* bỏ qua */ }
 /** Âm lượng tổng: thanh trượt 0..1 -> mức thật (mặc định 0.7 ≈ nhỏ vừa phải) */
 function masterLevel() { return 0.6 * audio.volume * audio.volume + 0.05 * audio.volume }
 watch(() => audio.volume, () => {
-  try { localStorage.setItem(KEY, JSON.stringify({ music: audio.music, sfx: audio.sfx, track: audio.track, volume: audio.volume, bossMusic: audio.bossMusic, reportTrack: audio.reportTrack })) } catch { /* bỏ qua */ }
+  try { localStorage.setItem(KEY, JSON.stringify({ music: audio.music, sfx: audio.sfx, track: audio.track, volume: audio.volume, bossMusic: audio.bossMusic, reportTrack: audio.reportTrack, rv: 2 })) } catch { /* bỏ qua */ }
   if (ctx) master.gain.setTargetAtTime(masterLevel(), ctx.currentTime, 0.05)
 })
 watch(() => [audio.music, audio.sfx, audio.track, audio.bossMusic, audio.reportTrack], () => {
-  try { localStorage.setItem(KEY, JSON.stringify({ music: audio.music, sfx: audio.sfx, track: audio.track, volume: audio.volume, bossMusic: audio.bossMusic, reportTrack: audio.reportTrack })) } catch { /* bỏ qua */ }
+  try { localStorage.setItem(KEY, JSON.stringify({ music: audio.music, sfx: audio.sfx, track: audio.track, volume: audio.volume, bossMusic: audio.bossMusic, reportTrack: audio.reportTrack, rv: 2 })) } catch { /* bỏ qua */ }
   if (audio.music) startMusic(); else stopMusic()
 })
 
@@ -387,7 +389,7 @@ async function playTrack(id: TrackId) {
   src.loop = true
   const g = ctx.createGain()
   g.gain.setValueAtTime(0, now)
-  g.gain.linearRampToValueAtTime(BOSS_GAIN[id] ?? 1, now + fade)
+  g.gain.linearRampToValueAtTime(id === 'report' && audio.reportTrack.startsWith('report-') ? 1 : BOSS_GAIN[id] ?? 1, now + fade) // bài tổng kết bossa mới to ngang nhạc quán
   src.connect(g); g.connect(musicBus)
   src.start(now + (id === 'report' ? 0.01 : 0.05))
   current = { id, src, gain: g, started: now, dur: buf.duration }

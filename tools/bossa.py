@@ -352,14 +352,15 @@ def compose(track, seed):
             acc = [0.35, 0.6, 0.45, 0.85][k % 4]
             if not intro:
                 s = shaker(acc * (0.9 + 0.2 * r.random()))
-                dry.add(s, bt * beat + hum() * 0.5, pan=0.4, gain=0.05)
+                dry.add(s, bt * beat + hum() * 0.5, pan=0.4, gain=0.05 * track.get('drums', 1.0))
         if not intro:
             for k in rim_pat[bar % 2]:
                 s = rim(0.7 + 0.2 * r.random())
-                dry.add(s, (bar * 4 + k / 4) * beat, pan=-0.15, gain=0.06)
-                wet.add(s, (bar * 4 + k / 4) * beat, pan=-0.15, gain=0.04)
-            for kb in (0, 2.5, 3):
-                dry.add(kick(0.6 if kb == 0 else 0.4), (bar * 4 + kb) * beat, gain=0.22)
+                dry.add(s, (bar * 4 + k / 4) * beat, pan=-0.15, gain=0.06 * track.get('drums', 1.0))
+                wet.add(s, (bar * 4 + k / 4) * beat, pan=-0.15, gain=0.04 * track.get('drums', 1.0))
+            if not track.get('nokick'):
+                for kb in (0, 2.5, 3):
+                    dry.add(kick(0.6 if kb == 0 else 0.4), (bar * 4 + kb) * beat, gain=0.22)
 
     # --- chuông lấp lánh rải hợp âm (Tết Tây) / đàn tranh rải ngũ cung đệm (Tết) ---
     if track.get('sparkle'):
@@ -432,6 +433,13 @@ TRACKS = [
     dict(id='boss-hoi-hop', name='Hồi hộp nhẹ', bpm=138, lead='rhodes', range=(62, 76), tick=True, intro=False,
          prog=[('A:m9', 4), ('A:m9', 4), ('F:maj7', 4), ('E:7b9', 4), ('A:m9', 4), ('D:m9', 4), ('B:m7b5', 4), ('E:7b9', 4),
                ('D:m9', 4), ('G:13', 4), ('C:maj7', 4), ('F:maj7', 4), ('B:m7b5', 4), ('E:7b9', 4), ('A:m9', 2), ('F:maj7', 2), ('B:m7b5', 2), ('E:7b9', 2)]),
+    # ---- nhạc màn tổng kết cuối ngày: chậm, êm, gần như không trống – cảm giác đóng cửa quán, đếm tiền, thở ra ----
+    dict(id='report-dong-cua', name='Đóng cửa quán', bpm=88, lead='vibes', range=(62, 78), drums=0.35, nokick=True,
+         prog=[('F:maj9', 4), ('E:m7', 2), ('A:7b9', 2), ('D:m9', 4), ('G:13', 4), ('C:maj9', 4), ('A:m9', 4), ('D:m9', 4), ('G:13', 4),
+               ('Bb:maj7', 4), ('A:m7', 4), ('G:m9', 4), ('C:13', 4), ('F:maj9', 4), ('D:m9', 4), ('G:m9', 4), ('C:9', 4)]),
+    dict(id='report-den-vang', name='Đèn vàng', bpm=84, lead='rhodes', range=(60, 76), drums=0.25, nokick=True,
+         prog=[('Eb:maj9', 4), ('C:m9', 4), ('F:m9', 4), ('Bb:13', 4), ('G:m7', 4), ('C:7b9', 4), ('F:m9', 4), ('Bb:13', 4),
+               ('Ab:maj7', 4), ('Ab:m6', 4), ('G:m7', 4), ('C:7b9', 4), ('F:m9', 4), ('Bb:13', 4), ('Eb:maj9', 4), ('Bb:13', 4)]),
     # ---- Tết Tây (27/12 → 3/1): tươi sáng, nhanh hơn, chuông lấp lánh ----
     dict(id='newyear-phao-hoa', name='Pháo hoa', bpm=140, lead='vibes', range=(65, 84), sparkle='glock',
          prog=[('C:maj9', 4), ('A:m9', 4), ('D:m9', 4), ('G:13', 4), ('E:m7', 4), ('A:7b9', 4), ('D:m9', 4), ('G:13', 4),
