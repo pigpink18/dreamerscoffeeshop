@@ -177,8 +177,8 @@ function measure(w: number) {
     others += ch.getBoundingClientRect().height + parseFloat(st.marginTop) + parseFloat(st.marginBottom)
   }
   const H = Math.floor(((page.clientHeight - others) * KART_W) / w)
-  const extra = Math.min(170, H - KART_H)
-  if (extra < 8) return { top: 0, bot: 0 }
+  // luôn rộng thêm tối thiểu ~30 điểm ảnh (trần + sàn) cho bếp thoáng; dư chỗ thì lấp hết (tối đa 170)
+  const extra = Math.max(30, Math.min(170, H - KART_H))
   const top = Math.min(44, Math.round(extra * 0.4))
   return { top, bot: extra - top }
 }
