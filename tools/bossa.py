@@ -440,20 +440,6 @@ TRACKS = [
     dict(id='report-den-vang', name='Đèn vàng', bpm=84, lead='rhodes', range=(60, 76), drums=0.25, nokick=True,
          prog=[('Eb:maj9', 4), ('C:m9', 4), ('F:m9', 4), ('Bb:13', 4), ('G:m7', 4), ('C:7b9', 4), ('F:m9', 4), ('Bb:13', 4),
                ('Ab:maj7', 4), ('Ab:m6', 4), ('G:m7', 4), ('C:7b9', 4), ('F:m9', 4), ('Bb:13', 4), ('Eb:maj9', 4), ('Bb:13', 4)]),
-    # ---- Tết Tây (27/12 → 3/1): tươi sáng, nhanh hơn, chuông lấp lánh ----
-    dict(id='newyear-phao-hoa', name='Pháo hoa', bpm=140, lead='vibes', range=(65, 84), sparkle='glock',
-         prog=[('C:maj9', 4), ('A:m9', 4), ('D:m9', 4), ('G:13', 4), ('E:m7', 4), ('A:7b9', 4), ('D:m9', 4), ('G:13', 4),
-               ('F:maj7', 4), ('F:m6', 4), ('E:m7', 4), ('A:7b9', 4), ('D:m9', 4), ('G:13', 4), ('C:69', 2), ('A:7b9', 2), ('D:m9', 2), ('G:13', 2)]),
-    dict(id='newyear-dem-giao-thua', name='Đêm giao thừa', bpm=134, lead='flute', range=(64, 82), sparkle='glock',
-         prog=[('Bb:maj7', 4), ('G:m9', 4), ('C:m9', 4), ('F:13', 4), ('D:m7', 4), ('G:7b9', 4), ('C:m9', 4), ('F:13', 4),
-               ('Eb:maj7', 4), ('Eb:m6', 4), ('D:m7', 4), ('G:7b9', 4), ('C:m9', 4), ('F:13', 4), ('Bb:69', 2), ('G:7b9', 2), ('C:m9', 2), ('F:13', 2)]),
-    # ---- Tết Nguyên Đán (đếm ngược + Tết): giai điệu ngũ cung, đàn tranh + sáo ----
-    dict(id='tet-xuan-ve', name='Xuân về', bpm=118, lead='tranh', range=(62, 81), scale=[0, 2, 4, 7, 9], sparkle='tranh',
-         prog=[('C:69', 4), ('A:m7', 4), ('D:m7', 4), ('G:9', 4), ('C:69', 4), ('E:m7', 4), ('F:maj7', 4), ('G:9', 4),
-               ('A:m7', 4), ('E:m7', 4), ('F:maj7', 4), ('C:69', 4), ('D:m7', 4), ('G:9', 4), ('C:69', 2), ('A:m7', 2), ('D:m7', 2), ('G:9', 2)]),
-    dict(id='tet-mai-vang', name='Mai vàng', bpm=124, lead='flute', range=(64, 84), scale=[7, 9, 11, 2, 4], sparkle='tranh',
-         prog=[('G:69', 4), ('E:m7', 4), ('A:m7', 4), ('D:9', 4), ('G:69', 4), ('B:m7', 4), ('C:maj7', 4), ('D:9', 4),
-               ('E:m7', 4), ('B:m7', 4), ('C:maj7', 4), ('G:69', 4), ('A:m7', 4), ('D:9', 4), ('G:69', 2), ('E:m7', 2), ('A:m7', 2), ('D:9', 2)]),
 ]
 
 

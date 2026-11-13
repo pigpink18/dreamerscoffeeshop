@@ -6,7 +6,7 @@ import { L } from './i18n'
 const KEY = 'dreamers-audio'
 // Nhạc nền trong quán: 5 vòng bossa nova nhẹ nhàng sáng tác riêng cho game (tools/bossa.py), phát luân phiên.
 // Nhạc khi boss tới: mặc định "Hồi hộp nhẹ" (tools/bossa.py, giọng thứ + tích tắc) hoặc "Out of Time" — Abstraction / Tallbeard (CC0, kịch tính)
-export type TrackId = 'lastXmas' | 'feliz' | 'phaoHoa' | 'giaoThua' | 'xuanVe' | 'maiVang' | 'somMai' | 'muaPhun' | 'hemNho' | 'chieuHien' | 'lyDenDa' | 'boss' | 'bossSoft' | 'report'
+export type TrackId = 'lastXmas' | 'feliz' | 'demNguoc' | 'lanVePho' | 'xuanSumVay' | 'somMai' | 'muaPhun' | 'hemNho' | 'chieuHien' | 'lyDenDa' | 'boss' | 'bossSoft' | 'report'
 export type TrackChoice = Exclude<TrackId, 'boss' | 'bossSoft' | 'report'> | 'auto'
 export type BossMusic = 'soft' | 'drama' | 'off'
 export const BOSS_MUSIC_LIST: { id: BossMusic; name: string; desc: string }[] = [
@@ -19,10 +19,9 @@ const isBossTrack = (id: TrackId) => id === 'boss' || id === 'bossSoft'
 export const MUSIC_FILES: Record<TrackId, string> = {
   lastXmas: 'BOSSANOVAPOPLastChristmas', // file do chủ game thêm
   feliz: 'BOSSANOVAFelizNavidad', // file do chủ game thêm
-  phaoHoa: 'newyear-phao-hoa', // Tết Tây (tools/bossa.py)
-  giaoThua: 'newyear-dem-giao-thua',
-  xuanVe: 'tet-xuan-ve', // Tết Nguyên Đán: ngũ cung, đàn tranh + sáo (tools/bossa.py)
-  maiVang: 'tet-mai-vang',
+  demNguoc: 'newyear-dem-nguoc', // Tết Tây: nhạc tiệc countdown (tools/tet.py)
+  lanVePho: 'tet-lan-ve-pho', // Tết: trống lân, chiêng, não bạt + sáo trúc (tools/tet.py)
+  xuanSumVay: 'tet-xuan-sum-vay', // Tết: đàn tranh, đàn bầu, mõ, phách
   somMai: 'bossa-som-mai',
   muaPhun: 'bossa-mua-phun',
   hemNho: 'bossa-hem-nho',
@@ -37,9 +36,9 @@ const BASE_TRACKS: TrackId[] = ['somMai', 'muaPhun', 'hemNho', 'chieuHien', 'lyD
 /** nhạc theo mùa (season.ts – tính theo ngày thật): phát mở đầu danh sách, hết mùa tự rút khỏi danh sách */
 const SEASON_TRACKS: Record<string, TrackId[]> = {
   xmas: ['lastXmas', 'feliz'], // Giáng Sinh 10/11 → 26/12
-  newyear: ['phaoHoa', 'giaoThua'], // Tết Tây 27/12 → 3/1
-  tetwait: ['xuanVe', 'maiVang'], // đếm ngược Tết
-  tet: ['xuanVe', 'maiVang'], // mùng 1 → mùng 7
+  newyear: ['demNguoc'], // Tết Tây 27/12 → 3/1
+  tetwait: ['xuanSumVay', 'lanVePho'], // đếm ngược Tết: êm trước, rộn ràng sau
+  tet: ['lanVePho', 'xuanSumVay'], // mùng 1 → mùng 7: múa lân mở màn
 }
 const SEASONAL: TrackId[] = SEASON_TRACKS[season() ?? ''] ?? []
 const PLAYLIST: TrackId[] = [...SEASONAL, ...BASE_TRACKS]
@@ -50,10 +49,9 @@ const ALL_TRACK_LIST: { id: TrackChoice; name: string; icon: string; desc: strin
   { id: 'auto', name: L('Phát luân phiên', 'Shuffle all'), icon: '', desc: SEASONAL.length ? L(`${PLAYLIST.length} bài lần lượt, mở đầu bằng ${SEASONAL.length} bài ${SEASON_NAME[season()!]}`, `${PLAYLIST.length} tunes in turn, starting with ${SEASONAL.length} ${SEASON_NAME[season()!]} songs`) : L('5 bài bossa nova lần lượt', '5 bossa nova tunes in turn') },
   { id: 'lastXmas', name: 'Last Christmas (bossa)', icon: '', desc: L('Bossa pop Giáng sinh', 'Christmas bossa pop') },
   { id: 'feliz', name: 'Feliz Navidad (bossa)', icon: '', desc: L('Bossa Giáng sinh vui tươi', 'Cheerful Christmas bossa') },
-  { id: 'phaoHoa', name: L('Pháo hoa', 'Fireworks'), icon: '', desc: L('Tết Tây: vibraphone + chuông lấp lánh', 'New Year: vibraphone & sparkling bells') },
-  { id: 'giaoThua', name: L('Đêm giao thừa', "New Year's Eve"), icon: '', desc: L('Tết Tây: sáo + chuông, rộn ràng', 'New Year: flute & bells, upbeat') },
-  { id: 'xuanVe', name: L('Xuân về', 'Spring Is Here'), icon: '', desc: L('Tết: đàn tranh ngũ cung', 'Tết: pentatonic zither (đàn tranh)') },
-  { id: 'maiVang', name: L('Mai vàng', 'Golden Blossoms'), icon: '', desc: L('Tết: sáo ngũ cung + đàn tranh', 'Tết: pentatonic flute & zither') },
+  { id: 'demNguoc', name: L('Đếm ngược', 'Countdown'), icon: '', desc: L('Tết Tây: nhạc tiệc countdown, pháo hoa', 'New Year: countdown party, fireworks') },
+  { id: 'lanVePho', name: L('Lân về phố', 'Lion Dance'), icon: '', desc: L('Tết: trống lân, chiêng, sáo trúc', 'Tết: lion-dance drums, gong & bamboo flute') },
+  { id: 'xuanSumVay', name: L('Xuân sum vầy', 'Spring Reunion'), icon: '', desc: L('Tết: đàn tranh, đàn bầu, mõ & phách', 'Tết: zither, monochord & wood blocks') },
   { id: 'somMai', name: L('Sớm mai', 'Early Morning'), icon: '', desc: L('Bossa sáng sớm, sáo nhẹ', 'Morning bossa, soft flute') },
   { id: 'muaPhun', name: L('Mưa phùn', 'Drizzle'), icon: '', desc: L('Chậm, vibraphone êm', 'Slow, mellow vibraphone') },
   { id: 'hemNho', name: L('Hẻm nhỏ', 'Little Alley'), icon: '', desc: L('Rhodes ấm, hơi jazz', 'Warm Rhodes, a little jazzy') },
