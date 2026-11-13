@@ -521,7 +521,8 @@ function measure(): { w: number; top: number; H: number } {
   const w = Math.min(SCENE_PREF_W, pw)
   const base = { w, top: 0, H: SCENE_FULL_H }
   const page = box?.parentElement
-  if (!staffAll.value || ui.phase !== 'open' || !box || !page) return base
+  // đang bán (có hay không có nhân viên): dùng hết chỗ trống phía trên khay để mở rộng quán (thêm trần + sàn), không để trống trải
+  if (ui.phase !== 'open' || !box || !page) return base
   let others = 0
   for (const ch of Array.from(page.children) as HTMLElement[]) {
     if (ch === box) continue
@@ -529,7 +530,7 @@ function measure(): { w: number; top: number; H: number } {
     others += ch.getBoundingClientRect().height + parseFloat(st.marginTop) + parseFloat(st.marginBottom)
   }
   const cs = getComputedStyle(box)
-  const ph = page.clientHeight - others - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - parseFloat(cs.marginTop) - parseFloat(cs.marginBottom) - 6
+  const ph = page.clientHeight - others - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - parseFloat(cs.marginTop) - parseFloat(cs.marginBottom) - (staffAll.value ? 6 : 14) // tự pha: chừa chút dư cho dòng công thức / hướng dẫn đổi cao thấp
   const H = Math.min(SCENE_H + 170, Math.floor((ph * CW) / w)) // lấp đầy chỗ trống (tối đa thêm 170 điểm ảnh)
   const extra = H - SCENE_H
   if (extra <= FLOOR_H + 6) return base
@@ -548,7 +549,7 @@ function resize(force: boolean | Event = false) {
   // (không đo lại khi đang pha / đang trao ly – tránh cảnh xê dịch ngay lúc đang bấm)
   const busy = !!ui.brew || !!ui.present
   // quán mở rộng: chiều cao màn hình đổi chút xíu cũng đo lại (iPhone lúc mới mở app báo thiếu chiều cao → sàn thấp, cây nhỏ)
-  const vhTol = staffAll.value && ui.phase === 'open' ? 8 : 120
+  const vhTol = ui.phase === 'open' ? 8 : 120
   const big = !locked || vw !== locked.vw || (!busy && Math.abs(vh - locked.vh) > vhTol) || (!busy && Math.abs(bh - locked.bh) > 40)
   if (force === true || big) locked = { vw, vh, bh, ...measure() }
   const { w, top, H } = locked!
