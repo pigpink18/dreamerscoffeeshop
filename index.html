@@ -11,6 +11,23 @@
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <title>Dreamers Coffee</title>
+      <script>
+      // Lỗi JS hiện thẳng lên màn hình (chụp gửi lại khi chơi trên iPhone)
+      window.__showErr = function (msg) {
+        try {
+          var el = document.getElementById('err-box')
+          if (!el) {
+            el = document.createElement('div'); el.id = 'err-box'
+            el.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;background:#fff4dc;color:#a3302a;font:600 12px/1.4 monospace;padding:10px;box-shadow:0 0 0 3px #261c1b;white-space:pre-wrap;max-height:40vh;overflow:auto'
+            el.onclick = function () { el.remove() }
+            document.body.appendChild(el)
+          }
+          el.textContent += (el.textContent ? '\n' : 'LỖI (chạm để ẩn):\n') + String(msg).slice(0, 400)
+        } catch (e) {}
+      }
+      window.addEventListener('error', function (e) { window.__showErr(e.message + ' @ ' + String(e.filename || '').split('/').pop() + ':' + e.lineno + ':' + e.colno) })
+      window.addEventListener('unhandledrejection', function (e) { window.__showErr('Promise: ' + String((e.reason && e.reason.stack) || e.reason)) })
+    </script>
   </head>
   <body>
     <div id="app"></div>

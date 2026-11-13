@@ -1,4 +1,7 @@
 import { createApp } from 'vue'
+
+// Lỗi JS hiện thẳng lên màn hình (hàm __showErr khai báo sẵn trong index.html, bắt cả lỗi lúc nạp module)
+const showError = (msg: string) => (window as any).__showErr?.(msg)
 import './style.css'
 import App from './App.vue'
 import { unlockAudio } from './game/audio'
@@ -9,7 +12,9 @@ import { initKitchen } from './game/kitchen'
 initMeta()
 initStory() // sau initMeta: bọc thêm vào các hook của meta
 initKitchen()
-createApp(App).mount('#app')
+const app = createApp(App)
+app.config.errorHandler = (err, _vm, info) => { console.error(err); showError(`${info}: ${(err as Error)?.stack || err}`) }
+app.mount('#app')
 // chạy local: ?dev=bep vào thẳng bếp (src/game/devtools.ts) – bản build bỏ hẳn đoạn này
 if (import.meta.env.DEV) import('./game/devtools').then((m) => m.devBoot())
 

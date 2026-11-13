@@ -703,7 +703,7 @@ let lastSession = 0
 function loop(now: number) {
   const dt = Math.min(0.1, (now - last) / 1000)
   last = now
-  if (!ui.paused) tick(dt * ui.speed)
+  if (!ui.paused && save.setupDone && !ui.showSetup) tick(dt * ui.speed) // đang ở màn thiết lập: quán đứng yên
   if (ui.phase === 'open' && now - lastSession > 2000) { lastSession = now; saveSession() }
   if (ui.phase === 'open') raf = requestAnimationFrame(loop)
 }

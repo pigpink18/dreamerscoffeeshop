@@ -33,13 +33,17 @@ function dice() {
 function pickLang(l: Lang) { lang.value = l; sfx('tap') }
 
 const clean = computed(() => name.value.replace(/\s+/g, ' ').trim().slice(0, 14))
+let done = false
 function confirm() {
-  unlockAudio()
+  if (done) return
+  done = true
+  ;(document.activeElement as HTMLElement | null)?.blur?.() // đóng bàn phím iPhone
+  try { unlockAudio() } catch { /* bỏ qua */ }
   save.player = clean.value || DEFAULT_NAME[gender.value]
   save.setupDone = true
   ui.showSetup = false
   persist()
-  sfx('done')
+  try { sfx('done') } catch { /* bỏ qua */ }
   if (saveProfile(lang.value, gender.value)) setTimeout(() => location.reload(), 250)
 }
 function close() { ui.showSetup = false; sfx('tap') }
@@ -85,7 +89,7 @@ onBeforeUnmount(() => cancelAnimationFrame(raf))
           <b class="tname">DREAMERS COFFEE</b>
           <small>{{ again ? T('Hồ sơ chủ quán', 'Owner profile') : T('Trước khi mở quán…', 'Before we open…') }}</small>
         </div>
-        <button v-if="again" class="x" @click="close">{{ T('ĐÓNG', 'CLOSE') }}</button>
+        <button v-if="again" class="x" @pointerdown="close">{{ T('ĐÓNG', 'CLOSE') }}</button>
       </div>
 
       <div class="board">
@@ -122,7 +126,7 @@ onBeforeUnmount(() => cancelAnimationFrame(raf))
         <p class="sign">{{ T('Biển quán', 'Sign') }}: <b>{{ clean || DEFAULT_NAME[gender] }} &amp; {{ T('Cáo', 'Cáo the corgi') }}</b></p>
       </div>
 
-      <button class="btn big good go" @click="confirm">
+      <button class="btn big good go" @pointerdown="confirm" @click="confirm">
         {{ again ? T('LƯU', 'SAVE') : T('MỞ QUÁN ▶', "LET'S OPEN ▶") }}
       </button>
       <p v-if="again && (lang !== LANG || gender !== GENDER)" class="note">{{ T('Game sẽ tải lại để đổi ngôn ngữ / nhân vật.', 'The game will reload to apply language / character.') }}</p>
