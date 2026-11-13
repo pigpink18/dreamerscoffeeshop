@@ -143,7 +143,7 @@ function pickOrder(id: number) {
       <button v-for="a in ACTIONS" :key="a.id" class="action" :class="{ trash: a.id === 'trash', guide: guideId === a.id }" @pointerdown.prevent="act(a.id)">
         <img :src="a.img" class="pix aic" alt="" />
         <span>{{ a.label }}</span>
-        <small v-if="a.id === 'chiet'">{{ L(`còn ${save.stock.cafe}`, `${save.stock.cafe} left`) }}</small>
+        <small v-if="a.id === 'chiet'" :title="L('Cà phê còn trong kho', 'Coffee left in stock')">{{ save.stock.cafe }}</small>
       </button>
     </div>
   </div>
@@ -211,14 +211,14 @@ function pickOrder(id: number) {
 
 .actions { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 10px 3px 0; }
 .action {
-  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 52px;
   background: #f2c14e; padding: 3px 0 5px;
   font-size: 11px; font-weight: 900; box-shadow: var(--px-border-2), inset 0 -4px 0 #d99a2b, inset 0 2px 0 #fff1a8, 0 4px 0 rgba(59, 42, 32, 0.5);
 }
 .action:active { transform: translateY(3px); box-shadow: var(--px-border-2); }
 .action.trash { background: #f1e2cf; box-shadow: var(--px-border-2), inset 0 -4px 0 #d8bf9f, 0 4px 0 rgba(59, 42, 32, 0.5); }
 .aic { height: 28px; width: 28px; object-fit: contain; }
-.action small { font-size: 9px; font-weight: 800; color: #6f4e37; }
+.action small { position: absolute; top: 2px; right: 4px; font-size: 9px; font-weight: 900; color: #6f4e37; } /* số cà phê còn: góc trên như khay nguyên liệu → các nút đều nhau */
 /* màn hình thấp (iPhone nhỏ / đang mở trong trình duyệt): khay gọn hơn để cảnh quán to hơn */
 @media (max-height: 720px) {
   .item { min-height: 46px; }
@@ -236,11 +236,11 @@ function pickOrder(id: number) {
 .panel.tight .ic { width: 24px; height: 24px; }
 .panel.tight .lbl { font-size: 9px; }
 .panel.tight .actions { margin-top: 5px; gap: 4px; }
-.panel.tight .action { padding: 1px 0 3px; font-size: 10px; }
+.panel.tight .action { padding: 1px 0 3px; font-size: 10px; min-height: 42px; }
 .panel.tight .aic { width: 22px; height: 22px; }
 .panel.tight .shelf { margin-top: 4px; padding: 2px 6px; }
 @media (max-height: 600px) {
-  .lbl, .action small { display: none; }
+  .lbl { display: none; }
   .item { min-height: 40px; }
 }
 /* màn thấp (iPhone SE, mini…): khay gọn lại để khung cảnh quán đủ chỗ, vẫn rộng bằng khay */

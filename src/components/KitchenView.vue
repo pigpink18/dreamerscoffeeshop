@@ -176,14 +176,21 @@ function measure(w: number) {
     if (ch === scene) continue
     const st = getComputedStyle(ch)
     const h = ch.getBoundingClientRect().height
-    // menu món (lúc rảnh, chỉ để xem – được phép cuộn) bị thay bằng dòng công thức + khay nấu khi nấu
-    // → chỉ chừa đủ chỗ cho khay nấu: lúc nấu mọi nút đều nằm trong màn hình, không phải kéo xuống
-    others += (ch.classList.contains('kmenu') ? COOK_UI_H : h) + parseFloat(st.marginTop) + parseFloat(st.marginBottom)
+    // menu món (bấm để nấu) lúc rảnh ↔ dòng công thức + khay nấu lúc nấu: chừa chỗ cho cái cao hơn
+    // → cả lúc rảnh lẫn lúc nấu đều không phải kéo xuống; thiếu chỗ thì khung bếp phía trên tự thấp lại
+    others += (ch.classList.contains('kmenu') ? Math.max(h, COOK_UI_H) : h) + parseFloat(st.marginTop) + parseFloat(st.marginBottom)
   }
   const avail = page.clientHeight - others // chiều cao còn lại cho khung bếp (px)
   const baseH = (w * KART_H) / KART_W
   // màn thấp: thu nhỏ khung (giữ tỉ lệ) để khay nấu luôn nằm trong màn hình, không phải cuộn
-  if (avail < baseH) return { top: 0, bot: 0, w: Math.max(Math.min(w, 220), Math.floor((avail * KART_W) / KART_H)) }
+  if (avail < baseH) {
+    // thiếu chỗ: giữ khung rộng hết màn hình, cắt bớt mép tường trên (tối đa 22) + dải sàn (tối đa 9) trước
+    const need = KART_H - Math.floor((avail * KART_W) / w) // số điểm ảnh cảnh phải bớt
+    if (need <= 31) { const top = -Math.min(22, Math.ceil(need * 0.7)); return { top, bot: -(need + top > 0 ? need + top : 0), w } }
+    // vẫn thiếu: cắt tối đa rồi thu nhỏ khung theo chiều cao còn lại
+    const H = KART_H - 31
+    return { top: -22, bot: -9, w: Math.max(Math.min(w, 170), Math.floor((avail * KART_W) / H)) }
+  }
   // dư chỗ: mở rộng thêm trần + sàn (tối đa 170 điểm ảnh)
   const extra = Math.min(170, Math.floor((avail * KART_W) / w) - KART_H)
   if (extra < 8) return { top: 0, bot: 0, w }

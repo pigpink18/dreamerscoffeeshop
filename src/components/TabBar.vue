@@ -44,16 +44,16 @@ function go(t: Tab) {
   z-index: 2;
 }
 .tab {
-  flex: 1; position: relative;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  flex: 1 1 0; min-width: 0; position: relative; /* 6 ô rộng bằng nhau dù chữ dài ngắn khác nhau */
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   padding: 6px 0 7px;
   color: #e6c79c;
   background: #5a3a28;
   box-shadow: var(--px-border-2), inset 0 -3px 0 #4a2e1f;
   transition: transform 0.1s;
 }
-.tab .icon { height: 27px; display: flex; align-items: center; filter: saturate(0.35) brightness(0.85); transition: transform 0.15s, filter 0.15s; }
-.tab .lbl { font-size: 9px; font-weight: 900; letter-spacing: 0.02em; text-transform: uppercase; white-space: nowrap; }
+.tab .icon { height: 27px; display: flex; align-items: center; justify-content: center; filter: saturate(0.35) brightness(0.85); transition: transform 0.15s, filter 0.15s; }
+.tab .lbl { max-width: 100%; padding: 0 2px; font-size: 9px; font-weight: 900; letter-spacing: 0.02em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
 .tab.active {
   color: var(--ink); background: #f2c14e; transform: translateY(-4px);
   box-shadow: var(--px-border-2), inset 0 -4px 0 #d99a2b, inset 0 2px 0 #fff1a8, 0 4px 0 #3b2a20;
