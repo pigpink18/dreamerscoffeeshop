@@ -8,6 +8,7 @@ import { SECRET_RECIPES, knownIngredients, tryRecipe } from '../../game/meta'
 import { SECRET_HINTS } from '../../game/metaData'
 import DrinkIcon from '../ui/DrinkIcon.vue'
 import PixelIcon from '../ui/PixelIcon.vue'
+import { L } from '../../game/i18n'
 
 const BASE: StepId[] = ['ly', 'da', 'suaDac', 'suaTuoi', 'matcha', 'tra', 'dao', 'syrup', 'kem', 'kemTuoi']
 const ACTS: StepId[] = ['chiet', 'lac', 'xay', 'khuay']
@@ -21,15 +22,15 @@ function retry() { seq.value = [...last.value]; msg.value = null }
 function add(s: StepId) { if (seq.value.length < 7) seq.value.push(s); msg.value = null }
 function pop() { seq.value.pop(); msg.value = null }
 function test() {
-  if (seq.value.length < 3) { msg.value = { t: 'Cho ít nhất 3 bước rồi pha thử nha', k: 'warn' }; return }
+  if (seq.value.length < 3) { msg.value = { t: L('Cho ít nhất 3 bước rồi pha thử nha', 'Add at least 3 steps, then give it a try'), k: 'warn' }; return }
   const r = tryRecipe(seq.value)
   last.value = [...seq.value]
   seq.value = []
-  if (r.kind === 'found') msg.value = { t: `Tìm ra công thức bí mật: ${recipeById[r.recipe].name}! Đã thêm vào menu + tặng nguyên liệu`, k: 'good' }
-  else if (r.kind === 'known') msg.value = { t: `Đây là ${recipeById[r.recipe!].name} – món đã có rồi`, k: '' }
-  else if (r.kind === 'order') msg.value = { t: 'Đúng nguyên liệu rồi! Nhưng thứ tự chưa chuẩn…', k: 'warn' }
-  else if (r.kind === 'close') msg.value = { t: 'Hơi giống một công thức bí mật… thử đổi vài bước xem', k: 'warn' }
-  else msg.value = { t: 'Uống thử… vị lạ quá… Không phải công thức nào cả', k: 'bad' }
+  if (r.kind === 'found') msg.value = { t: L(`Tìm ra công thức bí mật: ${recipeById[r.recipe].name}! Đã thêm vào menu + tặng nguyên liệu`, `Secret recipe found: ${recipeById[r.recipe].name}! Added to the menu + free ingredients`), k: 'good' }
+  else if (r.kind === 'known') msg.value = { t: L(`Đây là ${recipeById[r.recipe!].name} – món đã có rồi`, `That's ${recipeById[r.recipe!].name} – already on the menu`), k: '' }
+  else if (r.kind === 'order') msg.value = { t: L('Đúng nguyên liệu rồi! Nhưng thứ tự chưa chuẩn…', 'Right ingredients! But the order is off…'), k: 'warn' }
+  else if (r.kind === 'close') msg.value = { t: L('Hơi giống một công thức bí mật… thử đổi vài bước xem', 'Close to a secret recipe… try swapping a few steps'), k: 'warn' }
+  else msg.value = { t: L('Uống thử… vị lạ quá… Không phải công thức nào cả', "*sip*… that's weird… Not a recipe at all"), k: 'bad' }
 }
 const found = (id: string) => save.meta.secrets.includes(id as never)
 const hinted = (id: string) => save.meta.hints.includes(id as never)
@@ -38,35 +39,35 @@ const ingOf = (id: string) => [...new Set(recipeById[id as keyof typeof recipeBy
 
 <template>
   <div>
-    <div class="section-title">Phòng thử món</div>
+    <div class="section-title">{{ L('Phòng thử món', 'Test kitchen') }}</div>
     <div class="card lab">
       <div class="seq">
         <span v-for="(s, i) in seq" :key="i" class="chip"><i>{{ i + 1 }}</i><img :src="img(s)" alt="" /></span>
-        <span v-if="!seq.length" class="muted small">Chạm nguyên liệu / thao tác theo thứ tự bạn đoán…</span>
+        <span v-if="!seq.length" class="muted small">{{ L('Chạm nguyên liệu / thao tác theo thứ tự bạn đoán…', 'Tap ingredients / actions in the order you think…') }}</span>
       </div>
       <div class="pal">
         <button v-for="s in palette" :key="s" class="pi" :class="{ act: STEPS[s].kind === 'act' }" @click="add(s)"><img :src="img(s)" alt="" /><small>{{ STEPS[s].label }}</small></button>
       </div>
       <div class="btns">
-        <button class="btn sm ghost" :disabled="!seq.length" @click="pop">Bỏ bước</button>
-        <button class="btn sm accent" @click="test">PHA THỬ</button>
+        <button class="btn sm ghost" :disabled="!seq.length" @click="pop">{{ L('Bỏ bước', 'Undo step') }}</button>
+        <button class="btn sm accent" @click="test">{{ L('PHA THỬ', 'BREW IT') }}</button>
       </div>
-      <div v-if="msg" class="msg" :class="msg.k">{{ msg.t }} <button v-if="msg.k !== 'good' && last.length" class="btn sm ghost" @click="retry">Sửa lại lần vừa thử</button></div>
-      <p class="muted tiny">Pha thử miễn phí, không tốn nguyên liệu. Mọi món đều bắt đầu bằng Ly.</p>
+      <div v-if="msg" class="msg" :class="msg.k">{{ msg.t }} <button v-if="msg.k !== 'good' && last.length" class="btn sm ghost" @click="retry">{{ L('Sửa lại lần vừa thử', 'Edit last try') }}</button></div>
+      <p class="muted tiny">{{ L('Pha thử miễn phí, không tốn nguyên liệu. Mọi món đều bắt đầu bằng Ly.', 'Test brews are free and use no ingredients. Every drink starts with a Cup.') }}</p>
     </div>
-    <div class="section-title">Công thức bí mật · {{ save.meta.secrets.length }}/{{ SECRET_RECIPES.length }}</div>
+    <div class="section-title">{{ L('Công thức bí mật', 'Secret recipes') }} · {{ save.meta.secrets.length }}/{{ SECRET_RECIPES.length }}</div>
     <div class="secrets">
       <div v-for="r in SECRET_RECIPES" :key="r.id" class="card sc" :class="{ found: found(r.id) }">
         <DrinkIcon v-if="found(r.id)" :id="r.id" :scale="2" />
         <span v-else class="q"><PixelIcon name="question" :size="3" /></span>
         <div class="grow">
           <b>{{ found(r.id) ? r.name : '??? ' }}</b>
-          <div v-if="found(r.id)" class="muted small">Đã có trong menu</div>
+          <div v-if="found(r.id)" class="muted small">{{ L('Đã có trong menu', 'On the menu') }}</div>
           <template v-else-if="hinted(r.id)">
             <div class="small hint">“{{ SECRET_HINTS[r.id] }}”</div>
             <div class="ings"><img v-for="s in ingOf(r.id)" :key="s" :src="img(s)" :title="STEPS[s].label" alt="" /></div>
           </template>
-          <div v-else class="muted small">Chưa có gợi ý – gặp khách hiếm, làm nhiệm vụ, mở thành tựu để nhận</div>
+          <div v-else class="muted small">{{ L('Chưa có gợi ý – gặp khách hiếm, làm nhiệm vụ, mở thành tựu để nhận', 'No hint yet – meet rare guests, do quests or earn trophies to get one') }}</div>
         </div>
       </div>
     </div>

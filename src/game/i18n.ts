@@ -39,3 +39,9 @@ export function saveProfile(lang: Lang, gender: Gender): boolean {
   try { localStorage.setItem(KEY, JSON.stringify({ lang, gender })) } catch { /* bỏ qua */ }
   return lang !== LANG || gender !== GENDER
 }
+
+/** tiếng Anh: tên món ở giữa câu viết thường + 'a' → 'an' trước nguyên âm ("a Iced latte" → "an iced latte") */
+export function withDrink(s: string): string {
+  if (!isEn) return s
+  return s.replace(/\b([Aa]) (?=[AEIOUaeiou])/g, '$1n ').replace(/(\b(?:a|an|the|One|one|my|your|Your) )([A-Z])([a-z])/g, (_, a, b, c) => a + b.toLowerCase() + c)
+}

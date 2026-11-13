@@ -8,6 +8,7 @@ import {
 import { moneyShort } from '../game/data'
 import { PREMISES } from '../game/metaData'
 import PixelIcon from './ui/PixelIcon.vue'
+import { L } from '../game/i18n'
 
 defineProps<{ compact?: boolean }>()
 
@@ -22,40 +23,40 @@ const waiterCost = computed(() => WAITER_COSTS[save.seating.waiter])
     <div class="row">
       <span class="ic"><PixelIcon name="house" :size="3" /></span>
       <div class="grow">
-        <b v-if="!save.seating.tables">Khu ngồi bỏ hoang</b>
-        <b v-else>Bàn ghế {{ save.seating.tables }}/{{ maxTables }}</b>
-        <small v-if="!save.seating.tables">Bụi bặm, mạng nhện giăng kín. Dọn dẹp & kê 2 bàn đầu tiên để khách ngồi lại, boa thêm</small>
-        <small v-else-if="tableCost">Kê thêm 2 bàn: nhiều khách được ngồi lại, boa thêm</small>
-        <small v-else-if="nextPremise">Mặt bằng này tối đa {{ maxTables }} bàn · thuê "{{ nextPremise.name }}" để kê thêm</small>
-        <small v-else>Đã kín chỗ</small>
+        <b v-if="!save.seating.tables">{{ L('Khu ngồi bỏ hoang', 'Abandoned seating area') }}</b>
+        <b v-else>{{ L('Bàn ghế', 'Tables') }} {{ save.seating.tables }}/{{ maxTables }}</b>
+        <small v-if="!save.seating.tables">{{ L('Bụi bặm, mạng nhện giăng kín. Dọn dẹp & kê 2 bàn đầu tiên để khách ngồi lại, boa thêm', 'Dusty and full of cobwebs. Clean up & set out your first 2 tables so guests can stay and tip') }}</small>
+        <small v-else-if="tableCost">{{ L('Kê thêm 2 bàn: nhiều khách được ngồi lại, boa thêm', 'Add 2 more tables: more guests stay & tip') }}</small>
+        <small v-else-if="nextPremise">{{ L(`Mặt bằng này tối đa ${maxTables} bàn · thuê "${nextPremise.name}" để kê thêm`, `This place fits ${maxTables} tables max · rent "${nextPremise.name}" for more`) }}</small>
+        <small v-else>{{ L('Đã kín chỗ', 'No room left') }}</small>
       </div>
-      <button v-if="tableCost" class="btn sm accent" :disabled="save.money < tableCost" @click="buyTables">{{ save.seating.tables ? '+2' : 'Dọn dẹp' }} · {{ moneyShort(tableCost) }}</button>
-      <span v-else class="pxtag good">TỐI ĐA</span>
+      <button v-if="tableCost" class="btn sm accent" :disabled="save.money < tableCost" @click="buyTables">{{ save.seating.tables ? '+2' : L('Dọn dẹp', 'Clean up') }} · {{ moneyShort(tableCost) }}</button>
+      <span v-else class="pxtag good">{{ L('TỐI ĐA', 'MAX') }}</span>
     </div>
 
     <div class="row">
       <span class="ic"><PixelIcon name="star" :size="3" /></span>
       <div class="grow">
         <b>{{ TABLE_LEVELS[save.seating.level].name }}</b>
-        <small v-if="levelCost !== undefined">Lên {{ TABLE_LEVELS[save.seating.level + 1].name }}: {{ TABLE_LEVELS[save.seating.level + 1].desc }}</small>
+        <small v-if="levelCost !== undefined">{{ L('Lên', 'Next:') }} {{ TABLE_LEVELS[save.seating.level + 1].name }}: {{ TABLE_LEVELS[save.seating.level + 1].desc }}</small>
         <small v-else>{{ TABLE_LEVELS[save.seating.level].desc }}</small>
       </div>
       <button v-if="levelCost !== undefined" class="btn sm accent" :disabled="save.money < levelCost" @click="upgradeTables">{{ moneyShort(levelCost) }}</button>
-      <span v-else class="pxtag good">TỐI ĐA</span>
+      <span v-else class="pxtag good">{{ L('TỐI ĐA', 'MAX') }}</span>
     </div>
 
     <div class="row">
       <span class="ic"><PixelIcon name="staff" :size="3" /></span>
       <div class="grow">
-        <b>Phục vụ {{ save.seating.waiter }}/{{ WAITER_COSTS.length }}</b>
-        <small>Tự dọn bàn & thu tiền boa · lương {{ moneyShort(WAITER_WAGE) }}/ngày</small>
+        <b>{{ L('Phục vụ', 'Waiters') }} {{ save.seating.waiter }}/{{ WAITER_COSTS.length }}</b>
+        <small>{{ L(`Tự dọn bàn & thu tiền boa · lương ${moneyShort(WAITER_WAGE)}/ngày`, `Clear tables & collect tips · wage ${moneyShort(WAITER_WAGE)}/day`) }}</small>
       </div>
-      <button v-if="waiterCost !== undefined" class="btn sm accent" :disabled="save.money < waiterCost" @click="hireWaiter">Thuê · {{ moneyShort(waiterCost) }}</button>
-      <span v-else class="pxtag good">TỐI ĐA</span>
+      <button v-if="waiterCost !== undefined" class="btn sm accent" :disabled="save.money < waiterCost" @click="hireWaiter">{{ L('Thuê', 'Hire') }} · {{ moneyShort(waiterCost) }}</button>
+      <span v-else class="pxtag good">{{ L('TỐI ĐA', 'MAX') }}</span>
     </div>
 
     <p v-if="!compact || (ui.phase === 'open' && !save.seating.waiter)" class="hint">
-      Chạm {{ CLEAN_TAPS }} lần vào bàn bẩn để lau & nhận tiền boa. Bàn bẩn để lâu bị trừ uy tín, khách tới sau không có chỗ ngồi.
+      {{ L(`Chạm ${CLEAN_TAPS} lần vào bàn bẩn để lau & nhận tiền boa. Bàn bẩn để lâu bị trừ uy tín, khách tới sau không có chỗ ngồi.`, `Tap a dirty table ${CLEAN_TAPS} times to wipe it & collect tips. Dirty tables left too long hurt your reputation, and new guests have nowhere to sit.`) }}
     </p>
   </div>
 </template>

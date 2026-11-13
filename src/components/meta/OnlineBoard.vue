@@ -3,6 +3,7 @@ import { onMounted, computed, ref } from 'vue'
 import { save } from '../../game/store'
 import { onlineEnabled, board, loadBoard, submitScore, myNick } from '../../game/online'
 import PixelIcon from '../ui/PixelIcon.vue'
+import { L } from '../../game/i18n'
 
 const editing = ref(false)
 const nick = ref(myNick())
@@ -17,30 +18,30 @@ onMounted(() => { if (onlineEnabled && Date.now() - board.at > 60_000) submitSco
 
 <template>
   <div>
-    <div class="section-title">Bảng xếp hạng online</div>
+    <div class="section-title">{{ L('Bảng xếp hạng online', 'Online leaderboard') }}</div>
     <div v-if="!onlineEnabled" class="card off">
       <PixelIcon name="phone" :size="3" />
-      <div class="muted small">Chưa bật. Khi chủ game cấu hình máy chủ (xem README), điểm phố tích luỹ của mọi người chơi trên mọi máy sẽ được so tài ở đây.</div>
+      <div class="muted small">{{ L('Chưa bật. Khi chủ game cấu hình máy chủ (xem README), điểm phố tích luỹ của mọi người chơi trên mọi máy sẽ được so tài ở đây.', "Not enabled. Once the game's host sets up a server (see README), everyone's total street score from every device will be ranked here.") }}</div>
     </div>
     <div v-else class="card on">
       <div class="me">
         <div class="grow">
-          <div class="muted tiny">TÊN TRÊN BẢNG</div>
-          <div v-if="!editing" class="nm" @click="editing = true">{{ myNick() }} <small class="muted">(sửa)</small></div>
-          <div v-else class="edit"><input v-model="nick" maxlength="24" @keyup.enter="saveNick" /><button class="btn sm accent" @click="saveNick">LƯU</button></div>
+          <div class="muted tiny">{{ L('TÊN TRÊN BẢNG', 'YOUR BOARD NAME') }}</div>
+          <div v-if="!editing" class="nm" @click="editing = true">{{ myNick() }} <small class="muted">{{ L('(sửa)', '(edit)') }}</small></div>
+          <div v-else class="edit"><input v-model="nick" maxlength="24" @keyup.enter="saveNick" /><button class="btn sm accent" @click="saveNick">{{ L('LƯU', 'SAVE') }}</button></div>
         </div>
-        <div class="sc"><small>ĐIỂM</small><b>{{ Math.round(save.meta.online.career) }}</b></div>
+        <div class="sc"><small>{{ L('ĐIỂM', 'SCORE') }}</small><b>{{ Math.round(save.meta.online.career) }}</b></div>
       </div>
-      <div v-if="board.loading" class="muted small">Đang tải…</div>
-      <div v-else-if="board.error" class="muted small">{{ board.error }} <button class="btn sm ghost" @click="loadBoard">THỬ LẠI</button></div>
+      <div v-if="board.loading" class="muted small">{{ L('Đang tải…', 'Loading…') }}</div>
+      <div v-else-if="board.error" class="muted small">{{ board.error }} <button class="btn sm ghost" @click="loadBoard">{{ L('THỬ LẠI', 'RETRY') }}</button></div>
       <div v-else class="rows">
         <div v-for="(r, i) in board.rows" :key="r.player_id" class="rw" :class="{ mine: r.player_id === save.playerId }">
           <span class="rk">{{ i + 1 }}</span>
-          <span class="grow">{{ r.name }} <small class="muted">· ngày {{ r.day }} · {{ r.stars }} sao</small></span>
+          <span class="grow">{{ r.name }} <small class="muted">· {{ L('ngày', 'day') }} {{ r.day }} · {{ r.stars }} {{ L('sao', '★') }}</small></span>
           <b>{{ r.score }}</b>
         </div>
-        <div v-if="!board.rows.length" class="muted small">Chưa có ai – bán xong 1 ngày để lên bảng!</div>
-        <div v-if="board.rows.length && myPos < 0" class="muted small">Bạn chưa vào top 50 – cố lên!</div>
+        <div v-if="!board.rows.length" class="muted small">{{ L('Chưa có ai – bán xong 1 ngày để lên bảng!', 'Nobody here yet – finish a day to get on the board!') }}</div>
+        <div v-if="board.rows.length && myPos < 0" class="muted small">{{ L('Bạn chưa vào top 50 – cố lên!', "You're not in the top 50 yet – keep going!") }}</div>
       </div>
     </div>
   </div>

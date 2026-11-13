@@ -7,6 +7,7 @@ import { GOODS, goodUnlocked } from '../game/metaData'
 import { recipeById, STEPS, type StepId, type IngredientId } from '../game/data'
 import { iconUrl, IMG_URL } from '../game/pixel'
 import PixelIcon from './ui/PixelIcon.vue'
+import { L } from '../game/i18n'
 
 const showOrders = ref(false)
 // kệ hàng bán kèm (bánh / lưu niệm) – hiện khi đã thuê mặt bằng có bán
@@ -35,11 +36,11 @@ const items = computed(() => {
   return ITEMS.filter((i) => used.has(i.id))
 })
 const ACTIONS: { id: StepId | 'trash'; img: string; label: string }[] = [
-  { id: 'chiet', img: IMG_URL.espresso, label: 'Chiết xuất' },
-  { id: 'lac', img: IMG_URL.shaker, label: 'Lắc' },
-  { id: 'xay', img: IMG_URL.blender, label: 'Xay' },
-  { id: 'khuay', img: iconUrl('khuay'), label: 'Khuấy' },
-  { id: 'trash', img: iconUrl('trash'), label: 'Đổ bỏ' },
+  { id: 'chiet', img: IMG_URL.espresso, label: L('Chiết xuất', 'Espresso') },
+  { id: 'lac', img: IMG_URL.shaker, label: L('Lắc', 'Shake') },
+  { id: 'xay', img: IMG_URL.blender, label: L('Xay', 'Blend') },
+  { id: 'khuay', img: iconUrl('khuay'), label: L('Khuấy', 'Stir') },
+  { id: 'trash', img: iconUrl('trash'), label: L('Đổ bỏ', 'Toss') },
 ]
 const recipe = computed(() => (ui.brew ? recipeById[ui.brew.recipe] : null))
 const curStep = computed(() => (recipe.value && ui.brew ? recipe.value.steps[ui.brew.done.length] ?? null : null))
@@ -52,9 +53,9 @@ const busyShipper = computed(() => ui.shippers.filter((s) => s.orderId !== null)
 const guideId = computed(() => (tutOn.value && ui.brew && !ui.brew.busy ? curStep.value : null))
 const tutText = computed(() => {
   if (!tutOn.value) return ''
-  if (ui.present) return 'Chạm vào ly để trao cho khách!'
-  if (!ui.brew) return 'Khách đang chờ: bấm nút vàng “Nhận order” trên bóng thoại'
-  return curStep.value ? `Bấm nút đang sáng: ${STEPS[curStep.value].label} (làm đúng thứ tự từng bước)` : ''
+  if (ui.present) return L('Chạm vào ly để trao cho khách!', 'Tap the cup to hand it over!')
+  if (!ui.brew) return L('Khách đang chờ: bấm nút vàng “Nhận order” trên bóng thoại', 'A guest is waiting: tap the yellow “Take order” button in their bubble')
+  return curStep.value ? L(`Bấm nút đang sáng: ${STEPS[curStep.value].label} (làm đúng thứ tự từng bước)`, `Tap the glowing button: ${STEPS[curStep.value].label} (follow the steps in order)`) : ''
 })
 
 function act(id: StepId | 'trash') {
@@ -72,7 +73,7 @@ function pickOrder(id: number) {
   <div v-if="staffAll" class="panel staff-panel">
     <!-- quầy do nhân viên lo: nhân viên pha ngay trong cảnh quầy phía trên → ở đây chỉ còn kệ hàng + nút vào bếp -->
     <div v-if="shelf.length" class="shelf">
-      <span class="sh-lbl">KỆ</span>
+      <span class="sh-lbl">{{ L('KỆ', 'SHELF') }}</span>
       <button v-for="g in shelf" :key="g.id" class="good" :class="{ want: wanted === g.id, out: (save.meta.goods[g.id] ?? 0) < 1 }" @pointerdown.prevent="giveAddon(g.id)">
         <img :src="iconUrl(g.id)" class="pix" alt="" /><span class="gq">{{ save.meta.goods[g.id] ?? 0 }}</span>
       </button>
@@ -81,8 +82,8 @@ function pickOrder(id: number) {
     <button class="go-kitchen" @click="ui.page = 2">
       <i class="nail l" /><i class="nail r" />
       <PixelIcon name="house" :size="3" />
-      <span class="gk-t">{{ kitchenOpen() ? 'Vào bếp' : 'Mở khu bếp' }}</span>
-      <span v-if="kitchenOpen() && kitchen.tickets.length" class="gk-n">{{ kitchen.tickets.length }} phiếu</span>
+      <span class="gk-t">{{ kitchenOpen() ? L('Vào bếp', 'Kitchen') : L('Mở khu bếp', 'Open kitchen') }}</span>
+      <span v-if="kitchenOpen() && kitchen.tickets.length" class="gk-n">{{ kitchen.tickets.length }} {{ L('phiếu', kitchen.tickets.length === 1 ? 'ticket' : 'tickets') }}</span>
       <span class="gk-arrow">›</span>
     </button>
   </div>
@@ -92,8 +93,8 @@ function pickOrder(id: number) {
       <template v-if="recipe && ui.brew">
         <div class="rhead">
           <span class="rname">{{ recipe.name }}</span>
-          <span v-if="curStep" class="cur">Bước {{ ui.brew.done.length + 1 }}/{{ recipe.steps.length }}: <b>{{ STEPS[curStep].label }}</b></span>
-          <span v-else class="cur ok">Xong! Đưa khách</span>
+          <span v-if="curStep" class="cur">{{ L('Bước', 'Step') }} {{ ui.brew.done.length + 1 }}/{{ recipe.steps.length }}: <b>{{ STEPS[curStep].label }}</b></span>
+          <span v-else class="cur ok">{{ L('Xong! Đưa khách', 'Done! Serve it') }}</span>
         </div>
         <div class="steps">
           <span
@@ -104,8 +105,8 @@ function pickOrder(id: number) {
           </span>
         </div>
       </template>
-      <span v-else class="muted hint">Nhận order trên quầy để bắt đầu pha</span>
-      <div v-if="tutText" class="tut"><b>HƯỚNG DẪN</b> {{ tutText }}</div>
+      <span v-else class="muted hint">{{ L('Nhận order trên quầy để bắt đầu pha', 'Take an order at the counter to start brewing') }}</span>
+      <div v-if="tutText" class="tut"><b>{{ L('HƯỚNG DẪN', 'TIP') }}</b> {{ tutText }}</div>
       <button v-if="save.upgrades.shipper" class="app-btn" :class="{ hot: newOrders.length }" @click="showOrders = !showOrders">
         <PixelIcon name="phone" :size="2" /> {{ newOrders.length }}<small v-if="busyShipper"> · <PixelIcon name="scooter" :size="2" />{{ busyShipper }}</small>
       </button>
@@ -113,13 +114,13 @@ function pickOrder(id: number) {
 
     <!-- Danh sách đơn app -->
     <div v-if="showOrders" class="orders">
-      <div v-if="!ui.orders.length" class="muted small">Chưa có đơn app</div>
+      <div v-if="!ui.orders.length" class="muted small">{{ L('Chưa có đơn app', 'No app orders yet') }}</div>
       <div v-for="o in ui.orders" :key="o.id" class="ord">
         <span class="grow"><b>{{ o.name }}</b> · {{ recipeById[o.recipe].name }}
           <span class="obar"><i :style="{ width: Math.max(0, o.timeLeft / o.maxTime) * 100 + '%' }" /></span>
         </span>
-        <button v-if="o.state === 'new'" class="mini" :disabled="!!ui.brew || !canMake(o.recipe)" @click="pickOrder(o.id)">Pha</button>
-        <span v-else class="tag"><PixelIcon :name="o.state === 'ready' ? 'crate' : 'scooter'" :size="2" /> {{ o.state === 'ready' ? 'chờ ship' : 'đang giao' }}</span>
+        <button v-if="o.state === 'new'" class="mini" :disabled="!!ui.brew || !canMake(o.recipe)" @click="pickOrder(o.id)">{{ L('Pha', 'Brew') }}</button>
+        <span v-else class="tag"><PixelIcon :name="o.state === 'ready' ? 'crate' : 'scooter'" :size="2" /> {{ o.state === 'ready' ? L('chờ ship', 'awaiting rider') : L('đang giao', 'delivering') }}</span>
       </div>
     </div>
 
@@ -132,7 +133,7 @@ function pickOrder(id: number) {
     </div>
 
     <div v-if="shelf.length" class="shelf">
-      <span class="sh-lbl">KỆ</span>
+      <span class="sh-lbl">{{ L('KỆ', 'SHELF') }}</span>
       <button v-for="g in shelf" :key="g.id" class="good" :class="{ want: wanted === g.id, out: (save.meta.goods[g.id] ?? 0) < 1 }" @pointerdown.prevent="giveAddon(g.id)">
         <img :src="iconUrl(g.id)" class="pix" alt="" /><span class="gq">{{ save.meta.goods[g.id] ?? 0 }}</span>
       </button>
@@ -142,7 +143,7 @@ function pickOrder(id: number) {
       <button v-for="a in ACTIONS" :key="a.id" class="action" :class="{ trash: a.id === 'trash', guide: guideId === a.id }" @pointerdown.prevent="act(a.id)">
         <img :src="a.img" class="pix aic" alt="" />
         <span>{{ a.label }}</span>
-        <small v-if="a.id === 'chiet'">còn {{ save.stock.cafe }}</small>
+        <small v-if="a.id === 'chiet'">{{ L(`còn ${save.stock.cafe}`, `${save.stock.cafe} left`) }}</small>
       </button>
     </div>
   </div>

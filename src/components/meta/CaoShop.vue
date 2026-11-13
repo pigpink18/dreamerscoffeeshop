@@ -3,8 +3,9 @@ import { save } from '../../game/store'
 import { OUTFITS, DECOR_ITEMS, buyOutfit, buyDecor } from '../../game/meta'
 import CorgiPreview from './CorgiPreview.vue'
 import PixelIcon from '../ui/PixelIcon.vue'
+import { L } from '../../game/i18n'
 
-const SLOT: Record<string, string> = { head: 'Mũ', eyes: 'Kính', neck: 'Cổ', body: 'Áo' }
+const SLOT: Record<string, string> = L({ head: 'Mũ', eyes: 'Kính', neck: 'Cổ', body: 'Áo' }, { head: 'Hat', eyes: 'Glasses', neck: 'Neck', body: 'Top' })
 const owned = (id: string) => save.meta.outfits.includes(id)
 const wearing = (id: string) => Object.values(save.meta.wear).includes(id)
 </script>
@@ -14,32 +15,32 @@ const wearing = (id: string) => Object.values(save.meta.wear).includes(id)
     <div class="card beans">
       <CorgiPreview :scale="6" />
       <div class="grow">
-        <div class="kicker">TIỆM CỦA CÁO</div>
-        <div class="bn"><PixelIcon name="bean" :size="3" /> {{ save.meta.beans }} hạt vàng</div>
-        <div class="muted small">Kiếm hạt vàng từ nhiệm vụ ngày, thành tựu, khách hiếm và giải đua top phố. Hạt vàng không mua bằng tiền được!</div>
+        <div class="kicker">{{ L('TIỆM CỦA CÁO', "CÁO'S SHOP") }}</div>
+        <div class="bn"><PixelIcon name="bean" :size="3" /> {{ save.meta.beans }} {{ L('hạt vàng', 'gold beans') }}</div>
+        <div class="muted small">{{ L('Kiếm hạt vàng từ nhiệm vụ ngày, thành tựu, khách hiếm và giải đua top phố. Hạt vàng không mua bằng tiền được!', "Earn gold beans from daily quests, trophies, rare guests and the street race. Money can't buy them!") }}</div>
       </div>
     </div>
 
-    <div class="section-title">Trang phục cho Cáo</div>
+    <div class="section-title">{{ L('Trang phục cho Cáo', 'Outfits for Cáo') }}</div>
     <div class="grid">
       <button v-for="o in OUTFITS" :key="o.id" class="card it" :class="{ on: wearing(o.id), own: owned(o.id) }" @click="buyOutfit(o.id)">
         <CorgiPreview :scale="3" still :wear="{ [o.slot]: o.id }" />
         <b>{{ o.name }}</b>
         <small class="muted">{{ SLOT[o.slot] }}</small>
         <span class="pxtag" :class="wearing(o.id) ? 'good' : owned(o.id) ? '' : save.meta.beans >= o.cost ? 'warn' : ''">
-          {{ wearing(o.id) ? 'ĐANG MẶC' : owned(o.id) ? 'MẶC' : `${o.cost} hạt` }}
+          {{ wearing(o.id) ? L('ĐANG MẶC', 'WEARING') : owned(o.id) ? L('MẶC', 'WEAR') : L(`${o.cost} hạt`, `${o.cost} beans`) }}
         </span>
       </button>
     </div>
 
-    <div class="section-title">Trang trí quán</div>
+    <div class="section-title">{{ L('Trang trí quán', 'Shop decor') }}</div>
     <div class="list">
       <div v-for="d in DECOR_ITEMS" :key="d.id" class="card row deco">
         <div class="grow">
           <b>{{ d.name }}</b>
-          <div class="muted small">+{{ Math.round(d.buff * 100) }}% khách · thấy ngay trong quán</div>
+          <div class="muted small">+{{ Math.round(d.buff * 100) }}% {{ L('khách · thấy ngay trong quán', 'guests · shows up in the shop') }}</div>
         </div>
-        <span v-if="save.meta.decor.includes(d.id)" class="pxtag good">ĐÃ CÓ</span>
+        <span v-if="save.meta.decor.includes(d.id)" class="pxtag good">{{ L('ĐÃ CÓ', 'OWNED') }}</span>
         <button v-else class="btn sm accent" :disabled="save.meta.beans < d.cost" @click="buyDecor(d.id)"><PixelIcon name="bean" :size="2" /> {{ d.cost }}</button>
       </div>
     </div>

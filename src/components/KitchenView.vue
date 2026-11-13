@@ -15,6 +15,7 @@ import {
 } from '../game/kitchen'
 import PixelIcon from './ui/PixelIcon.vue'
 import PixelNum from './ui/PixelNum.vue'
+import { L } from '../game/i18n'
 
 const root = ref<HTMLDivElement>()
 const cv = ref<HTMLCanvasElement>()
@@ -95,10 +96,10 @@ const miniInfo = computed(() => {
   const m = mini.value
   if (!m) return null
   return {
-    chien: { title: 'ÁP CHẢO', tip: 'Giữ nút để chiên – thả tay khi thanh vào vùng VÀNG GIÒN', btn: holding.value ? 'ĐANG CHIÊN… THẢ ĐÚNG LÚC' : 'GIỮ ĐỂ CHIÊN' },
-    nuong: { title: 'NƯỚNG WAFFLE', tip: 'Khuôn đang nóng dần – mở khuôn khi bánh vàng đều', btn: 'MỞ KHUÔN' },
-    luoc: { title: 'TRỤNG MÌ', tip: 'Chạm VỚT MÌ khi kim nằm trong vùng xanh', btn: 'VỚT MÌ' },
-    tron: { title: 'TRỘN MÌ', tip: `Chạm liên tục cho thấm sốt: ${Math.min(taps.value, TRON_TAPS)}/${TRON_TAPS}`, btn: 'TRỘN!' },
+    chien: { title: L('ÁP CHẢO', 'PAN-FRY'), tip: L('Giữ nút để chiên – thả tay khi thanh vào vùng VÀNG GIÒN', 'Hold to fry – let go when the bar hits GOLDEN CRISPY'), btn: holding.value ? L('ĐANG CHIÊN… THẢ ĐÚNG LÚC', 'FRYING… LET GO IN TIME') : L('GIỮ ĐỂ CHIÊN', 'HOLD TO FRY') },
+    nuong: { title: L('NƯỚNG WAFFLE', 'BAKE WAFFLE'), tip: L('Khuôn đang nóng dần – mở khuôn khi bánh vàng đều', 'The iron is heating up – open it when the waffle is evenly golden'), btn: L('MỞ KHUÔN', 'OPEN IRON') },
+    luoc: { title: L('TRỤNG MÌ', 'BOIL NOODLES'), tip: L('Chạm VỚT MÌ khi kim nằm trong vùng xanh', 'Tap DRAIN when the needle is in the green zone'), btn: L('VỚT MÌ', 'DRAIN') },
+    tron: { title: L('TRỘN MÌ', 'TOSS NOODLES'), tip: L(`Chạm liên tục cho thấm sốt: ${Math.min(taps.value, TRON_TAPS)}/${TRON_TAPS}`, `Tap fast to coat in sauce: ${Math.min(taps.value, TRON_TAPS)}/${TRON_TAPS}`), btn: L('TRỘN!', 'TOSS!') },
   }[m.step]
 })
 function endMini(good: boolean, text: string) {
@@ -115,15 +116,15 @@ function updateMini(now: number) {
   if (m.step === 'chien') {
     if (holding.value) {
       if (now - sizzleT > 380) { sizzleT = now; sfx('pour') }
-      if (heat.value >= 1) endMini(false, 'Cháy rồi!')
+      if (heat.value >= 1) endMini(false, L('Cháy rồi!', 'Burnt!'))
     }
   } else if (m.step === 'nuong') {
     if (now - sizzleT > 600) { sizzleT = now; sfx('pour') }
-    if (heat.value >= 1) endMini(false, 'Waffle cháy khét!')
+    if (heat.value >= 1) endMini(false, L('Waffle cháy khét!', 'Waffle scorched!'))
   } else if (m.step === 'luoc') {
-    if (el > LUOC_MS) endMini(false, 'Mì nở bủng rồi…')
+    if (el > LUOC_MS) endMini(false, L('Mì nở bủng rồi…', 'Soggy noodles…'))
   } else if (m.step === 'tron') {
-    if (el > TRON_MS) endMini(false, 'Trộn chưa đều')
+    if (el > TRON_MS) endMini(false, L('Trộn chưa đều', 'Not mixed well'))
   }
 }
 const inZone = (v: number, z: [number, number]) => v >= z[0] && v <= z[1]
@@ -132,12 +133,12 @@ function miniDown() {
   if (!m) return
   sample()
   if (m.step === 'chien') { if (!holding.value) { holding.value = true; holdAt = performance.now(); sfx('pour') } }
-  else if (m.step === 'nuong') endMini(inZone(heat.value, ZONE.nuong), inZone(heat.value, ZONE.nuong) ? 'Vàng đều, thơm phức!' : heat.value < ZONE.nuong[0] ? 'Bánh còn sống…' : 'Hơi cháy rồi')
-  else if (m.step === 'luoc') endMini(inZone(needle.value, ZONE.luoc), inZone(needle.value, ZONE.luoc) ? 'Mì dai vừa!' : needle.value < ZONE.luoc[0] ? 'Mì còn cứng' : 'Mì hơi nhũn')
+  else if (m.step === 'nuong') endMini(inZone(heat.value, ZONE.nuong), inZone(heat.value, ZONE.nuong) ? L('Vàng đều, thơm phức!', 'Golden & fragrant!') : heat.value < ZONE.nuong[0] ? L('Bánh còn sống…', 'Still doughy…') : L('Hơi cháy rồi', 'A bit burnt'))
+  else if (m.step === 'luoc') endMini(inZone(needle.value, ZONE.luoc), inZone(needle.value, ZONE.luoc) ? L('Mì dai vừa!', 'Perfectly chewy!') : needle.value < ZONE.luoc[0] ? L('Mì còn cứng', 'Still too firm') : L('Mì hơi nhũn', 'A bit mushy'))
   else if (m.step === 'tron') {
     taps.value++
     sfx('stir')
-    if (taps.value >= TRON_TAPS) endMini(true, 'Trộn đều, thấm sốt!')
+    if (taps.value >= TRON_TAPS) endMini(true, L('Trộn đều, thấm sốt!', 'Saucy & well mixed!'))
   }
 }
 function miniUp() {
@@ -147,7 +148,7 @@ function miniUp() {
   holding.value = false
   if (heat.value < 0.05) return // chạm nhầm, chưa chiên
   const good = inZone(heat.value, ZONE.chien)
-  endMini(good, good ? 'Vàng giòn, chuẩn bài!' : heat.value < ZONE.chien[0] ? 'Còn sống, chưa vàng' : 'Hơi cháy rồi')
+  endMini(good, good ? L('Vàng giòn, chuẩn bài!', 'Golden crispy, nailed it!') : heat.value < ZONE.chien[0] ? L('Còn sống, chưa vàng', 'Undercooked, not golden') : L('Hơi cháy rồi', 'A bit burnt'))
 }
 // thanh đo: vị trí kim + vùng chuẩn
 const gauge = computed(() => {
@@ -403,12 +404,12 @@ const waiting = computed(() => ui.queue.length)
   <div ref="root" class="kitchen">
     <div class="scene" :class="{ shake: shaking }">
       <canvas ref="cv" class="pixel" />
-      <div class="ktitle"><PixelIcon name="house" :size="2" /> BẾP</div>
-      <button v-if="!staffAll && waiting && kitchenOpen()" class="counter-chip" @click="ui.page = 0">Quầy nước: {{ waiting }} khách ›</button>
+      <div class="ktitle"><PixelIcon name="house" :size="2" /> {{ L('BẾP', 'KITCHEN') }}</div>
+      <button v-if="!staffAll && waiting && kitchenOpen()" class="counter-chip" @click="ui.page = 0">{{ L(`Quầy nước: ${waiting} khách`, `Bar: ${waiting} waiting`) }} ›</button>
       <div v-if="!kitchenOpen()" class="kclosed">
-        <b>KHU BẾP CÒN ĐÓNG CỬA</b>
-        <span>Mở bếp để bán kèm bánh mì chảo, mì trộn cay và waffle nhiều loại nhân. Tặng sẵn 1 gói mỗi nguyên liệu.</span>
-        <button class="btn sm accent" :disabled="save.money < KITCHEN_COST" @click="unlockKitchen">MỞ BẾP · {{ moneyShort(KITCHEN_COST) }}</button>
+        <b>{{ L('KHU BẾP CÒN ĐÓNG CỬA', 'THE KITCHEN IS CLOSED') }}</b>
+        <span>{{ L('Mở bếp để bán kèm bánh mì chảo, mì trộn cay và waffle nhiều loại nhân. Tặng sẵn 1 gói mỗi nguyên liệu.', 'Open the kitchen to serve sizzling pan bánh mì, spicy tossed noodles and waffles with all kinds of fillings. Comes with 1 pack of each ingredient.') }}</span>
+        <button class="btn sm accent" :disabled="save.money < KITCHEN_COST" @click="unlockKitchen">{{ L('MỞ BẾP', 'OPEN KITCHEN') }} · {{ moneyShort(KITCHEN_COST) }}</button>
       </div>
     </div>
 
@@ -431,7 +432,7 @@ const waiting = computed(() => ui.queue.length)
       <!-- phiếu đơn treo trên thanh -->
       <div v-else class="rail">
         <i class="rbar" />
-        <span v-if="!kitchen.tickets.length" class="empty">Chưa có đơn bếp · khách gọi kèm món sẽ hiện phiếu ở đây</span>
+        <span v-if="!kitchen.tickets.length" class="empty">{{ L('Chưa có đơn bếp · khách gọi kèm món sẽ hiện phiếu ở đây', 'No food orders yet · tickets appear here when guests order food') }}</span>
         <button v-for="tk in kitchen.tickets" :key="tk.id" class="ticket" :class="{ on: cook?.ticketId === tk.id, low: ticketPct(tk.id) < 30, dis: !canCook(tk.food) }" @pointerdown.prevent="startCook(tk.id)">
           <i class="pin" />
           <span class="th"><b>#{{ tk.id % 100 }}</b><span>{{ tk.name }}</span></span>
@@ -442,7 +443,7 @@ const waiting = computed(() => ui.queue.length)
           <span class="tf">
             <i class="tbar"><em :style="{ width: ticketPct(tk.id) + '%' }" /></i>
             <span class="tsec">{{ Math.ceil(tk.t) }}s</span>
-            <span class="tstate">{{ cook?.ticketId === tk.id ? 'NẤU…' : !canCook(tk.food) ? 'HẾT' : 'NẤU' }}</span>
+            <span class="tstate">{{ cook?.ticketId === tk.id ? L('NẤU…', 'COOKING…') : !canCook(tk.food) ? L('HẾT', 'OUT') : L('NẤU', 'COOK') }}</span>
           </span>
         </button>
       </div>
@@ -452,9 +453,9 @@ const waiting = computed(() => ui.queue.length)
         <template v-if="food && cook">
           <div class="rhead">
             <span class="rname">{{ food.name }}</span>
-            <span v-if="curStep && cook.auto" class="cur">Đang bỏ <b>{{ label(curStep) }}</b>…</span>
-            <span v-else-if="curStep" class="cur">Bước {{ cook.done.length + 1 }}/{{ food.steps.length }}: <b>{{ label(curStep) }}</b></span>
-            <span v-else class="cur ok">Ra món!</span>
+            <span v-if="curStep && cook.auto" class="cur">{{ L('Đang bỏ', 'Adding') }} <b>{{ label(curStep) }}</b>…</span>
+            <span v-else-if="curStep" class="cur">{{ L('Bước', 'Step') }} {{ cook.done.length + 1 }}/{{ food.steps.length }}: <b>{{ label(curStep) }}</b></span>
+            <span v-else class="cur ok">{{ L('Ra món!', 'Order up!') }}</span>
           </div>
           <div class="steps">
             <span v-for="(s, i) in food.steps" :key="i" class="st" :class="{ done: i < cook.done.length, now: i === cook.done.length }">
@@ -473,15 +474,15 @@ const waiting = computed(() => ui.queue.length)
         </button>
         <button class="op trash" @pointerdown.prevent="act('trash')">
           <img :src="iconUrl('trash')" class="pix" alt="" />
-          <span>Đổ bỏ</span>
+          <span>{{ L('Đổ bỏ', 'Toss') }}</span>
         </button>
       </div>
       <!-- chưa nấu: thực đơn bếp – còn nấu được bao nhiêu phần, món nào đang có đơn (bấm để nấu luôn) -->
       <!-- chưa nấu: thực đơn bếp – dùng đúng bộ khung của game (nhãn gỗ, thẻ giấy, nhãn vuông, số pixel) -->
       <div v-else class="kmenu">
         <div class="kmh">
-          <span class="section-title">Món bếp</span>
-          <span class="kms">Hôm nay {{ ui.stats.foodSold ?? 0 }} món · <PixelNum :text="moneyShort(ui.stats.foodRev ?? 0)" :size="2" color="#2f9e6b" /></span>
+          <span class="section-title">{{ L('Món bếp', 'Kitchen menu') }}</span>
+          <span class="kms">{{ L(`Hôm nay ${ui.stats.foodSold ?? 0} món`, `Today ${ui.stats.foodSold ?? 0} sold`) }} · <PixelNum :text="moneyShort(ui.stats.foodRev ?? 0)" :size="2" color="#2f9e6b" /></span>
         </div>
         <div class="card kml">
           <button v-for="m in menuCards" :key="m.id" class="kr" :class="{ wait: m.wait > 0, none: m.can < 1 }" @pointerdown.prevent="m.ticket && startCook(m.ticket)">
@@ -490,8 +491,8 @@ const waiting = computed(() => ui.queue.length)
               <span class="kn">{{ m.name }}</span>
               <PixelNum :text="moneyShort(m.price)" :size="2" color="#2f9e6b" />
             </span>
-            <span v-if="m.wait" class="pxtag warn">{{ m.wait }} đơn</span>
-            <span v-else-if="m.can < 1" class="pxtag bad">Hết</span>
+            <span v-if="m.wait" class="pxtag warn">{{ m.wait }} {{ L('đơn', m.wait === 1 ? 'order' : 'orders') }}</span>
+            <span v-else-if="m.can < 1" class="pxtag bad">{{ L('Hết', 'Out') }}</span>
             <span v-else class="kc">×{{ m.can }}</span>
           </button>
         </div>

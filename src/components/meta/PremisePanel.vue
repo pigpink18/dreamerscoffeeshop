@@ -4,27 +4,28 @@ import { moneyShort } from '../../game/data'
 import { PREMISES, premiseLocked, rentPremise } from '../../game/meta'
 import RoomPreview from './RoomPreview.vue'
 import PixelIcon from '../ui/PixelIcon.vue'
+import { L } from '../../game/i18n'
 </script>
 
 <template>
   <div>
-    <p class="muted hint">Thuê mặt bằng lớn hơn: khách đông hơn, chịu trả giá cao hơn, thêm chỗ chờ – nhưng tiền thuê mỗi ngày cũng cao hơn.</p>
+    <p class="muted hint">{{ L('Thuê mặt bằng lớn hơn: khách đông hơn, chịu trả giá cao hơn, thêm chỗ chờ – nhưng tiền thuê mỗi ngày cũng cao hơn.', 'Rent a bigger place: more guests, happier to pay more, extra waiting spots – but the daily rent goes up too.') }}</p>
     <div class="list">
       <div v-for="p in PREMISES" :key="p.id" class="card prem" :class="{ cur: save.meta.premise === p.id, past: save.meta.premise > p.id }">
         <RoomPreview :premise="p.id" :corgi="save.meta.premise === p.id" />
         <div class="body">
-          <div class="name">{{ p.name }} <span v-if="save.meta.premise === p.id" class="pxtag good">ĐANG Ở</span></div>
+          <div class="name">{{ p.name }} <span v-if="save.meta.premise === p.id" class="pxtag good">{{ L('ĐANG Ở', 'CURRENT') }}</span></div>
           <div class="muted small">{{ p.desc }}</div>
           <div class="effs">
-            <span class="pxtag">Khách x{{ p.customerMul }}</span>
-            <span class="pxtag" v-if="p.priceMul > 1">Giá chấp nhận +{{ Math.round((p.priceMul - 1) * 100) }}%</span>
-            <span class="pxtag" v-if="p.slots">+{{ p.slots }} chỗ chờ</span>
-            <span class="pxtag warn">Thuê {{ moneyShort(p.rent) }}/ngày</span>
+            <span class="pxtag">{{ L('Khách', 'Guests') }} x{{ p.customerMul }}</span>
+            <span class="pxtag" v-if="p.priceMul > 1">{{ L('Giá chấp nhận', 'Price tolerance') }} +{{ Math.round((p.priceMul - 1) * 100) }}%</span>
+            <span class="pxtag" v-if="p.slots">+{{ p.slots }} {{ L('chỗ chờ', 'queue spots') }}</span>
+            <span class="pxtag warn">{{ L('Thuê', 'Rent') }} {{ moneyShort(p.rent) }}/{{ L('ngày', 'day') }}</span>
           </div>
           <div v-if="save.meta.premise < p.id" class="act">
             <span class="muted small lock" v-if="premiseLocked(p.id)"><PixelIcon name="lock" :size="2" /> {{ premiseLocked(p.id) }}</span>
-            <span v-else class="muted small">Tiền cọc {{ moneyShort(p.deposit) }}</span>
-            <button class="btn sm accent" :disabled="!!premiseLocked(p.id) || save.money < p.deposit" @click="rentPremise(p.id)">THUÊ · {{ moneyShort(p.deposit) }}</button>
+            <span v-else class="muted small">{{ L('Tiền cọc', 'Deposit') }} {{ moneyShort(p.deposit) }}</span>
+            <button class="btn sm accent" :disabled="!!premiseLocked(p.id) || save.money < p.deposit" @click="rentPremise(p.id)">{{ L('THUÊ', 'RENT') }} · {{ moneyShort(p.deposit) }}</button>
           </div>
         </div>
       </div>

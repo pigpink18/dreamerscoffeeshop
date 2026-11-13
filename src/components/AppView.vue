@@ -6,6 +6,7 @@ import { REGULARS, BOND_LEVELS, bondLevel, SHIPPERS } from '../game/data'
 import PixelIcon from './ui/PixelIcon.vue'
 import DrinkIcon from './ui/DrinkIcon.vue'
 import PersonPortrait from './ui/PersonPortrait.vue'
+import { L, isEn } from '../game/i18n'
 
 const BOND_ICON = ['heartOff', 'heart', 'heart2']
 
@@ -23,12 +24,12 @@ const regulars = computed(() => REGULARS.map((r) => ({ ...r, bond: save.bonds[r.
   <div>
     <!-- Trang quán trên app giao đồ (hư cấu) -->
     <div class="card store">
-      <div class="brand"><span class="logo">DreamersFood</span><span class="muted tiny">app giao đồ uống</span></div>
+      <div class="brand"><span class="logo">DreamersFood</span><span class="muted tiny">{{ L('app giao đồ uống', 'drink delivery app') }}</span></div>
       <div class="row">
         <div class="avatar"><PixelIcon name="cup" :size="4" /></div>
         <div class="grow">
           <div class="name">Dreamers Coffee</div>
-          <div class="muted small">Cà phê · Trà · Giao nhanh bởi shipper rapper</div>
+          <div class="muted small">{{ L('Cà phê · Trà · Giao nhanh bởi shipper rapper', 'Coffee · Tea · Speedy delivery by rapper riders') }}</div>
         </div>
       </div>
       <template v-if="save.upgrades.shipper">
@@ -36,7 +37,7 @@ const regulars = computed(() => REGULARS.map((r) => ({ ...r, bond: save.bonds[r.
           <div class="big">{{ rating.toFixed(1) }}</div>
           <div>
             <div class="stars"><PixelIcon v-for="i in 5" :key="i" :name="i <= Math.round(rating) ? 'star' : 'starOff'" :size="2" /></div>
-            <div class="muted tiny">{{ save.reviews.length }} đánh giá</div>
+            <div class="muted tiny">{{ save.reviews.length }} {{ L('đánh giá', 'reviews') }}</div>
           </div>
           <div class="dist grow">
             <div v-for="(n, i) in dist" :key="i" class="drow"><span>{{ 5 - i }}</span><div><i :style="{ width: (n / maxDist) * 100 + '%' }" /></div></div>
@@ -47,13 +48,14 @@ const regulars = computed(() => REGULARS.map((r) => ({ ...r, bond: save.bonds[r.
         </div>
       </template>
       <div v-else class="locked">
-        <PixelIcon name="scooter" :size="4" /><span>Chưa mở bán online. Thuê <b>Shipper rapper</b> ở tab Nâng cấp để nhận đơn qua app nha!</span>
-        <button class="btn sm accent" style="margin-top: 10px" @click="ui.tab = 'upgrade'"><PixelIcon name="up" :size="2" /> ĐI TỚI NÂNG CẤP</button>
+        <PixelIcon name="scooter" :size="4" /><span v-if="isEn">Not selling online yet. Hire a <b>Rapper rider</b> in the Upgrades tab to take app orders!</span>
+        <span v-else>Chưa mở bán online. Thuê <b>Shipper rapper</b> ở tab Nâng cấp để nhận đơn qua app nha!</span>
+        <button class="btn sm accent" style="margin-top: 10px" @click="ui.tab = 'upgrade'"><PixelIcon name="up" :size="2" /> {{ L('ĐI TỚI NÂNG CẤP', 'GO TO UPGRADES') }}</button>
       </div>
     </div>
 
     <template v-if="save.reviews.length">
-      <div class="section-title">Đánh giá mới nhất</div>
+      <div class="section-title">{{ L('Đánh giá mới nhất', 'Latest reviews') }}</div>
       <div class="reviews">
         <div v-for="r in save.reviews.slice(0, 12)" :key="r.id" class="card review">
           <div class="row">
@@ -62,33 +64,33 @@ const regulars = computed(() => REGULARS.map((r) => ({ ...r, bond: save.bonds[r.
               <b>{{ r.name }}</b>
               <div class="stars sm"><PixelIcon v-for="i in 5" :key="i" :name="i <= r.stars ? 'star' : 'starOff'" :size="1.5" /></div>
             </div>
-            <span class="muted tiny rday">Ngày {{ r.day }} <DrinkIcon :id="r.recipe" :scale="1" /></span>
+            <span class="muted tiny rday">{{ L('Ngày', 'Day') }} {{ r.day }} <DrinkIcon :id="r.recipe" :scale="1" /></span>
           </div>
           <p>{{ noEmoji(r.text) }}</p>
         </div>
       </div>
     </template>
 
-    <div class="section-title">Khách quen</div>
+    <div class="section-title">{{ L('Khách quen', 'Regulars') }}</div>
     <div class="card regs">
       <div v-for="r in regulars" :key="r.id" class="reg">
         <span class="face"><PersonPortrait :look="r.look" :hidden="r.bond <= 0" :scale="2" /><PixelIcon v-if="r.bond <= 0" class="q" name="question" :size="2" /></span>
         <div class="grow">
           <b>{{ r.bond > 0 ? r.name : '???' }}</b>
-          <div class="muted tiny">{{ r.bond > 0 ? r.role : 'Chưa gặp – sẽ sớm ghé quán' }}</div>
+          <div class="muted tiny">{{ r.bond > 0 ? r.role : L('Chưa gặp – sẽ sớm ghé quán', "Not met yet – dropping by soon") }}</div>
           <div class="hearts pxbar"><i :style="{ width: r.bond + '%' }" /></div>
         </div>
         <span class="lvl pxtag" :class="['', 'warn', 'bad'][bondLevel(r.bond)]"><PixelIcon :name="BOND_ICON[bondLevel(r.bond)]" :size="2" /> {{ BOND_LEVELS[bondLevel(r.bond)].name }}</span>
       </div>
-      <div class="muted tiny note">Tám chuyện & pha chuẩn để thân hơn. Khách quen/bạn thân tip nhiều hơn và kiên nhẫn hơn.</div>
+      <div class="muted tiny note">{{ L('Tám chuyện & pha chuẩn để thân hơn. Khách quen/bạn thân tip nhiều hơn và kiên nhẫn hơn.', 'Chat and nail their drinks to grow closer. Regulars and close friends tip more and wait longer.') }}</div>
     </div>
 
-    <div class="section-title">Tác động xã hội</div>
+    <div class="section-title">{{ L('Tác động xã hội', 'Social impact') }}</div>
     <div class="card impact">
-      <div class="tile"><PixelIcon name="plant" /><b>{{ save.impact.plastic }}</b><small>ly nhựa đã tiết kiệm</small></div>
-      <div class="tile"><PixelIcon name="bean" /><b>{{ save.impact.farmerKg.toFixed(1) }}kg</b><small>cà phê mua từ nông dân</small></div>
+      <div class="tile"><PixelIcon name="plant" /><b>{{ save.impact.plastic }}</b><small>{{ L('ly nhựa đã tiết kiệm', 'plastic cups saved') }}</small></div>
+      <div class="tile"><PixelIcon name="bean" /><b>{{ save.impact.farmerKg.toFixed(1) }}kg</b><small>{{ L('cà phê mua từ nông dân', 'coffee bought from farmers') }}</small></div>
     </div>
-    <p class="muted tiny note">Mở “Sống xanh” và “Cà phê sạch Cầu Đất” ở tab Nâng cấp để tăng tác động.</p>
+    <p class="muted tiny note">{{ L('Mở “Sống xanh” và “Cà phê sạch Cầu Đất” ở tab Nâng cấp để tăng tác động.', 'Unlock “Go Green” and “Cầu Đất Clean Coffee” in the Upgrades tab to boost your impact.') }}</p>
   </div>
 </template>
 

@@ -8,6 +8,7 @@ import { RARE, ACHIEVEMENTS, achCtx, albumCount, ALBUM_TOTAL } from '../game/met
 import AppView from './AppView.vue'
 import PixelIcon from './ui/PixelIcon.vue'
 import PersonPortrait from './ui/PersonPortrait.vue'
+import { L } from '../game/i18n'
 
 const seg = ref<'quest' | 'album' | 'ach' | 'app'>('quest')
 const Q = computed(() => save.meta.quests)
@@ -18,24 +19,24 @@ const A = save.meta.album
 const fallback = randomLook()
 const groups = computed(() => rawGroups.value.map((g) => ({ ...g, seen: g.items.filter((x) => save.meta.album[x.key]).length })))
 const rawGroups = computed(() => [
-  { title: 'Khách quen', items: REGULARS.map((r) => ({ key: `reg:${r.id}`, name: r.name, look: r.look })) },
-  { title: 'Khách hiếm', items: RARE.map((r) => ({ key: `rare:${r.id}`, name: r.name, look: r.look })) },
-  { title: 'Khách cá tính', items: CHARACTERS.map((b, i) => ({ key: `boss:${i}`, name: b.name, look: b.look })) },
-  { title: 'Khách du lịch', items: INTL_NAMES.map((n) => ({ key: `intl:${n.name}`, name: n.name, look: save.meta.album[`intl:${n.name}`]?.look ?? fallback })) },
-  { title: 'Khách vãng lai', items: [...FEMALE_NAMES, ...MALE_NAMES].map((n) => ({ key: `name:${n}`, name: n, look: save.meta.album[`name:${n}`]?.look ?? fallback })) },
+  { title: L('Khách quen', 'Regulars'), items: REGULARS.map((r) => ({ key: `reg:${r.id}`, name: r.name, look: r.look })) },
+  { title: L('Khách hiếm', 'Rare guests'), items: RARE.map((r) => ({ key: `rare:${r.id}`, name: r.name, look: r.look })) },
+  { title: L('Khách cá tính', 'Characters'), items: CHARACTERS.map((b, i) => ({ key: `boss:${i}`, name: b.name, look: b.look })) },
+  { title: L('Khách du lịch', 'Tourists'), items: INTL_NAMES.map((n) => ({ key: `intl:${n.name}`, name: n.name, look: save.meta.album[`intl:${n.name}`]?.look ?? fallback })) },
+  { title: L('Khách vãng lai', 'Passers-by'), items: [...FEMALE_NAMES, ...MALE_NAMES].map((n) => ({ key: `name:${n}`, name: n, look: save.meta.album[`name:${n}`]?.look ?? fallback })) },
 ])
 const rareHint = (key: string) => {
   const r = RARE.find((x) => `rare:${x.id}` === key)
   if (!r) return ''
-  const w = r.weather ? { sunny: 'nắng', hot: 'nóng', cloudy: 'nhiều mây', rainy: 'mưa' } as Record<string, string> : null
-  const parts = [r.weather && w ? 'trời ' + r.weather.map((x) => w[x]).join('/') : '', r.from !== undefined && r.from >= 0.6 ? 'buổi tối' : r.to !== undefined && r.to <= 0.4 ? 'buổi sáng' : '', r.minDay ? `từ ngày ${r.minDay}` : '']
-  return parts.filter(Boolean).join(', ') || 'bất chợt'
+  const w = r.weather ? L({ sunny: 'nắng', hot: 'nóng', cloudy: 'nhiều mây', rainy: 'mưa' }, { sunny: 'sunny', hot: 'hot', cloudy: 'cloudy', rainy: 'rainy' }) as Record<string, string> : null
+  const parts = [r.weather && w ? L('trời ', '') + r.weather.map((x) => w[x]).join('/') : '', r.from !== undefined && r.from >= 0.6 ? L('buổi tối', 'evening') : r.to !== undefined && r.to <= 0.4 ? L('buổi sáng', 'morning') : '', r.minDay ? L(`từ ngày ${r.minDay}`, `from day ${r.minDay}`) : '']
+  return parts.filter(Boolean).join(', ') || L('bất chợt', 'anytime')
 }
 const achList = computed(() => ACHIEVEMENTS.map((a) => {
   const v = a.stat(achCtx.value)
   return { ...a, v: Math.min(v, a.goal), done: save.meta.ach.includes(a.id) }
 }).sort((a, b) => Number(a.done) - Number(b.done) || b.v / b.goal - a.v / a.goal))
-const fmt = (n: number) => (n >= 1_000_000 ? (n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1) + 'tr' : String(n))
+const fmt = (n: number) => (n >= 1_000_000 ? (n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1) + L('tr', 'M') : String(n))
 void ui
 void A
 </script>
@@ -43,16 +44,16 @@ void A
 <template>
   <div>
     <div class="segs">
-      <button :class="{ on: seg === 'quest' }" @click="seg = 'quest'">Nhiệm vụ<span v-if="doneN < 3" class="dotn">{{ 3 - doneN }}</span></button>
+      <button :class="{ on: seg === 'quest' }" @click="seg = 'quest'">{{ L('Nhiệm vụ', 'Quests') }}<span v-if="doneN < 3" class="dotn">{{ 3 - doneN }}</span></button>
       <button :class="{ on: seg === 'album' }" @click="seg = 'album'">Album</button>
-      <button :class="{ on: seg === 'ach' }" @click="seg = 'ach'">Thành tựu</button>
-      <button :class="{ on: seg === 'app' }" @click="seg = 'app'">App & khách</button>
+      <button :class="{ on: seg === 'ach' }" @click="seg = 'ach'">{{ L('Thành tựu', 'Trophies') }}</button>
+      <button :class="{ on: seg === 'app' }" @click="seg = 'app'">{{ L('App & khách', 'App & guests') }}</button>
     </div>
 
     <!-- Nhiệm vụ -->
     <template v-if="seg === 'quest'">
-      <div class="card beans"><PixelIcon name="bean" :size="3" /><b>{{ save.meta.beans }} hạt vàng</b><span class="muted small grow">dùng ở Nâng cấp › Tiệm của Cáo</span></div>
-      <div class="section-title">Nhiệm vụ ngày {{ save.day }} · {{ doneN }}/3</div>
+      <div class="card beans"><PixelIcon name="bean" :size="3" /><b>{{ save.meta.beans }} {{ L('hạt vàng', 'gold beans') }}</b><span class="muted small grow">{{ L('dùng ở Nâng cấp › Tiệm của Cáo', "spend at Upgrades › Cáo's Shop") }}</span></div>
+      <div class="section-title">{{ L(`Nhiệm vụ ngày ${save.day}`, `Day ${save.day} quests`) }} · {{ doneN }}/3</div>
       <div class="list">
         <div v-for="(q, i) in Q.list" :key="i" class="card quest" :class="{ done: q.done }">
           <PixelIcon :name="q.done ? 'star' : 'starOff'" :size="3" />
@@ -64,12 +65,12 @@ void A
           <span class="pxtag" :class="q.done ? 'good' : 'warn'"><PixelIcon name="bean" :size="2" /> {{ q.beans }}</span>
         </div>
       </div>
-      <p class="muted note">Xong cả 3 nhiệm vụ: thưởng thêm 5 hạt vàng và có thể nhận gợi ý công thức bí mật. Nhiệm vụ đổi mỗi ngày.</p>
+      <p class="muted note">{{ L('Xong cả 3 nhiệm vụ: thưởng thêm 5 hạt vàng và có thể nhận gợi ý công thức bí mật. Nhiệm vụ đổi mỗi ngày.', 'Finish all 3 quests for 5 bonus gold beans and a chance at a secret recipe hint. Quests change daily.') }}</p>
     </template>
 
     <!-- Album -->
     <template v-else-if="seg === 'album'">
-      <div class="card beans"><PixelIcon name="menu" :size="3" /><b>{{ albumCount }}/{{ ALBUM_TOTAL }} khách</b><i class="pbar grow"><b :style="{ width: (albumCount / ALBUM_TOTAL) * 100 + '%' }" /></i></div>
+      <div class="card beans"><PixelIcon name="menu" :size="3" /><b>{{ albumCount }}/{{ ALBUM_TOTAL }} {{ L('khách', 'guests') }}</b><i class="pbar grow"><b :style="{ width: (albumCount / ALBUM_TOTAL) * 100 + '%' }" /></i></div>
       <template v-for="g in groups" :key="g.title">
         <div class="section-title">{{ g.title }} · {{ g.seen }}/{{ g.items.length }}</div>
         <div class="album">
@@ -85,7 +86,7 @@ void A
 
     <!-- Thành tựu -->
     <template v-else-if="seg === 'ach'">
-      <div class="section-title">Thành tựu · {{ save.meta.ach.length }}/{{ ACHIEVEMENTS.length }}</div>
+      <div class="section-title">{{ L('Thành tựu', 'Trophies') }} · {{ save.meta.ach.length }}/{{ ACHIEVEMENTS.length }}</div>
       <div class="list">
         <div v-for="a in achList" :key="a.id" class="card quest" :class="{ done: a.done }">
           <PixelIcon :name="a.done ? 'trophy' : 'lock'" :size="3" />

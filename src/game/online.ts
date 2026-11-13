@@ -2,6 +2,7 @@
 import { reactive } from 'vue'
 import { save } from './store'
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './onlineConfig'
+import { L } from './i18n'
 
 const URL_ = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || SUPABASE_URL
 const KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) || SUPABASE_ANON_KEY
@@ -35,7 +36,7 @@ export async function loadBoard() {
     board.rows = await r.json()
     board.at = Date.now()
   } catch {
-    board.error = 'Không tải được bảng xếp hạng (mất mạng?)'
+    board.error = L('Không tải được bảng xếp hạng (mất mạng?)', "Couldn't load the leaderboard (offline?)")
   } finally {
     board.loading = false
   }

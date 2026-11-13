@@ -1,6 +1,7 @@
 // Âm thanh: hiệu ứng tự tổng hợp bằng Web Audio + nhạc nền CC0 (Abstraction / Tallbeard Studios)
 import { reactive, watch } from 'vue'
 import { isXmasSeason } from './season'
+import { L } from './i18n'
 
 const KEY = 'dreamers-audio'
 // Nhạc nền trong quán: 5 vòng bossa nova nhẹ nhàng sáng tác riêng cho game (tools/bossa.py), phát luân phiên.
@@ -9,9 +10,9 @@ export type TrackId = 'lastXmas' | 'feliz' | 'somMai' | 'muaPhun' | 'hemNho' | '
 export type TrackChoice = Exclude<TrackId, 'boss' | 'bossSoft' | 'report'> | 'auto'
 export type BossMusic = 'soft' | 'drama' | 'off'
 export const BOSS_MUSIC_LIST: { id: BossMusic; name: string; desc: string }[] = [
-  { id: 'soft', name: 'Hồi hộp nhẹ', desc: 'Bossa giọng thứ, nhanh hơn chút, có tiếng tích tắc' },
-  { id: 'drama', name: 'Kịch tính', desc: 'Out of Time – chiptune dồn dập' },
-  { id: 'off', name: 'Giữ nhạc quán', desc: 'Không đổi nhạc khi boss tới' },
+  { id: 'soft', name: L('Hồi hộp nhẹ', 'Light suspense'), desc: L('Bossa giọng thứ, nhanh hơn chút, có tiếng tích tắc', 'Minor-key bossa, a bit faster, with a ticking clock') },
+  { id: 'drama', name: L('Kịch tính', 'Dramatic'), desc: L('Out of Time – chiptune dồn dập', 'Out of Time – driving chiptune') },
+  { id: 'off', name: L('Giữ nhạc quán', 'Keep café music'), desc: L('Không đổi nhạc khi boss tới', "Don't switch music when the boss shows up") },
 ]
 const BOSS_GAIN: Partial<Record<TrackId, number>> = { bossSoft: 0.85, boss: 0.6, report: 1.4, lastXmas: 2.2, feliz: 1.8 } // cân bằng với nhạc quán
 const isBossTrack = (id: TrackId) => id === 'boss' || id === 'bossSoft'
@@ -35,14 +36,14 @@ const PLAYLIST: TrackId[] = isXmasSeason() ? ALL_TRACKS : ALL_TRACKS.filter((t) 
 /** Mỗi bài lặp mấy vòng (~1 phút/vòng) rồi chuyển bài kế tiếp */
 const LOOPS_PER_TRACK = 2
 const ALL_TRACK_LIST: { id: TrackChoice; name: string; icon: string; desc: string }[] = [
-  { id: 'auto', name: 'Phát luân phiên', icon: '', desc: isXmasSeason() ? '7 bài bossa nova lần lượt, mở đầu bằng 2 bài Giáng sinh' : '5 bài bossa nova lần lượt' },
-  { id: 'lastXmas', name: 'Last Christmas (bossa)', icon: '', desc: 'Bossa pop Giáng sinh' },
-  { id: 'feliz', name: 'Feliz Navidad (bossa)', icon: '', desc: 'Bossa Giáng sinh vui tươi' },
-  { id: 'somMai', name: 'Sớm mai', icon: '', desc: 'Bossa sáng sớm, sáo nhẹ' },
-  { id: 'muaPhun', name: 'Mưa phùn', icon: '', desc: 'Chậm, vibraphone êm' },
-  { id: 'hemNho', name: 'Hẻm nhỏ', icon: '', desc: 'Rhodes ấm, hơi jazz' },
-  { id: 'chieuHien', name: 'Chiều hiên', icon: '', desc: 'Thong thả buổi chiều' },
-  { id: 'lyDenDa', name: 'Ly đen đá', icon: '', desc: 'Giọng thứ, hơi hoài niệm' },
+  { id: 'auto', name: L('Phát luân phiên', 'Shuffle all'), icon: '', desc: isXmasSeason() ? L('7 bài bossa nova lần lượt, mở đầu bằng 2 bài Giáng sinh', '7 bossa nova tunes in turn, starting with 2 Christmas songs') : L('5 bài bossa nova lần lượt', '5 bossa nova tunes in turn') },
+  { id: 'lastXmas', name: 'Last Christmas (bossa)', icon: '', desc: L('Bossa pop Giáng sinh', 'Christmas bossa pop') },
+  { id: 'feliz', name: 'Feliz Navidad (bossa)', icon: '', desc: L('Bossa Giáng sinh vui tươi', 'Cheerful Christmas bossa') },
+  { id: 'somMai', name: L('Sớm mai', 'Early Morning'), icon: '', desc: L('Bossa sáng sớm, sáo nhẹ', 'Morning bossa, soft flute') },
+  { id: 'muaPhun', name: L('Mưa phùn', 'Drizzle'), icon: '', desc: L('Chậm, vibraphone êm', 'Slow, mellow vibraphone') },
+  { id: 'hemNho', name: L('Hẻm nhỏ', 'Little Alley'), icon: '', desc: L('Rhodes ấm, hơi jazz', 'Warm Rhodes, a little jazzy') },
+  { id: 'chieuHien', name: L('Chiều hiên', 'Porch Afternoon'), icon: '', desc: L('Thong thả buổi chiều', 'A lazy afternoon') },
+  { id: 'lyDenDa', name: L('Ly đen đá', 'Iced Black Coffee'), icon: '', desc: L('Giọng thứ, hơi hoài niệm', 'Minor key, a bit nostalgic') },
 ]
 /** nhạc màn tổng kết cuối ngày (chọn trong Cài đặt) – các file trong public/assets/music */
 export const REPORT_TRACKS: { file: string; name: string }[] = [
@@ -51,7 +52,7 @@ export const REPORT_TRACKS: { file: string; name: string }[] = [
   { file: 'three-red-hearts', name: 'Three Red Hearts' },
   { file: 'puzzle-pieces', name: 'Puzzle Pieces' },
   { file: 'sanctuary', name: 'Sanctuary' },
-  { file: 'mappy', name: 'Mappy (cũ)' },
+  { file: 'mappy', name: L('Mappy (cũ)', 'Mappy (classic)') },
 ]
 export const TRACK_LIST = ALL_TRACK_LIST.filter((t) => t.id === 'auto' || PLAYLIST.includes(t.id))
 export const audio = reactive({ music: true, sfx: true, volume: 0.7, unlocked: false, track: 'auto' as TrackChoice, playing: '' as TrackId | '', bossMusic: 'off' as BossMusic, reportTrack: 'penguin-town' }) // không đổi nhạc & không kêu báo khi boss tới

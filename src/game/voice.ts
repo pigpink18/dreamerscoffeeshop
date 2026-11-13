@@ -8,6 +8,7 @@
 //   {y}/{Y}  chủ quán tự xưng        (em, chị, con, cháu, mình)
 //   {nữ|nam} chọn chữ theo giới tính khách (chữ đầu cho nữ, chữ sau cho nam)
 import type { ChatTopic } from './data'
+import { isEn, GENDER as OWNER_G } from './i18n'
 
 export type Gender = 'f' | 'm'
 export interface Persona { g: Gender; t: string; b: string; k: string; y: string }
@@ -30,11 +31,18 @@ export const NEUTRAL: Persona = xung.minh('f')
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
+// chủ quán là nam: khách gọi / chủ quán tự xưng "chị" → "anh", "bà" → "ông", "cô" → "chú"
+const OWNER_M: Record<string, string> = { 'chị': 'anh', 'bà': 'ông', 'cô': 'chú' }
+// tiếng Anh: không có xưng hô kiểu Việt → mã nào cũng thành I / you
+const EN_CODE: Record<'t' | 'b' | 'k' | 'y', string> = { t: 'I', b: 'you', k: 'you', y: 'I' }
+
 export function voice(text: string, p: Persona = NEUTRAL): string {
   return text
     .replace(/\{([^{}|]*)\|([^{}|]*)\}/g, (_, f: string, m: string) => (p.g === 'f' ? f : m))
     .replace(/\{([tbkyTBKY])\}/g, (_, c: string) => {
-      const v = p[c.toLowerCase() as 't' | 'b' | 'k' | 'y']
+      const key = c.toLowerCase() as 't' | 'b' | 'k' | 'y'
+      let v = isEn ? EN_CODE[key] : p[key]
+      if (!isEn && OWNER_G === 'm' && (key === 'b' || key === 'y')) v = OWNER_M[v] ?? v
       return c === c.toUpperCase() ? cap(v) : v
     })
 }

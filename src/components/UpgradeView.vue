@@ -6,6 +6,7 @@ import PixelIcon from './ui/PixelIcon.vue'
 import PremisePanel from './meta/PremisePanel.vue'
 import CaoShop from './meta/CaoShop.vue'
 import SeatingPanel from './SeatingPanel.vue'
+import { L } from '../game/i18n'
 
 const seg = ref<'up' | 'seat' | 'prem' | 'cao'>('up')
 
@@ -16,32 +17,32 @@ const UICON: Record<string, string> = { staff: 'staff', machine: 'gear', shipper
 <template>
   <div>
     <div class="segs">
-      <button :class="{ on: seg === 'up' }" @click="seg = 'up'">Nâng cấp</button>
-      <button :class="{ on: seg === 'seat' }" @click="seg = 'seat'">Khu ngồi</button>
-      <button :class="{ on: seg === 'prem' }" @click="seg = 'prem'">Mặt bằng</button>
-      <button :class="{ on: seg === 'cao' }" @click="seg = 'cao'">Tiệm của Cáo</button>
+      <button :class="{ on: seg === 'up' }" @click="seg = 'up'">{{ L('Nâng cấp', 'Upgrades') }}</button>
+      <button :class="{ on: seg === 'seat' }" @click="seg = 'seat'">{{ L('Khu ngồi', 'Seating') }}</button>
+      <button :class="{ on: seg === 'prem' }" @click="seg = 'prem'">{{ L('Mặt bằng', 'Premises') }}</button>
+      <button :class="{ on: seg === 'cao' }" @click="seg = 'cao'">{{ L('Tiệm của Cáo', "Cáo's Shop") }}</button>
     </div>
     <template v-if="seg === 'seat'">
-      <div class="section-title" style="margin-top: 4px">Khu khách ngồi</div>
-      <p class="muted hint">Khi đang bán, vuốt sang trái ở màn quầy để tới khu khách ngồi. Khách ngồi lại uống xong sẽ để lại ly bẩn và tiền boa trên bàn.</p>
+      <div class="section-title" style="margin-top: 4px">{{ L('Khu khách ngồi', 'Seating area') }}</div>
+      <p class="muted hint">{{ L('Khi đang bán, vuốt sang trái ở màn quầy để tới khu khách ngồi. Khách ngồi lại uống xong sẽ để lại ly bẩn và tiền boa trên bàn.', 'While open, swipe left from the counter to reach the seating area. Guests who stay leave dirty cups and tips on the table when they finish.') }}</p>
       <SeatingPanel />
     </template>
     <PremisePanel v-else-if="seg === 'prem'" />
     <CaoShop v-else-if="seg === 'cao'" />
     <template v-else>
-    <div class="section-title" style="margin-top: 4px">Nâng cấp quán</div>
-    <p class="muted hint">Mua xong sẽ thấy ngay trong cảnh quán: nhân viên đứng quầy, máy espresso mới, cây xanh, dây đèn, biển neon, mèo nằm quầy…</p>
+    <div class="section-title" style="margin-top: 4px">{{ L('Nâng cấp quán', 'Shop upgrades') }}</div>
+    <p class="muted hint">{{ L('Mua xong sẽ thấy ngay trong cảnh quán: nhân viên đứng quầy, máy espresso mới, cây xanh, dây đèn, biển neon, mèo nằm quầy…', 'Everything you buy shows up in the shop right away: staff at the counter, a new espresso machine, plants, string lights, a neon sign, a cat napping on the counter…') }}</p>
     <div class="list">
       <div v-for="u in UPGRADES" :key="u.id" class="card up">
         <span class="slot"><PixelIcon :name="UICON[u.id] || 'up'" :size="3" /></span>
         <div class="grow">
-          <div class="name">{{ u.name }}<span v-if="u.social" class="pxtag good soc">XÃ HỘI</span></div>
+          <div class="name">{{ u.name }}<span v-if="u.social" class="pxtag good soc">{{ L('XÃ HỘI', 'SOCIAL') }}</span></div>
           <div class="muted small">{{ u.desc }}</div>
           <div class="pips">
             <span v-for="n in u.costs.length" :key="n" class="pip" :class="{ on: n <= save.upgrades[u.id] }" />
           </div>
-          <div class="eff now"><PixelIcon name="check" :size="2" /> Hiện tại: {{ u.effect(save.upgrades[u.id]) }}</div>
-          <div v-if="save.upgrades[u.id] < u.costs.length" class="eff next"><PixelIcon name="up" :size="2" /> Cấp {{ save.upgrades[u.id] + 1 }}: {{ u.effect(save.upgrades[u.id] + 1) }}</div>
+          <div class="eff now"><PixelIcon name="check" :size="2" /> {{ L('Hiện tại', 'Now') }}: {{ u.effect(save.upgrades[u.id]) }}</div>
+          <div v-if="save.upgrades[u.id] < u.costs.length" class="eff next"><PixelIcon name="up" :size="2" /> {{ L('Cấp', 'Lv') }} {{ save.upgrades[u.id] + 1 }}: {{ u.effect(save.upgrades[u.id] + 1) }}</div>
         </div>
         <button
           v-if="save.upgrades[u.id] < u.costs.length"
@@ -49,19 +50,19 @@ const UICON: Record<string, string> = { staff: 'staff', machine: 'gear', shipper
           :disabled="save.money < u.costs[save.upgrades[u.id]]"
           @click="buyUpgrade(u.id)"
         >{{ moneyShort(u.costs[save.upgrades[u.id]]) }}</button>
-        <span v-else class="pxtag good max">TỐI ĐA</span>
+        <span v-else class="pxtag good max">{{ L('TỐI ĐA', 'MAX') }}</span>
       </div>
     </div>
 
-    <div class="section-title">Thành tích</div>
+    <div class="section-title">{{ L('Thành tích', 'Records') }}</div>
     <div class="stats">
-      <div class="tile"><PixelIcon name="sunny" /><b>{{ save.day }}</b><span>Ngày</span></div>
-      <div class="tile"><PixelIcon name="cup" /><b>{{ save.totals.served }}</b><span>Ly đã bán</span></div>
-      <div class="tile"><PixelIcon name="coin" /><b>{{ moneyShort(save.totals.revenue) }}</b><span>Tổng doanh thu</span></div>
-      <div class="tile"><PixelIcon name="trophy" /><b>{{ moneyShort(save.totals.bestProfit) }}</b><span>Lời cao nhất/ngày</span></div>
+      <div class="tile"><PixelIcon name="sunny" /><b>{{ save.day }}</b><span>{{ L('Ngày', 'Days') }}</span></div>
+      <div class="tile"><PixelIcon name="cup" /><b>{{ save.totals.served }}</b><span>{{ L('Ly đã bán', 'Cups sold') }}</span></div>
+      <div class="tile"><PixelIcon name="coin" /><b>{{ moneyShort(save.totals.revenue) }}</b><span>{{ L('Tổng doanh thu', 'Total revenue') }}</span></div>
+      <div class="tile"><PixelIcon name="trophy" /><b>{{ moneyShort(save.totals.bestProfit) }}</b><span>{{ L('Lời cao nhất/ngày', 'Best day profit') }}</span></div>
     </div>
 
-    <p class="muted tiny center">Chơi lại từ đầu: bấm nút bánh răng (Cài đặt) ở góc trên.</p>
+    <p class="muted tiny center">{{ L('Chơi lại từ đầu: bấm nút bánh răng (Cài đặt) ở góc trên.', 'To start over: tap the gear (Settings) button up top.') }}</p>
     </template>
   </div>
 </template>

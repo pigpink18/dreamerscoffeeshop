@@ -1,7 +1,7 @@
 // Cốt truyện chính "28 ngày giữ dốc": chuỗi MÂY Coffee muốn mua cả con dốc, bà Tư chủ nhà sẽ quyết định
 // cho ai thuê tiếp vào ngày chung kết Hội Barista Phố Núi. Mỗi chương là 1 cảnh hội thoại hiện đầu ngày,
 // lựa chọn trong cảnh để lại cờ (flags) ảnh hưởng lượng khách, danh tiếng, tiền và cái kết.
-import { ownerLook, G } from './i18n'
+import { ownerLook, G, L, DEFAULT_NAME, GENDER } from './i18n'
 import { computed, watch } from 'vue'
 import { save, ui, toast, persist } from './store'
 import { hooks } from './hooks'
@@ -49,152 +49,153 @@ export interface Chapter {
 // ---------- nhân vật ----------
 const girl = (shirt: string): Look => ({ skin: '#f3c9a6', hair: '#1f1a1c', style: 'shoulder', shirt, acc: ['blush'] })
 export const CAST: Record<Exclude<Speaker, 'none' | 'cao'>, { name: string; look: Look; pitch: number }> = {
-  yen: { name: 'Yến', look: ownerLook('#3f7a73'), pitch: G(640, 470) },
-  tu: { name: 'Bà Tư chủ nhà', look: { skin: '#e2b089', hair: '#d9d4cb', style: 'bun', shirt: '#7a4f8a', acc: ['glasses'] }, pitch: 420 },
-  thang: { name: 'Thắng “Nhân Rộng” · CEO MÂY Coffee', look: { skin: '#f0c8a0', hair: '#2a2220', style: 'slick', shirt: '#24242b', accent: '#f4f4f0', acc: ['shades', 'chain'] }, pitch: 330 },
-  me: { name: 'Mẹ', look: { skin: '#efc39c', hair: '#3a2c28', style: 'bob', shirt: '#b8484a', acc: ['glasses', 'earring'] }, pitch: 520 },
+  yen: { name: DEFAULT_NAME[GENDER], look: ownerLook('#3f7a73'), pitch: G(640, 470) },
+  tu: { name: L('Bà Tư chủ nhà', 'Mrs. Tư, the landlady'), look: { skin: '#e2b089', hair: '#d9d4cb', style: 'bun', shirt: '#7a4f8a', acc: ['glasses'] }, pitch: 420 },
+  thang: { name: L('Thắng “Nhân Rộng” · CEO MÂY Coffee', 'Thắng “Scale-Up” · CEO of MÂY Coffee'), look: { skin: '#f0c8a0', hair: '#2a2220', style: 'slick', shirt: '#24242b', accent: '#f4f4f0', acc: ['shades', 'chain'] }, pitch: 330 },
+  me: { name: L('Mẹ', 'Mom'), look: { skin: '#efc39c', hair: '#3a2c28', style: 'bob', shirt: '#b8484a', acc: ['glasses', 'earring'] }, pitch: 520 },
   kenny: { name: 'Kenny Sang', look: REGULARS.find((r) => r.id === 'tuan')?.look ?? girl('#f4f4f0'), pitch: 380 },
   linh: { name: 'Linh Livestream', look: { skin: '#f6d2b5', hair: '#c9864f', style: 'long', shirt: '#ff8fb8', acc: ['hoops', 'lipstick'] }, pitch: 760 },
 }
-export const speakerName = (s: Speaker) => (s === 'cao' ? 'Cáo' : s === 'none' ? '' : s === 'yen' ? save.player || 'Yến' : CAST[s].name)
+export const speakerName = (s: Speaker) => (s === 'cao' ? 'Cáo' : s === 'none' ? '' : s === 'yen' ? save.player || DEFAULT_NAME[GENDER] : CAST[s].name)
 
 const flag = (k: string) => !!save.story.flags[k]
 const addSupport = (n: number) => { save.story.flags.support = (save.story.flags.support ?? 0) + n }
 
 // ---------- kịch bản ----------
+// chuỗi "{name}" được thay bằng tên chủ quán lúc hiển thị (StoryScene)
 export const CHAPTERS: Chapter[] = [
   {
-    id: 'c1', at: 1, title: 'Chương 1 · Tờ hợp đồng 28 ngày', bg: 'shop', cast: ['yen', 'tu'],
-    goal: 'Giữ khách vui để nâng danh tiếng. Ngày chung kết, bà Tư sẽ quyết định.',
+    id: 'c1', at: 1, title: L('Chương 1 · Tờ hợp đồng 28 ngày', 'Chapter 1 · The 28-day lease'), bg: 'shop', cast: ['yen', 'tu'],
+    goal: L('Giữ khách vui để nâng danh tiếng. Ngày chung kết, bà Tư sẽ quyết định.', 'Keep guests happy to grow your reputation. On finals day, Mrs. Tư decides.'),
     lines: [
-      { who: 'tu', text: 'Con Yến, bà nói thẳng nha. Có một chuỗi cà phê trên thành phố muốn mua nguyên con dốc này.' },
-      { who: 'yen', text: 'Dạ?! Nguyên con dốc luôn hả bà?', mood: 'sad' },
-      { who: 'tu', text: 'Họ trả gấp ba tiền thuê. Mà bà già rồi, bà không ham tiền. Bà ham cái quán có hồn.' },
-      { who: 'tu', text: 'Còn 28 ngày nữa là Hội Barista Phố Núi. Hôm đó bà sẽ coi phố này thương ai hơn, rồi bà quyết.' },
-      { who: 'cao', text: 'Gâu! (Cáo đặt cái chân lên tờ hợp đồng như ký tên.)' },
-      { who: 'yen', text: 'Dạ… vậy con xin bà 28 ngày.', choices: [
-        { text: 'Con hứa quán sẽ là chỗ cả dốc thương nhất!', support: 3, reply: [{ who: 'tu', text: 'Được. Nói được thì làm được nha con.', mood: 'happy' }] },
-        { text: 'Chuỗi đó gấp ba thì con… gấp bốn tình cảm!', sassy: true, support: 2, rep: 2, reply: [{ who: 'tu', text: 'Cha, cái miệng này bán cà phê là hợp rồi đó!', mood: 'happy' }] },
+      { who: 'tu', text: L('Con {name}, bà nói thẳng nha. Có một chuỗi cà phê trên thành phố muốn mua nguyên con dốc này.', '{name}, dear, I’ll be straight with you. A big city coffee chain wants to buy this whole slope.') },
+      { who: 'yen', text: L('Dạ?! Nguyên con dốc luôn hả bà?', 'What?! The WHOLE slope?'), mood: 'sad' },
+      { who: 'tu', text: L('Họ trả gấp ba tiền thuê. Mà bà già rồi, bà không ham tiền. Bà ham cái quán có hồn.', 'They’re offering triple the rent. But I’m old. I don’t want money. I want a café with a soul.') },
+      { who: 'tu', text: L('Còn 28 ngày nữa là Hội Barista Phố Núi. Hôm đó bà sẽ coi phố này thương ai hơn, rồi bà quyết.', 'The Hill Town Barista Fest is in 28 days. That day I’ll see who this street loves more. Then I’ll decide.') },
+      { who: 'cao', text: L('Gâu! (Cáo đặt cái chân lên tờ hợp đồng như ký tên.)', 'Woof! (Cáo plants a paw on the lease, like a signature.)') },
+      { who: 'yen', text: L('Dạ… vậy con xin bà 28 ngày.', 'Okay… then give me those 28 days.'), choices: [
+        { text: L('Con hứa quán sẽ là chỗ cả dốc thương nhất!', 'I promise this will be the most loved spot on the slope!'), support: 3, reply: [{ who: 'tu', text: L('Được. Nói được thì làm được nha con.', 'Good. Big words, dear. Now back them up.'), mood: 'happy' }] },
+        { text: L('Chuỗi đó gấp ba thì con… gấp bốn tình cảm!', 'They pay triple? I’ll pay quadruple… in love!'), sassy: true, support: 2, rep: 2, reply: [{ who: 'tu', text: L('Cha, cái miệng này bán cà phê là hợp rồi đó!', 'Ha! With a mouth like that, you were born to sell coffee!'), mood: 'happy' }] },
       ] },
     ],
   },
   {
-    id: 'c2', at: 3, title: 'Chương 2 · CEO đi dép tổ ong', bg: 'shop', cast: ['yen', 'thang'],
-    goal: 'MÂY Coffee đã để ý quán. Nâng cấp quán và giữ danh tiếng thật ổn.',
+    id: 'c2', at: 3, title: L('Chương 2 · CEO đi dép tổ ong', 'Chapter 2 · The CEO in foam sandals'), bg: 'shop', cast: ['yen', 'thang'],
+    goal: L('MÂY Coffee đã để ý quán. Nâng cấp quán và giữ danh tiếng thật ổn.', 'MÂY Coffee has its eye on you. Upgrade the café and keep your reputation strong.'),
     lines: [
-      { who: 'thang', text: 'Chào em. Anh là Thắng, founder kiêm CEO kiêm Chief Vibe Officer của MÂY Coffee.' },
-      { who: 'thang', text: 'Anh không bán cà phê. Anh bán một hệ sinh thái trải nghiệm đa điểm chạm, có roadmap scale lên 300 chi nhánh.' },
-      { who: 'yen', text: 'Dạ… vậy anh uống gì ạ?' },
-      { who: 'thang', text: 'Anh uống… data. Mà thôi, cho anh ly bạc xỉu ít đường, ít đá, ít sữa, nhiều insight.' },
-      { who: 'thang', text: 'Nói thẳng: anh mua lại quán em. Em làm store manager cho anh, KPI nhẹ thôi, 14 tiếng một ngày.', choices: [
-        { text: 'Dạ cảm ơn anh, nhưng quán này không bán ạ.', support: 2, reply: [{ who: 'thang', text: 'Ok em. Nhưng thị trường không chờ ai đâu nha.', mood: 'grumpy' }] },
-        { text: 'Hệ sinh thái của anh có cây thông nào không anh?', sassy: true, set: 'locals', support: 4, rep: 3, reply: [
-          { who: 'thang', text: '…Em sẽ hối hận đó. MÂY sẽ khai trương ngay đối diện.', mood: 'angry' },
-          { who: 'none', text: 'Mấy ông chú uống cà phê bàn bên cạnh vỗ tay rần rần. Chuyện lan khắp dốc trong một buổi sáng.' },
+      { who: 'thang', text: L('Chào em. Anh là Thắng, founder kiêm CEO kiêm Chief Vibe Officer của MÂY Coffee.', 'Hey. I’m Thắng: founder, CEO and Chief Vibe Officer of MÂY Coffee.') },
+      { who: 'thang', text: L('Anh không bán cà phê. Anh bán một hệ sinh thái trải nghiệm đa điểm chạm, có roadmap scale lên 300 chi nhánh.', 'I don’t sell coffee. I sell a multi-touchpoint experience ecosystem, with a roadmap to scale to 300 stores.') },
+      { who: 'yen', text: L('Dạ… vậy anh uống gì ạ?', 'Uh huh… so what can I get you?') },
+      { who: 'thang', text: L('Anh uống… data. Mà thôi, cho anh ly bạc xỉu ít đường, ít đá, ít sữa, nhiều insight.', 'I drink… data. Fine, a bạc xỉu. Less sugar, less ice, less milk, extra insight.') },
+      { who: 'thang', text: L('Nói thẳng: anh mua lại quán em. Em làm store manager cho anh, KPI nhẹ thôi, 14 tiếng một ngày.', 'Bottom line: I buy your café. You stay on as store manager. Light KPIs. Just 14 hours a day.'), choices: [
+        { text: L('Dạ cảm ơn anh, nhưng quán này không bán ạ.', 'Thanks, but this café isn’t for sale.'), support: 2, reply: [{ who: 'thang', text: L('Ok em. Nhưng thị trường không chờ ai đâu nha.', 'Sure. But the market waits for no one.'), mood: 'grumpy' }] },
+        { text: L('Hệ sinh thái của anh có cây thông nào không anh?', 'Does your ecosystem have any actual trees?'), sassy: true, set: 'locals', support: 4, rep: 3, reply: [
+          { who: 'thang', text: L('…Em sẽ hối hận đó. MÂY sẽ khai trương ngay đối diện.', '…You’ll regret that. MÂY is opening right across the street.'), mood: 'angry' },
+          { who: 'none', text: L('Mấy ông chú uống cà phê bàn bên cạnh vỗ tay rần rần. Chuyện lan khắp dốc trong một buổi sáng.', 'The old uncles at the next table burst into applause. By lunch, the whole slope has heard.') },
         ] },
       ] },
     ],
   },
   {
-    id: 'c3', at: 6, title: 'Chương 3 · Cuộc gọi lúc 9 giờ tối', bg: 'night', cast: ['yen', 'me'],
-    goal: 'Mẹ đang lo. Cố có một tuần lời đẹp cho mẹ yên tâm.',
+    id: 'c3', at: 6, title: L('Chương 3 · Cuộc gọi lúc 9 giờ tối', 'Chapter 3 · The 9 PM phone call'), bg: 'night', cast: ['yen', 'me'],
+    goal: L('Mẹ đang lo. Cố có một tuần lời đẹp cho mẹ yên tâm.', 'Mom is worried. Turn a nice profit this week to put her mind at ease.'),
     lines: [
-      { who: 'me', text: 'Alo, con gái. Mẹ coi Facebook thấy con đứng bán cà phê, tay đen thui hà.', mood: 'sad' },
-      { who: 'me', text: 'Cô Hạnh nói ngân hàng của cô đang tuyển. Con về Hà Nội đi, có lương tháng, có bảo hiểm.' },
-      { who: 'yen', text: 'Mẹ ơi…', mood: 'sad' },
-      { who: 'cao', text: 'Ẳng! (Cáo chen mặt vào camera.)' },
-      { who: 'me', text: 'Ủa con gì mập vậy? Con nuôi chó mà không nói mẹ hả?!', mood: 'angry' },
-      { who: 'yen', text: 'Dạ… đây là Cáo, đồng sáng lập của con.', choices: [
-        { text: 'Mẹ lên Đà Lạt chơi với con đi, rồi mẹ coi quán.', set: 'momVisit', support: 2, reply: [{ who: 'me', text: 'Để mẹ coi vé xe… Nhưng mẹ lên là mẹ kiểm tra sổ sách đó nha!', mood: 'happy' }] },
-        { text: 'Con ổn mà mẹ, mẹ đừng lo.', reply: [{ who: 'me', text: 'Ừ… con nhớ ăn uống đàng hoàng. Mẹ gửi đồ lên cho.', mood: 'sad' }] },
+      { who: 'me', text: L(`Alo, ${G('con gái', 'con trai')}. Mẹ coi Facebook thấy con đứng bán cà phê, tay đen thui hà.`, 'Hello, sweetie. I saw you on Facebook selling coffee. Your hands were all black!'), mood: 'sad' },
+      { who: 'me', text: L('Cô Hạnh nói ngân hàng của cô đang tuyển. Con về Hà Nội đi, có lương tháng, có bảo hiểm.', 'Auntie Hạnh says her bank is hiring. Come home to Hanoi. Steady pay, health insurance…') },
+      { who: 'yen', text: L('Mẹ ơi…', 'Mom…'), mood: 'sad' },
+      { who: 'cao', text: L('Ẳng! (Cáo chen mặt vào camera.)', 'Arf! (Cáo shoves his face into the camera.)') },
+      { who: 'me', text: L('Ủa con gì mập vậy? Con nuôi chó mà không nói mẹ hả?!', 'What is that chubby thing? You got a DOG and didn’t tell me?!'), mood: 'angry' },
+      { who: 'yen', text: L('Dạ… đây là Cáo, đồng sáng lập của con.', 'Um… this is Cáo. My co-founder.'), choices: [
+        { text: L('Mẹ lên Đà Lạt chơi với con đi, rồi mẹ coi quán.', 'Come visit me in Da Lat, Mom. See the café yourself.'), set: 'momVisit', support: 2, reply: [{ who: 'me', text: L('Để mẹ coi vé xe… Nhưng mẹ lên là mẹ kiểm tra sổ sách đó nha!', 'Let me check bus tickets… But when I come, I’m checking your books!'), mood: 'happy' }] },
+        { text: L('Con ổn mà mẹ, mẹ đừng lo.', 'I’m fine, Mom. Don’t worry.'), reply: [{ who: 'me', text: L('Ừ… con nhớ ăn uống đàng hoàng. Mẹ gửi đồ lên cho.', 'Okay… eat properly, alright? I’ll send you a care package.'), mood: 'sad' }] },
       ] },
     ],
   },
   {
-    id: 'c4', at: 9, title: 'Chương 4 · Kenny muốn nghỉ việc', bg: 'rain', cast: ['yen', 'kenny'],
-    goal: 'Những người khách quen là chỗ dựa của quán. Tám chuyện nhiều với họ.',
+    id: 'c4', at: 9, title: L('Chương 4 · Kenny muốn nghỉ việc', 'Chapter 4 · Kenny wants to quit'), bg: 'rain', cast: ['yen', 'kenny'],
+    goal: L('Những người khách quen là chỗ dựa của quán. Tám chuyện nhiều với họ.', 'Your regulars are your rock. Chat with them often.'),
     lines: [
-      { who: 'kenny', text: 'Em ơi, ly đen đá như cũ… À không, hôm nay anh không đi làm. Anh xin nghỉ ốm.', mood: 'sad' },
-      { who: 'kenny', text: 'Ốm thiệt nha, ốm tâm hồn. Sáng nay anh mở Outlook ra là tim đập 140.' },
-      { who: 'kenny', text: 'Em bỏ việc văn phòng lên đây mở quán, em có sợ không?', choices: [
-        { text: 'Sợ chứ anh. Nhưng sợ cả đời còn sợ hơn.', set: 'kennyQuit', support: 2, reply: [{ who: 'kenny', text: '…Câu này anh in ra dán lên màn hình máy tính luôn.', mood: 'happy' }] },
-        { text: 'Anh thử nghỉ phép một tuần trước đã.', set: 'kennyRest', support: 1, reply: [{ who: 'kenny', text: 'Ừ ha. Nghỉ phép thì sếp vẫn gọi, nhưng anh sẽ… không bắt máy!', mood: 'happy' }] },
-        { text: 'Anh mà nghỉ thì ai trả tiền cà phê cho em?', sassy: true, support: 1, rep: 1, reply: [{ who: 'kenny', text: 'Haha, thực tế ghê. Thôi anh cày thêm mùa KPI này vì em đó.', mood: 'happy' }] },
+      { who: 'kenny', text: L('Em ơi, ly đen đá như cũ… À không, hôm nay anh không đi làm. Anh xin nghỉ ốm.', 'Hey, the usual iced black… Actually, no work today. I called in sick.'), mood: 'sad' },
+      { who: 'kenny', text: L('Ốm thiệt nha, ốm tâm hồn. Sáng nay anh mở Outlook ra là tim đập 140.', 'Really sick. Soul-sick. I opened Outlook this morning and my heart hit 140.') },
+      { who: 'kenny', text: L('Em bỏ việc văn phòng lên đây mở quán, em có sợ không?', 'You quit your office job to open a café up here. Weren’t you scared?'), choices: [
+        { text: L('Sợ chứ anh. Nhưng sợ cả đời còn sợ hơn.', 'Terrified. But being scared my whole life scared me more.'), set: 'kennyQuit', support: 2, reply: [{ who: 'kenny', text: L('…Câu này anh in ra dán lên màn hình máy tính luôn.', '…I’m printing that and taping it to my monitor.'), mood: 'happy' }] },
+        { text: L('Anh thử nghỉ phép một tuần trước đã.', 'Maybe start with a week off?'), set: 'kennyRest', support: 1, reply: [{ who: 'kenny', text: L('Ừ ha. Nghỉ phép thì sếp vẫn gọi, nhưng anh sẽ… không bắt máy!', 'True. The boss will still call, but I’ll just… not pick up!'), mood: 'happy' }] },
+        { text: L('Anh mà nghỉ thì ai trả tiền cà phê cho em?', 'If you quit, who’s gonna buy my coffee?'), sassy: true, support: 1, rep: 1, reply: [{ who: 'kenny', text: L('Haha, thực tế ghê. Thôi anh cày thêm mùa KPI này vì em đó.', 'Haha, brutal. Fine, I’ll grind one more KPI season. For you.'), mood: 'happy' }] },
       ] },
     ],
   },
   {
-    id: 'c5', at: 13, title: 'Chương 5 · MÂY khai trương đối diện', bg: 'shop', cast: ['linh', 'thang'],
-    goal: 'MÂY phát ly miễn phí 3 ngày, khách sẽ vắng hơn. Pha thật chuẩn để giữ khách.',
+    id: 'c5', at: 13, title: L('Chương 5 · MÂY khai trương đối diện', 'Chapter 5 · MÂY opens across the street'), bg: 'shop', cast: ['linh', 'thang'],
+    goal: L('MÂY phát ly miễn phí 3 ngày, khách sẽ vắng hơn. Pha thật chuẩn để giữ khách.', 'MÂY is giving away free drinks for 3 days, so fewer guests. Brew perfectly to keep them.'),
     after: () => { save.story.flags.mayOpen = save.day },
     lines: [
-      { who: 'none', text: 'Sáng nay, bên kia dốc dựng cổng bong bóng, loa kéo mở nhạc EDM. MÂY Coffee khai trương.' },
-      { who: 'linh', text: 'Hello cả nhà iu! Linh Livestream đây! Hôm nay MÂY tặng ly đầu tiên FREE nha! Thả tim đi mọi người!', mood: 'love' },
-      { who: 'thang', text: 'Cà phê của MÂY được tối ưu bằng AI. Hạt cà phê được chọn bởi thuật toán.', mood: 'happy' },
-      { who: 'linh', text: 'Ủa anh, vậy cà phê này rang ở đâu dạ?' },
-      { who: 'thang', text: 'Ở… trên cloud em.', mood: 'grumpy' },
-      { who: 'none', text: 'Khách xếp hàng dài bên kia đường. Cáo nằm dài trước cửa quán, buồn so.' },
-      { who: 'none', if: 'locals', text: 'Nhưng mấy ông chú hôm trước vẫn ghé Dreamers: “Ly free bên kia không có cây thông.”' },
+      { who: 'none', text: L('Sáng nay, bên kia dốc dựng cổng bong bóng, loa kéo mở nhạc EDM. MÂY Coffee khai trương.', 'This morning, a balloon arch goes up across the slope and a speaker blasts EDM. MÂY Coffee is open.') },
+      { who: 'linh', text: L('Hello cả nhà iu! Linh Livestream đây! Hôm nay MÂY tặng ly đầu tiên FREE nha! Thả tim đi mọi người!', 'Hiii fam! Linh Livestream here! MÂY’s first cup is FREE today! Smash those hearts!'), mood: 'love' },
+      { who: 'thang', text: L('Cà phê của MÂY được tối ưu bằng AI. Hạt cà phê được chọn bởi thuật toán.', 'MÂY coffee is AI-optimized. Every bean is selected by an algorithm.'), mood: 'happy' },
+      { who: 'linh', text: L('Ủa anh, vậy cà phê này rang ở đâu dạ?', 'Ooh, so where do you roast it?') },
+      { who: 'thang', text: L('Ở… trên cloud em.', 'In… the cloud.'), mood: 'grumpy' },
+      { who: 'none', text: L('Khách xếp hàng dài bên kia đường. Cáo nằm dài trước cửa quán, buồn so.', 'The line stretches down the street over there. Cáo sprawls by the door, glum.') },
+      { who: 'none', if: 'locals', text: L('Nhưng mấy ông chú hôm trước vẫn ghé Dreamers: “Ly free bên kia không có cây thông.”', 'But those old uncles still drop by Dreamers: “Free coffee over there doesn’t come with trees.”') },
     ],
   },
   {
-    id: 'c6', at: 16, title: 'Chương 6 · Cáo đánh hơi bí mật', bg: 'night', cast: ['yen', 'cao'],
-    goal: 'Lựa chọn của bạn đang lan trên mạng. Giữ danh tiếng thật vững.',
+    id: 'c6', at: 16, title: L('Chương 6 · Cáo đánh hơi bí mật', 'Chapter 6 · Cáo sniffs out a secret'), bg: 'night', cast: ['yen', 'cao'],
+    goal: L('Lựa chọn của bạn đang lan trên mạng. Giữ danh tiếng thật vững.', 'Your choice is spreading online. Keep your reputation rock solid.'),
     lines: [
-      { who: 'none', text: 'Đêm. Cáo biến mất. Yến đi tìm, thấy bé đang bới thùng rác sau quán MÂY.' },
-      { who: 'cao', text: 'Gâu gâu! (Cáo tha về một cái bao to: “BỘT HƯƠNG CÀ PHÊ – 3 TRONG 1 – 25KG”.)' },
-      { who: 'yen', text: 'Trời đất… “Cà phê chọn bởi thuật toán” là cái này hả?', mood: 'angry' },
-      { who: 'yen', text: 'Mình làm gì với cái bao này đây Cáo?', choices: [
-        { text: 'Chụp hình đăng lên group Đà Lạt Review.', sassy: true, set: 'exposed', support: 3, rep: 4, reply: [
-          { who: 'none', text: 'Bài đăng đạt 12 nghìn lượt chia sẻ sau một đêm. Comment top: “Cloud gì mà cloud 3 trong 1”.' },
+      { who: 'none', text: L('Đêm. Cáo biến mất. {name} đi tìm, thấy bé đang bới thùng rác sau quán MÂY.', 'Night. Cáo is missing. {name} finds him digging through the bins behind MÂY.') },
+      { who: 'cao', text: L('Gâu gâu! (Cáo tha về một cái bao to: “BỘT HƯƠNG CÀ PHÊ – 3 TRONG 1 – 25KG”.)', 'Woof woof! (Cáo drags back a huge sack: “COFFEE-FLAVORED POWDER – 3-IN-1 – 25KG”.)') },
+      { who: 'yen', text: L('Trời đất… “Cà phê chọn bởi thuật toán” là cái này hả?', 'Oh my god… THIS is the “algorithm-selected coffee”?'), mood: 'angry' },
+      { who: 'yen', text: L('Mình làm gì với cái bao này đây Cáo?', 'So what do we do with this, Cáo?'), choices: [
+        { text: L('Chụp hình đăng lên group Đà Lạt Review.', 'Snap a pic and post it to the Da Lat Review group.'), sassy: true, set: 'exposed', support: 3, rep: 4, reply: [
+          { who: 'none', text: L('Bài đăng đạt 12 nghìn lượt chia sẻ sau một đêm. Comment top: “Cloud gì mà cloud 3 trong 1”.', '12,000 shares overnight. Top comment: “So the cloud is… 3-in-1?”') },
         ] },
-        { text: 'Mang trả lại. Mình thắng bằng ly cà phê của mình thôi.', set: 'kind', support: 5, reply: [
-          { who: 'none', text: 'Yến để cái bao trước cửa MÂY, kèm mẩu giấy: “Rơi đồ nè anh. – Dreamers”.' },
-          { who: 'cao', text: 'Gâu. (Cáo có vẻ không đồng ý lắm.)' },
+        { text: L('Mang trả lại. Mình thắng bằng ly cà phê của mình thôi.', 'Give it back. We’ll win with our own coffee.'), set: 'kind', support: 5, reply: [
+          { who: 'none', text: L('{name} để cái bao trước cửa MÂY, kèm mẩu giấy: “Rơi đồ nè anh. – Dreamers”.', '{name} leaves the sack at MÂY’s door with a note: “You dropped this. – Dreamers”.') },
+          { who: 'cao', text: L('Gâu. (Cáo có vẻ không đồng ý lắm.)', 'Woof. (Cáo does not seem to agree.)') },
         ] },
       ] },
     ],
   },
   {
-    id: 'c7', at: 19, title: 'Chương 7 · Mẹ lên Đà Lạt', bg: 'shop', cast: ['yen', 'me'],
-    goal: 'Gần tới chung kết rồi. Đông khách, pha chuẩn, đừng để ai bỏ về.',
+    id: 'c7', at: 19, title: L('Chương 7 · Mẹ lên Đà Lạt', 'Chapter 7 · Mom comes to Da Lat'), bg: 'shop', cast: ['yen', 'me'],
+    goal: L('Gần tới chung kết rồi. Đông khách, pha chuẩn, đừng để ai bỏ về.', 'The finals are close. Pack the café, brew right, and don’t let anyone walk out.'),
     lines: [
-      { who: 'me', if: 'momVisit', text: 'Trời đất, lạnh quá con ơi! Ủa quán con… dễ thương vậy hả?', mood: 'happy' },
-      { who: 'me', if: 'momVisit', text: 'Mẹ ngồi đây từ sáng, đếm được 40 khách, có ông Tây còn khen “very good” nữa!', mood: 'love' },
-      { who: 'me', if: 'momVisit', text: 'Thôi, mẹ không nói chuyện ngân hàng nữa. Cầm chút tiền nè, mua cái máy xay cho đàng hoàng.', mood: 'happy' },
-      { who: 'none', if: '!momVisit', text: 'Một thùng hàng từ Hà Nội gửi lên: ô mai, trà, một cái khăn len và mẩu giấy viết tay.' },
-      { who: 'me', if: '!momVisit', text: '“Mẹ coi clip con trên mạng rồi. Mẹ không hiểu hết, nhưng thấy con cười nhiều. Vậy là được.”', mood: 'love' },
-      { who: 'yen', text: '…Mẹ ơi.', mood: 'love' },
-      { who: 'cao', text: 'Gâu! (Cáo ăn mất nửa gói ô mai.)' },
+      { who: 'me', if: 'momVisit', text: L('Trời đất, lạnh quá con ơi! Ủa quán con… dễ thương vậy hả?', 'Goodness, it’s freezing! Wait… your café is THIS cute?'), mood: 'happy' },
+      { who: 'me', if: 'momVisit', text: L('Mẹ ngồi đây từ sáng, đếm được 40 khách, có ông Tây còn khen “very good” nữa!', 'I’ve sat here since morning and counted 40 customers! A foreigner even said “very good”!'), mood: 'love' },
+      { who: 'me', if: 'momVisit', text: L('Thôi, mẹ không nói chuyện ngân hàng nữa. Cầm chút tiền nè, mua cái máy xay cho đàng hoàng.', 'Fine, no more bank talk. Here’s a little money. Buy yourself a proper grinder.'), mood: 'happy' },
+      { who: 'none', if: '!momVisit', text: L('Một thùng hàng từ Hà Nội gửi lên: ô mai, trà, một cái khăn len và mẩu giấy viết tay.', 'A box arrives from Hanoi: candied plums, tea, a knitted scarf and a handwritten note.') },
+      { who: 'me', if: '!momVisit', text: L('“Mẹ coi clip con trên mạng rồi. Mẹ không hiểu hết, nhưng thấy con cười nhiều. Vậy là được.”', '“I watched your videos online. I don’t get all of it, but you smile a lot. That’s enough for me.”'), mood: 'love' },
+      { who: 'yen', text: L('…Mẹ ơi.', '…Oh, Mom.'), mood: 'love' },
+      { who: 'cao', text: L('Gâu! (Cáo ăn mất nửa gói ô mai.)', 'Woof! (Cáo eats half the candied plums.)') },
     ],
     after: () => {
       const m = flag('momVisit') ? 500_000 : 200_000
       save.money += m
-      toast(`Mẹ cho ${m / 1000}K. Thương mẹ!`, 'heart', 3200)
+      toast(L(`Mẹ cho ${m / 1000}K. Thương mẹ!`, `Mom sent ${m / 1000}K. Love you, Mom!`), 'heart', 3200)
     },
   },
   {
-    id: 'c8', at: 23, title: 'Chương 8 · Đêm cúp điện', bg: 'rain', cast: ['yen', 'tu'],
-    goal: 'Chặng cuối! Danh tiếng cao + lòng phố = cái kết đẹp.',
+    id: 'c8', at: 23, title: L('Chương 8 · Đêm cúp điện', 'Chapter 8 · The night the lights went out'), bg: 'rain', cast: ['yen', 'tu'],
+    goal: L('Chặng cuối! Danh tiếng cao + lòng phố = cái kết đẹp.', 'Final stretch! High reputation + neighborhood love = a happy ending.'),
     lines: [
-      { who: 'none', text: 'Bão về. Cả dốc cúp điện. Bên MÂY máy pha tự động đứng hình, đóng cửa sớm.' },
-      { who: 'yen', text: 'Mình còn cái ấm với phin. Pha tay được mà!', mood: 'happy' },
-      { who: 'none', text: 'Đèn cầy được thắp lên. Hàng xóm kéo qua, người mang ghế, người mang bánh căn.' },
-      { who: 'kenny', if: 'kennyQuit', text: 'Anh nghỉ việc rồi nè! Giờ anh bán bánh mì đầu dốc. Hôm nay anh bao bánh mì cả quán!', mood: 'happy' },
-      { who: 'kenny', if: 'kennyRest', text: 'Anh nghỉ phép được ba ngày rồi, chưa bắt máy sếp lần nào. Tự hào quá!', mood: 'happy' },
-      { who: 'tu', text: 'Hồi trước dốc này cũng vậy đó con. Cúp điện là cả xóm ngồi chung một chỗ.', mood: 'love' },
-      { who: 'tu', text: 'Tuần sau là chung kết rồi. Bà coi hết rồi, giờ chỉ còn coi con pha ly cuối thôi.' },
+      { who: 'none', text: L('Bão về. Cả dốc cúp điện. Bên MÂY máy pha tự động đứng hình, đóng cửa sớm.', 'A storm rolls in. The whole slope loses power. MÂY’s automatic machines freeze, and they close early.') },
+      { who: 'yen', text: L('Mình còn cái ấm với phin. Pha tay được mà!', 'We’ve still got a kettle and a phin filter. We can brew by hand!'), mood: 'happy' },
+      { who: 'none', text: L('Đèn cầy được thắp lên. Hàng xóm kéo qua, người mang ghế, người mang bánh căn.', 'Candles flicker on. Neighbors drift in, some with stools, some with plates of bánh căn.') },
+      { who: 'kenny', if: 'kennyQuit', text: L('Anh nghỉ việc rồi nè! Giờ anh bán bánh mì đầu dốc. Hôm nay anh bao bánh mì cả quán!', 'I quit! Now I sell bánh mì at the top of the slope. Tonight, bánh mì’s on me!'), mood: 'happy' },
+      { who: 'kenny', if: 'kennyRest', text: L('Anh nghỉ phép được ba ngày rồi, chưa bắt máy sếp lần nào. Tự hào quá!', 'Three days off and I haven’t answered the boss once. So proud of me!'), mood: 'happy' },
+      { who: 'tu', text: L('Hồi trước dốc này cũng vậy đó con. Cúp điện là cả xóm ngồi chung một chỗ.', 'This slope used to be like this, dear. Power goes out, and the whole street gathers in one place.'), mood: 'love' },
+      { who: 'tu', text: L('Tuần sau là chung kết rồi. Bà coi hết rồi, giờ chỉ còn coi con pha ly cuối thôi.', 'The finals are next week. I’ve seen enough. Now I just want to taste your final cup.') },
     ],
   },
   {
-    id: 'c9', at: 27, title: 'Chung kết · Hội Barista Phố Núi', bg: 'stage', cast: ['tu', 'thang'],
+    id: 'c9', at: 27, title: L('Chung kết · Hội Barista Phố Núi', 'Finals · Hill Town Barista Fest'), bg: 'stage', cast: ['tu', 'thang'],
     goal: '',
     lines: [
-      { who: 'none', text: 'Sân khấu dựng giữa chợ Đà Lạt. Ban giám khảo: bà Tư, một nghệ nhân rang xay và… Linh Livestream.' },
-      { who: 'thang', text: 'MÂY xin giới thiệu: Cloud Latte, bọt sữa in logo bằng laser, kèm NFT.', mood: 'happy' },
-      { who: 'linh', text: 'Ủa NFT là cái gì dạ anh?', mood: 'neutral' },
-      { who: 'none', text: 'Tới lượt Dreamers. Yến không nói gì nhiều, chỉ pha một ly cà phê sữa đá. Cáo ngồi nghiêm như giám khảo phụ.' },
-      { who: 'tu', text: 'Bà đã quyết rồi.' },
+      { who: 'none', text: L('Sân khấu dựng giữa chợ Đà Lạt. Ban giám khảo: bà Tư, một nghệ nhân rang xay và… Linh Livestream.', 'A stage stands in the middle of Da Lat market. The judges: Mrs. Tư, a master roaster and… Linh Livestream.') },
+      { who: 'thang', text: L('MÂY xin giới thiệu: Cloud Latte, bọt sữa in logo bằng laser, kèm NFT.', 'MÂY presents: the Cloud Latte. Laser-etched logo foam. Comes with an NFT.'), mood: 'happy' },
+      { who: 'linh', text: L('Ủa NFT là cái gì dạ anh?', 'Wait, what’s an NFT?'), mood: 'neutral' },
+      { who: 'none', text: L('Tới lượt Dreamers. {name} không nói gì nhiều, chỉ pha một ly cà phê sữa đá. Cáo ngồi nghiêm như giám khảo phụ.', 'Dreamers’ turn. {name} says very little, and simply makes one iced milk coffee. Cáo sits up straight like a junior judge.') },
+      { who: 'tu', text: L('Bà đã quyết rồi.', 'I’ve made my decision.') },
     ],
   },
 ]
@@ -205,26 +206,30 @@ export function endingKind(): 'great' | 'good' | 'retry' { const s = endingScore
 export function endingLines(): Line[] {
   const k = endingKind()
   const tail: Line[] = []
-  if (flag('exposed')) tail.push({ who: 'linh', text: 'Cả nhà ơi, Linh xin lỗi vì quảng cáo bột 3 trong 1 nha. Linh về phe Dreamers!', mood: 'sad' })
-  if (flag('kind')) tail.push({ who: 'thang', text: 'Cái bao bột hôm trước… cảm ơn em. Không ai từng trả đồ cho anh.', mood: 'sad' })
+  if (flag('exposed')) tail.push({ who: 'linh', text: L('Cả nhà ơi, Linh xin lỗi vì quảng cáo bột 3 trong 1 nha. Linh về phe Dreamers!', 'Fam, I’m sorry for hyping 3-in-1 powder. Linh is Team Dreamers now!'), mood: 'sad' })
+  if (flag('kind')) tail.push({ who: 'thang', text: L('Cái bao bột hôm trước… cảm ơn em. Không ai từng trả đồ cho anh.', 'That sack the other night… thank you. Nobody’s ever given anything back to me.'), mood: 'sad' })
   if (k === 'great') return [...tail,
-    { who: 'tu', text: 'Con dốc này không bán. Bà cho Dreamers thuê tiếp, năm năm, giá cũ.', mood: 'love' },
-    { who: 'thang', text: 'Ok… MÂY sẽ pivot. Bọn anh chuyển sang bán khoá học “Làm giàu từ cà phê”.', mood: 'grumpy' },
-    { who: 'yen', text: 'Cáo ơi, mình giữ được quán rồi!', mood: 'love' },
-    { who: 'cao', text: 'GÂU!!! (Cáo chạy ba vòng quanh sân khấu.)' },
+    { who: 'tu', text: L('Con dốc này không bán. Bà cho Dreamers thuê tiếp, năm năm, giá cũ.', 'This slope is not for sale. Dreamers keeps the lease. Five years, same rent.'), mood: 'love' },
+    { who: 'thang', text: L('Ok… MÂY sẽ pivot. Bọn anh chuyển sang bán khoá học “Làm giàu từ cà phê”.', 'Fine… MÂY will pivot. We’re launching a course: “Get Rich With Coffee”.'), mood: 'grumpy' },
+    { who: 'yen', text: L('Cáo ơi, mình giữ được quán rồi!', 'Cáo, we did it! We kept the café!'), mood: 'love' },
+    { who: 'cao', text: L('GÂU!!! (Cáo chạy ba vòng quanh sân khấu.)', 'WOOF!!! (Cáo does three laps around the stage.)') },
   ]
   if (k === 'good') return [...tail,
-    { who: 'tu', text: 'Bà cho con thuê tiếp. Nhưng MÂY cũng thuê được cái nhà đối diện. Cạnh tranh công bằng nha.', mood: 'happy' },
-    { who: 'thang', text: 'Hẹn em ở mùa sau. Lần này anh rang cà phê thật.', mood: 'grumpy' },
-    { who: 'yen', text: 'Mời anh. Tụi em không sợ đâu!', mood: 'happy' },
+    { who: 'tu', text: L('Bà cho con thuê tiếp. Nhưng MÂY cũng thuê được cái nhà đối diện. Cạnh tranh công bằng nha.', 'You keep the lease. But MÂY gets the place across the street. Fair competition, alright?'), mood: 'happy' },
+    { who: 'thang', text: L('Hẹn em ở mùa sau. Lần này anh rang cà phê thật.', 'See you next season. This time I’m roasting real coffee.'), mood: 'grumpy' },
+    { who: 'yen', text: L('Mời anh. Tụi em không sợ đâu!', 'Bring it on. We’re not scared!'), mood: 'happy' },
   ]
   return [...tail,
-    { who: 'tu', text: 'Bà thương con, nhưng phố chưa đủ thương quán. Bà cho thêm một mùa nữa, cố lên nha.', mood: 'sad' },
-    { who: 'yen', text: 'Dạ. Mùa sau con sẽ làm tốt hơn.', mood: 'sad' },
-    { who: 'cao', text: 'Gâu. (Cáo dụi đầu vào chân Yến.)' },
+    { who: 'tu', text: L('Bà thương con, nhưng phố chưa đủ thương quán. Bà cho thêm một mùa nữa, cố lên nha.', 'I adore you, dear, but the street isn’t in love with the café yet. I’ll give you one more season. Chin up.'), mood: 'sad' },
+    { who: 'yen', text: L('Dạ. Mùa sau con sẽ làm tốt hơn.', 'Okay. Next season, I’ll do better.'), mood: 'sad' },
+    { who: 'cao', text: L('Gâu. (Cáo dụi đầu vào chân {name}.)', 'Woof. (Cáo nuzzles against {name}’s leg.)') },
   ]
 }
-export const ENDING_TITLE = { great: 'Kết đẹp: Con dốc của những người mơ mộng', good: 'Kết mở: Hai quán, một con dốc', retry: 'Chưa kết: Thêm một mùa nữa' }
+export const ENDING_TITLE = {
+  great: L('Kết đẹp: Con dốc của những người mơ mộng', 'Happy ending: The slope of dreamers'),
+  good: L('Kết mở: Hai quán, một con dốc', 'Open ending: Two cafés, one slope'),
+  retry: L('Chưa kết: Thêm một mùa nữa', 'To be continued: One more season'),
+}
 
 // ---------- tiến trình ----------
 /** ngày (của game) mà chương diễn ra */
@@ -252,7 +257,7 @@ export function finishChapter(ch: Chapter) {
     save.story.ending = endingKind()
     const bonus = { great: 2_000_000, good: 1_000_000, retry: 300_000 }[save.story.ending]
     save.money += bonus
-    toast(`Thưởng chung kết: ${bonus / 1000}K`, 'good', 3500)
+    toast(L(`Thưởng chung kết: ${bonus / 1000}K`, `Finals bonus: ${bonus / 1000}K`), 'good', 3500)
   }
   persist()
 }
@@ -276,11 +281,11 @@ export function initStory() {
   hooks.dayStart = () => {
     prevStart?.()
     const f = save.story.flags
-    if (f.mayOpen && save.day - f.mayOpen < 3) setTimeout(() => toast('MÂY Coffee đang phát ly free bên kia dốc, khách vắng hơn', 'bad', 3200), 900)
+    if (f.mayOpen && save.day - f.mayOpen < 3) setTimeout(() => toast(L('MÂY Coffee đang phát ly free bên kia dốc, khách vắng hơn', 'MÂY Coffee is giving away free drinks across the slope. Fewer guests today.'), 'bad', 3200), 900)
   }
   // nhắc hạn chung kết ở màn chuẩn bị
   watch(() => save.day, (d) => {
     const left = finaleDay.value - d
-    if (!storyDone.value && left > 0 && left <= 3) setTimeout(() => toast(`Còn ${left} ngày tới chung kết Hội Barista!`, 'heart', 3000), 800)
+    if (!storyDone.value && left > 0 && left <= 3) setTimeout(() => toast(L(`Còn ${left} ngày tới chung kết Hội Barista!`, `${left} day${left === 1 ? '' : 's'} until the Barista Fest finals!`), 'heart', 3000), 800)
   })
 }

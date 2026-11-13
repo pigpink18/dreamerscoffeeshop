@@ -8,7 +8,7 @@ import { unlockAudio, sfx } from '../game/audio'
 import { px, shade, drawPerson, drawCorgi, CZ, rivet, woodFrame, spr, loadImages, type Ctx } from '../game/pixel'
 import type { Look } from '../game/data'
 import TypeText from './TypeText.vue'
-import { ownerLook, G } from '../game/i18n'
+import { ownerLook, G, L, DEFAULT_NAME, GENDER } from '../game/i18n'
 import PixelIcon from './ui/PixelIcon.vue'
 import logoUrl from '../assets/logo.png'
 
@@ -20,29 +20,29 @@ interface Scene { title: string; lines: string[]; trans: Trans; cams?: Cam[]; dr
 const WIDE: Cam = { z: 1, x: W / 2, y: H / 2 }
 
 const SCENES: Scene[] = [
-  { title: 'Hà Nội · 2:00 sáng', trans: 'fade', cams: [WIDE, { z: 1.5, x: 72, y: 36 }], lines: [
-    'Hà Nội, 2 giờ sáng. {name}, 24 tuổi, đang sửa slide lần thứ 17 cho sếp.',
-    'Cốc Americano thứ tư nguội ngắt. Cô chợt nghĩ: “Mình sống để chạy deadline hả trời?”',
+  { title: L('Hà Nội · 2:00 sáng', 'Hanoi · 2:00 AM'), trans: 'fade', cams: [WIDE, { z: 1.5, x: 72, y: 36 }], lines: [
+    L('Hà Nội, 2 giờ sáng. {name}, 24 tuổi, đang sửa slide lần thứ 17 cho sếp.', 'Hanoi, 2 AM. {name}, 24, is fixing the boss’s slides. Version 17.'),
+    L(`Cốc Americano thứ tư nguội ngắt. ${G('Cô', 'Anh')} chợt nghĩ: “Mình sống để chạy deadline hả trời?”`, `The fourth Americano has gone stone cold. A thought sneaks in: “Is this it? I live to chase deadlines?”`),
   ], draw: sceneOffice },
-  { title: 'Đèo Prenn · sương sớm', trans: 'iris', lines: [
-    'Sáng hôm sau, {name} nộp đơn nghỉ việc, gom hết can đảm và… hai cái vali, bay một mạch từ Hà Nội vào Nam.',
-    'Xe từ sân bay Liên Khương leo đèo Prenn. Sương giăng kín đồi thông. Đà Lạt đón cô bằng 16 độ và mùi cà phê rang.',
+  { title: L('Đèo Prenn · sương sớm', 'Prenn Pass · morning mist'), trans: 'iris', lines: [
+    L('Sáng hôm sau, {name} nộp đơn nghỉ việc, gom hết can đảm và… hai cái vali, bay một mạch từ Hà Nội vào Nam.', 'The next morning, {name} quits, packs every ounce of courage and… two suitcases, and flies south.'),
+    L(`Xe từ sân bay Liên Khương leo đèo Prenn. Sương giăng kín đồi thông. Đà Lạt đón ${G('cô', 'anh')} bằng 16 độ và mùi cà phê rang.`, `The airport bus climbs Prenn Pass through pine hills wrapped in fog. Da Lat says hello with 16°C and the smell of roasting coffee.`),
   ], draw: sceneBus },
-  { title: 'Cuối con dốc nhỏ', trans: 'slide', cams: [WIDE, { z: 1.6, x: 66, y: 64 }], lines: [
-    'Cuối con dốc có một quán cà phê cũ, treo tấm biển “CHO THUÊ” bạc màu.',
-    'Trước cửa… một bé corgi mập ú, lông muối tiêu lốm đốm, ngồi canh như chủ nhà.',
+  { title: L('Cuối con dốc nhỏ', 'At the end of a little slope'), trans: 'slide', cams: [WIDE, { z: 1.6, x: 66, y: 64 }], lines: [
+    L('Cuối con dốc có một quán cà phê cũ, treo tấm biển “CHO THUÊ” bạc màu.', 'At the bottom of the slope sits an old café with a faded “FOR RENT” sign.'),
+    L('Trước cửa… một bé corgi mập ú, lông muối tiêu lốm đốm, ngồi canh như chủ nhà.', 'And on the doorstep… a chubby, speckled corgi, standing guard like it owns the place.'),
   ], draw: sceneOldShop },
-  { title: 'Đồng sáng lập', trans: 'dissolve', cams: [{ z: 1.15, x: 60, y: 54 }, { z: 1.4, x: 70, y: 56 }], lines: [
-    'Bé không chịu đi đâu hết, cứ dụi cái mông tròn vào chân cô.',
-    'Cô đặt tên bé là Cáo, vì cái mặt lém lỉnh y chang con cáo. Vậy là quán có đồng sáng lập lương trả bằng pate.',
+  { title: L('Đồng sáng lập', 'The co-founder'), trans: 'dissolve', cams: [{ z: 1.15, x: 60, y: 54 }, { z: 1.4, x: 70, y: 56 }], lines: [
+    L(`Bé không chịu đi đâu hết, cứ dụi cái mông tròn vào chân ${G('cô', 'anh')}.`, `The pup refuses to leave, and keeps bumping a round little butt against {name}’s legs.`),
+    L(`${G('Cô', 'Anh')} đặt tên bé là Cáo, vì cái mặt lém lỉnh y chang con cáo. Vậy là quán có đồng sáng lập lương trả bằng pate.`, `${G('She', 'He')} names him Cáo — “fox” — for that sly little fox face. And so the café gets a co-founder, paid in pâté.`),
   ], draw: sceneMeet },
-  { title: 'Ba tuần sửa quán', trans: 'wipe', cams: [WIDE, { z: 1.4, x: 64, y: 26 }], lines: [
-    'Hai đứa dọn dẹp ba tuần liền: sơn tường, lau máy, còn Cáo thì phụ… làm đổ sơn.',
-    'Tấm biển mới được treo lên: DREAMERS COFFEE quán của những người dám mơ mộng.',
+  { title: L('Ba tuần sửa quán', 'Three weeks of fixing up'), trans: 'wipe', cams: [WIDE, { z: 1.4, x: 64, y: 26 }], lines: [
+    L('Hai đứa dọn dẹp ba tuần liền: sơn tường, lau máy, còn Cáo thì phụ… làm đổ sơn.', 'Three weeks of scrubbing, painting and polishing. Cáo helps too… mostly by knocking over paint.'),
+    L('Tấm biển mới được treo lên: DREAMERS COFFEE quán của những người dám mơ mộng.', 'Up goes the new sign: DREAMERS COFFEE, a café for people brave enough to dream.'),
   ], draw: scenePaint },
-  { title: 'Ngày khai trương', trans: 'flash', lines: [
-    'Sáng nay, Dreamers Coffee mở cửa ngày đầu tiên.',
-    'Pha từng ly thật ngon, chiều cả những vị khách khó ở nhất. Sẵn sàng chưa, chủ quán {name}?',
+  { title: L('Ngày khai trương', 'Opening day'), trans: 'flash', lines: [
+    L('Sáng nay, Dreamers Coffee mở cửa ngày đầu tiên.', 'This morning, Dreamers Coffee opens its doors for the very first time.'),
+    L('Pha từng ly thật ngon, chiều cả những vị khách khó ở nhất. Sẵn sàng chưa, chủ quán {name}?', 'Brew every cup with love, and charm even the grumpiest guests. Ready, {name}?'),
   ], draw: sceneOpen },
 ]
 
@@ -52,7 +52,7 @@ const si = ref(0) // cảnh
 const li = ref(0) // câu trong cảnh
 const typer = ref<InstanceType<typeof TypeText> | null>(null)
 const scene = computed(() => SCENES[si.value])
-const line = computed(() => scene.value.lines[li.value].replace(/\{name\}/g, save.player || 'Yến'))
+const line = computed(() => scene.value.lines[li.value].replace(/\{name\}/g, save.player || DEFAULT_NAME[GENDER]))
 const isLast = computed(() => si.value === SCENES.length - 1 && li.value === scene.value.lines.length - 1)
 
 let sceneStart = performance.now()
@@ -239,7 +239,7 @@ function chapterPlate(c: Ctx, t: number) {
   const x = Math.round(-40 + 44 * k), y = 4
   px(c, x, y, 36, 9, CZ.ink); px(c, x + 1, y + 1, 34, 7, CZ.w2); px(c, x + 1, y + 1, 34, 1, CZ.w4); px(c, x + 1, y + 7, 34, 1, CZ.w1)
   rivet(c, x + 1, y + 1); rivet(c, x + 33, y + 1)
-  label(c, 'MỞ ĐẦU', x + 18, y + 4.8, CZ.cream, 5)
+  label(c, L('MỞ ĐẦU', 'PROLOGUE'), x + 18, y + 4.8, CZ.cream, 5)
 }
 
 // ---------- nhân vật ----------
@@ -500,12 +500,12 @@ function sceneOldShop(c: Ctx, t: number, l: number, lt: number) {
   for (const wx of [24, 86]) { for (let i = 0; i < 18; i += 2) { px(c, wx + i, 47 + Math.round(i * 0.7), 2, 2, CZ.w3); px(c, wx + i, 59 - Math.round(i * 0.7), 2, 2, CZ.w2) } }
   // biển cũ bạc màu trên cửa
   px(c, 44, 33, 40, 9, CZ.ink); px(c, 45, 34, 38, 7, '#8f7a62')
-  label(c, 'C  PHÊ', 64, 38, '#c9b89c', 5)
+  label(c, L('C  PHÊ', 'C  FFEE'), 64, 38, '#c9b89c', 5)
   // biển CHO THUÊ đong đưa
   const sw = Math.round(Math.sin(t * 2) * 0.8)
   px(c, 63, 42, 1, 3, CZ.ink)
   px(c, 50 + sw, 45, 28, 9, '#b3261e'); px(c, 51 + sw, 46, 26, 7, '#f4efe2')
-  label(c, 'CHO THUÊ', 64 + sw, 49.6, '#b3261e', 4.5)
+  label(c, L('CHO THUÊ', 'FOR RENT'), 64 + sw, 49.6, '#b3261e', 4.5)
   cobble(c, 80, '#8b7d6b')
   // lá thông rơi
   for (let i = 0; i < 5; i++) { const lx = (i * 31 + t * 6) % W, ly = (i * 17 + t * 9) % 80; px(c, Math.round(lx), Math.round(ly), 2, 1, '#c98a52') }
@@ -655,13 +655,13 @@ function sceneOpen(c: Ctx, t: number, l: number, lt: number) {
    <div class="wrap">
     <div class="top">
       <span class="ttl">{{ stage === 'story' ? scene.title : 'DREAMERS COFFEE' }}</span>
-      <button class="skip" @click.stop="finish">Bỏ qua <PixelIcon name="play" :size="2" /></button>
+      <button class="skip" @click.stop="finish">{{ L('Bỏ qua', 'Skip') }} <PixelIcon name="play" :size="2" /></button>
     </div>
     <div v-if="stage === 'title'" class="title-card" @click.stop>
       <img :src="logoUrl" class="logo" alt="Dreamers Coffee" />
       <b class="tname">DREAMERS COFFEE</b>
       <!-- <div class="tsub">Yến &amp; Cáo · Đà Lạt</div> -->
-      <button class="go" @click="begin">Bắt đầu câu chuyện ▶</button>
+      <button class="go" @click="begin">{{ L('Bắt đầu câu chuyện', 'Begin the story') }} ▶</button>
     </div>
     <div v-show="stage === 'story'" class="stage">
       <canvas ref="cv" class="cv" />
@@ -673,9 +673,9 @@ function sceneOpen(c: Ctx, t: number, l: number, lt: number) {
     <div v-if="stage === 'story'" class="box">
       <TypeText ref="typer" :key="si + '-' + li" :text="line" :speed="26" :pitch="620" />
       <div class="nav">
-        <span class="hint">chạm để tiếp</span>
-        <button v-if="isLast" class="go" @click.stop="finish"><PixelIcon name="cup" :size="2" /> Mở quán thôi!</button>
-        <button v-else class="nxt" @click.stop="next">Tiếp ▶</button>
+        <span class="hint">{{ L('chạm để tiếp', 'tap to continue') }}</span>
+        <button v-if="isLast" class="go" @click.stop="finish"><PixelIcon name="cup" :size="2" /> {{ L('Mở quán thôi!', 'Let’s open up!') }}</button>
+        <button v-else class="nxt" @click.stop="next">{{ L('Tiếp', 'Next') }} ▶</button>
       </div>
     </div>
    </div>

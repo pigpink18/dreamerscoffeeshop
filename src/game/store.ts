@@ -1,4 +1,4 @@
-import { DEFAULT_NAME, GENDER } from './i18n'
+import { DEFAULT_NAME, GENDER, L, withDrink } from './i18n'
 import { noEmoji } from './text'
 import { reactive, computed, watch } from 'vue'
 import {
@@ -83,9 +83,9 @@ export const MAX_TABLES = [4, 6, 6]
 /** Giá mua thêm 2 bàn (theo số bàn đang có: 0→2 là dọn dẹp góc bỏ hoang, 2→4, 4→6) */
 export const TABLE_COSTS: Record<number, number> = { 0: 150_000, 2: 400_000, 4: 1_200_000 }
 export const TABLE_LEVELS = [
-  { name: 'Bàn gỗ', tip: 1, sit: 1, desc: 'Ghế gỗ đơn giản' },
-  { name: 'Ghế đệm', tip: 1.5, sit: 1.15, desc: 'Khách ngồi êm hơn: boa x1.5' },
-  { name: 'Sofa nhung', tip: 2.2, sit: 1.3, desc: 'Khách mê ngồi lâu: boa x2.2, uy tín cao hơn' },
+  { name: L('Bàn gỗ', 'Wooden tables'), tip: 1, sit: 1, desc: L('Ghế gỗ đơn giản', 'Simple wooden chairs') },
+  { name: L('Ghế đệm', 'Cushioned chairs'), tip: 1.5, sit: 1.15, desc: L('Khách ngồi êm hơn: boa x1.5', 'Comfier seats: tips x1.5') },
+  { name: L('Sofa nhung', 'Velvet sofas'), tip: 2.2, sit: 1.3, desc: L('Khách mê ngồi lâu: boa x2.2, uy tín cao hơn', 'Guests love to linger: tips x2.2, more reputation') },
 ]
 export const TABLE_LEVEL_COSTS = [700_000, 1_800_000] // nâng lên đệm, lên sofa
 export const WAITER_COSTS = [300_000, 800_000] // phí thuê phục vụ thứ 1, 2
@@ -360,7 +360,7 @@ function compensateMoneyBug(readRaw: () => Partial<SaveData> | null) {
     if (save.money >= target) return
     const gift = target - save.money
     save.money = target
-    setTimeout(() => toast(`Xin lỗi vì lỗi mất tiền! Quán được bồi thường ${moneyShort(gift)}`, 'good', 5000), 1500)
+    setTimeout(() => toast(L(`Xin lỗi vì lỗi mất tiền! Quán được bồi thường ${moneyShort(gift)}`, `Sorry about the lost money bug! Here's ${moneyShort(gift)} to make up for it`), 'good', 5000), 1500)
   } catch { /* bỏ qua */ }
 }
 
@@ -482,7 +482,7 @@ export const tutOn = computed(() => !save.tutDone && ui.phase === 'open')
 function finishTutorial() {
   if (save.tutDone) return
   save.tutDone = true
-  toast('Tuyệt! Ly đầu tiên hoàn hảo. Pha chuẩn liên tiếp sẽ ăn COMBO thưởng thêm tiền đó!', 'good', 4200)
+  toast(L('Tuyệt! Ly đầu tiên hoàn hảo. Pha chuẩn liên tiếp sẽ ăn COMBO thưởng thêm tiền đó!', 'Awesome! A perfect first cup. Keep nailing drinks in a row for a bonus COMBO!'), 'good', 4200)
 }
 
 // ---------- SỰ KIỆN THEO MÙA (season.ts) ----------
@@ -588,7 +588,7 @@ const CURVE_AVG = (() => { let s = 0; for (let i = 0; i < 200; i++) s += rushCur
 export function buyPack(id: IngredientId, packs = 1) {
   const ing = ingredientById[id]
   const cost = ing.packPrice * packs
-  if (save.money < cost) { toast('Không đủ tiền!', 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return false }
+  if (save.money < cost) { toast(L('Không đủ tiền!', 'Not enough money!'), 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return false }
   save.money -= cost
   save.stock[id] += ing.packSize * packs
   ui.stats.spent += cost
@@ -604,10 +604,10 @@ export function setPrice(id: RecipeId, price: number) {
 export function unlockRecipe(id: RecipeId) {
   const r = recipeById[id]
   if (save.unlocked.includes(id)) return
-  if (save.money < r.unlockCost) { toast('Không đủ tiền!', 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return }
+  if (save.money < r.unlockCost) { toast(L('Không đủ tiền!', 'Not enough money!'), 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return }
   save.money -= r.unlockCost
   save.unlocked.push(id)
-  toast(`Đã thêm ${r.name} vào menu!`, 'good')
+  toast(L(`Đã thêm ${r.name} vào menu!`, `Added ${r.name} to the menu!`), 'good')
   sfx('done')
   vibrate([10, 30, 10])
 }
@@ -617,12 +617,12 @@ export function buyUpgrade(id: UpgradeId) {
   const lvl = save.upgrades[id]
   if (lvl >= u.costs.length) return
   const cost = u.costs[lvl]
-  if (save.money < cost) { toast('Không đủ tiền!', 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return }
+  if (save.money < cost) { toast(L('Không đủ tiền!', 'Not enough money!'), 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return }
   save.money -= cost
   save.upgrades[id]++
   if (id === 'staff' && ui.phase === 'open') ui.staffProgress.push(0)
   if (id === 'shipper' && ui.phase === 'open') addShipper(save.upgrades.shipper - 1)
-  toast(`${u.name} → cấp ${save.upgrades[id]}`, 'good')
+  toast(L(`${u.name} → cấp ${save.upgrades[id]}`, `${u.name} → level ${save.upgrades[id]}`), 'good')
   sfx(u.social ? 'heart' : 'done')
   vibrate([10, 30, 10])
 }
@@ -666,7 +666,7 @@ let last = 0
 export function openShop() {
   if (ui.phase !== 'prep') return
   if (!save.unlocked.some((r) => canMake(r))) {
-    toast('Kho trống – hãy nhập nguyên liệu trước!', 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return
+    toast(L('Kho trống – hãy nhập nguyên liệu trước!', 'The pantry is empty – stock up on ingredients first!'), 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return
   }
   persist()
   ui.phase = 'open'
@@ -812,13 +812,13 @@ function tick(dt: number) {
       if (ui.talk?.custId === c.id) ui.talk = null
       if (c.regular) addBond(c.regular, -8)
       if (c.needy !== undefined) {
-        toast(`${c.face} Không sao đâu, mai ghé lại nha 🙂`, 'say')
+        toast(L(`${c.face} Không sao đâu, mai ghé lại nha 🙂`, `${c.face} No worries, I'll swing by tomorrow 🙂`), 'say')
         continue
       }
       ui.stats.angry++
       breakCombo()
       changeRep(-2)
-      float('😡 Bỏ đi', 'bad')
+      float(L('😡 Bỏ đi', '😡 Walked out'), 'bad')
       const line = voice(pick(LINES.angry), c.p)
       if (ui.queue.length === 0 || i === 0) bus.emit({ type: 'angry', id: c.id, line })
       else toast(`${c.face} ${line}`, 'say', 2800)
@@ -836,7 +836,7 @@ function tick(dt: number) {
       breakCombo()
       changeRep(-0.5)
       const rv = addReview(o, 1)
-      toast(`📱 ${o.name} huỷ đơn: “${rv.text}”`, 'bad', 2800)
+      toast(L(`📱 ${o.name} huỷ đơn: “${rv.text}”`, `📱 ${o.name} cancelled: “${rv.text}”`), 'bad', 2800)
       sfx('angry')
     }
   }
@@ -849,7 +849,7 @@ function tick(dt: number) {
   for (let s = 0; s < ui.staffProgress.length; s++) {
     const cust = custs[s]
     const order = cust ? undefined : ords[s - custs.length]
-    ui.staffJob[s] = cust ? `${recipeById[cust.recipe].name} cho ${cust.name ?? 'khách'}` : order ? `đơn app của ${order.name}` : null
+    ui.staffJob[s] = cust ? L(`${recipeById[cust.recipe].name} cho ${cust.name ?? 'khách'}`, `${recipeById[cust.recipe].name} for ${cust.name ?? 'a guest'}`) : order ? L(`đơn app của ${order.name}`, `${order.name}'s app order`) : null
     ui.staffRecipe[s] = cust?.recipe ?? order?.recipe ?? null
     // đã đóng cửa: nhân viên chỉ làm nốt ly đang pha dở, không nhận ly mới
     if (!cust && !order || (ui.closing && !(ui.staffProgress[s] > 0))) { ui.staffProgress[s] = 0; ui.staffJob[s] = null; ui.staffRecipe[s] = null; continue }
@@ -891,7 +891,7 @@ function tick(dt: number) {
     if (!ui.closing) {
       ui.closing = true
       ui.rush = null
-      if (workLeft()) toast('Tới giờ đóng cửa – làm nốt đơn đang dở rồi tổng kết nhé', 'info', 3200)
+      if (workLeft()) toast(L('Tới giờ đóng cửa – làm nốt đơn đang dở rồi tổng kết nhé', 'Closing time – finish the last orders, then we wrap up the day'), 'info', 3200)
     }
     if (!workLeft() || ui.time >= DAY_LENGTH + 60) endDay()
   }
@@ -923,7 +923,7 @@ function spawnCustomer() {
     // mùa Noel: ~40% khách đội mũ Noel (copy ngoại hình, không sửa ngoại hình gốc của nhân vật)
     if (isXmasSeason() && Math.random() < 0.4 && !HAT_STYLES.includes(c.look.style)) c.look = { ...c.look, acc: [...(c.look.acc ?? []), 'santa'] }
     // khu bếp: gọi kèm món ăn → phiếu đơn vào bếp
-    if (c.needy === undefined) { const f = hooks.foodFor?.(c.name ?? REGULARS.find((r) => r.id === c.regular)?.name ?? 'Khách'); if (f) c.food = f }
+    if (c.needy === undefined) { const f = hooks.foodFor?.(c.name ?? REGULARS.find((r) => r.id === c.regular)?.name ?? L('Khách', 'Guest')); if (f) c.food = f }
     ui.queue.push(c)
   }
   if (ui.queue.length >= queueCapacity.value) {
@@ -939,7 +939,7 @@ function spawnCustomer() {
     const recipe = chooseRecipe().id
     const maxP = 75 * (1 + 0.1 * save.upgrades.decor)
     push({ id: nextId(), face: '✨', recipe, patience: maxP, maxPatience: maxP, rare: R.id, name: R.name, look: R.look, p: R.p,
-      greeting: voice(R.greet, R.p).replace('{drink}', recipeById[recipe].name) })
+      greeting: withDrink(voice(R.greet, R.p).replace('{drink}', recipeById[recipe].name)) })
     sfx('bell')
     return
   }
@@ -953,7 +953,7 @@ function spawnCustomer() {
       const lvl = bondLevel(save.bonds[r.id] ?? 0)
       const maxP = 68 * (1 + 0.1 * save.upgrades.decor) * (1 + lvl * 0.15)
       push({ id: nextId(), face: r.face, recipe, patience: maxP, maxPatience: maxP, regular: r.id, look: r.look, p: r.p,
-        greeting: voice(r.greet[lvl], r.p).replace('{drink}', recipeById[recipe].name) })
+        greeting: withDrink(voice(r.greet[lvl], r.p).replace('{drink}', recipeById[recipe].name)) })
       sfx('bell')
       return
     }
@@ -980,14 +980,14 @@ function spawnCustomer() {
     const look = P?.look ?? G.look(g)
     const maxP = maxPatience * G.patience
     push({ id: nextId(), face: pick(CUSTOMER_FACES), recipe: choice.id, patience: maxP, maxPatience: maxP, look, group: G.id, p,
-      name, album: P?.album, greeting: voice(pick(P?.greet ?? G.greet), p).replace('{drink}', drink) })
+      name, album: P?.album, greeting: withDrink(voice(pick(P?.greet ?? G.greet), p).replace('{drink}', drink)) })
     sfx('bell')
     return
   }
   const g: Gender = Math.random() < 0.5 ? 'f' : 'm'
   const p = walkinPersona(g)
   push({ id: nextId(), face: pick(CUSTOMER_FACES), recipe: choice.id, patience: maxPatience, maxPatience, look: randomLook(g), name: funnyName(g), p,
-    greeting: voice(pick(GENERIC_ORDERS), p).replace('{drink}', drink) })
+    greeting: withDrink(voice(pick(GENERIC_ORDERS), p).replace('{drink}', drink)) })
   sfx('bell')
 }
 
@@ -996,7 +996,7 @@ function spawnOrder() {
   if (choice.ratio > 1 && Math.random() > clamp(1 - (choice.ratio - 1) * 1.6, 0, 1)) return
   ui.orders.push({ id: nextId(), name: pick(ORDER_NAMES), recipe: choice.id, timeLeft: 80, maxTime: 80, state: 'new', perfect: false })
   sfx('bell')
-  if (ui.view !== 'app') toast('📱 Có đơn mới trên app!', 'info', 1500)
+  if (ui.view !== 'app') toast(L('📱 Có đơn mới trên app!', '📱 New app order!'), 'info', 1500)
 }
 
 export function changeRep(d: number) {
@@ -1022,7 +1022,7 @@ function completeWalkIn(c: Customer, perfect: boolean, byStaff: boolean, mistake
     save.impact.given++
     ui.stats.given++
     changeRep(2.5)
-    float('💛 Ly treo', 'good')
+    float(L('💛 Ly treo', '💛 Paid-forward cup'), 'good')
     if (byStaff) toast(`${c.face} ${NEEDY[c.needy].who}: “${NEEDY[c.needy].thanks}”`, 'heart', 3000)
     else bus.emit({ type: 'served', id: c.id, stars: 5, text: NEEDY[c.needy].thanks, price: 0, tip: 0, needy: true })
     sfx('heart')
@@ -1074,7 +1074,7 @@ function completeWalkIn(c: Customer, perfect: boolean, byStaff: boolean, mistake
     // khách du lịch review theo kiểu riêng của nhóm
     if (G && stars >= 4 && Math.random() < 0.75) text = pick(G.good)
     if (G && stars <= 3 && Math.random() < 0.75) text = pick(G.meh)
-    text = voice(text, c.p).replace('{drink}', r.name.toLowerCase())
+    text = withDrink(voice(text, c.p).replace('{drink}', r.name.toLowerCase()))
     if (R && stars >= 4) text = R.thanks
     const name = c.regular ? REGULARS.find((x) => x.id === c.regular)!.name : c.name ?? pick(ORDER_NAMES)
     save.reviews.unshift({ id: nextId(), name, stars, text, recipe: c.recipe, day: save.day, src: 'quan' })
@@ -1100,10 +1100,10 @@ export function giveAddon(id: string) {
   const c = ui.queue[0]
   if (!c || c.addon !== id || c.addonDone) {
     sfx('wrong'); vibrate([20, 30, 20]); bus.emit({ type: 'wrong' })
-    toast(c?.addon && !c.addonDone ? 'Khách không gọi món này' : 'Khách đang đứng quầy không mua kèm món này', 'bad', 1400)
+    toast(c?.addon && !c.addonDone ? L('Khách không gọi món này', "The guest didn't order this") : L('Khách đang đứng quầy không mua kèm món này', "The guest at the counter doesn't want this add-on"), 'bad', 1400)
     return
   }
-  if (!sellAddonTo(c)) { toast('Hết hàng trên kệ – vào Kho nhập thêm', 'bad'); sfx('wrong'); return }
+  if (!sellAddonTo(c)) { toast(L('Hết hàng trên kệ – vào Kho nhập thêm', 'Shelf is empty – restock in the Pantry'), 'bad'); sfx('wrong'); return }
   sfx('coin'); vibrate(10)
 }
 
@@ -1114,7 +1114,7 @@ function orderReady(o: Order, perfect: boolean, byStaff: boolean) {
     const combo = perfect ? comboUp(save.prices[o.recipe]) : (breakCombo(), 0)
     if (combo) { save.money += combo; ui.stats.revenue += combo; ui.stats.comboBonus = (ui.stats.comboBonus ?? 0) + combo }
     sfx('done')
-    toast(ui.shippers.some((s) => s.orderId === null) ? `📦 Đơn của ${o.name} xong, shipper tới lấy!` : `📦 Đơn của ${o.name} xong, chờ shipper rảnh`, 'good', 1800)
+    toast(ui.shippers.some((s) => s.orderId === null) ? L(`📦 Đơn của ${o.name} xong, shipper tới lấy!`, `📦 ${o.name}'s order is ready, rider on the way!`) : L(`📦 Đơn của ${o.name} xong, chờ shipper rảnh`, `📦 ${o.name}'s order is ready, waiting for a free rider`), 'good', 1800)
   }
 }
 
@@ -1145,7 +1145,7 @@ function addBond(id: string, d: number) {
   if (bondLevel(after) > bondLevel(before)) {
     const r = REGULARS.find((x) => x.id === id)!
     const lv = BOND_LEVELS[bondLevel(after)]
-    setTimeout(() => { toast(`${lv.icon} ${r.name} giờ là ${lv.name} của quán!`, 'heart', 2800); sfx('heart') }, 900)
+    setTimeout(() => { toast(L(`${lv.icon} ${r.name} giờ là ${lv.name} của quán!`, `${lv.icon} ${r.name} is now the café's ${lv.name}!`), 'heart', 2800); sfx('heart') }, 900)
   }
 }
 
@@ -1213,12 +1213,12 @@ export function stepMs(step: StepId) {
 
 export function startBrew(target: 'cust' | 'order', id: number) {
   if (ui.brew || ui.present) return
-  if (ui.closing) { toast('Quán đã đóng cửa – không nhận thêm order', 'info', 1600); return }
-  if (staffAll.value) { toast('Nhân viên đang lo quầy pha chế – bạn vào Bếp nấu món nhé', 'info', 1800); return }
+  if (ui.closing) { toast(L('Quán đã đóng cửa – không nhận thêm order', "We're closed – no more orders"), 'info', 1600); return }
+  if (staffAll.value) { toast(L('Nhân viên đang lo quầy pha chế – bạn vào Bếp nấu món nhé', 'Staff has the bar covered – head to the Kitchen to cook!'), 'info', 1800); return }
   const recipe = target === 'cust' ? ui.queue.find((c) => c.id === id)?.recipe : ui.orders.find((o) => o.id === id && o.state === 'new')?.recipe
   if (!recipe) return
   if (!canMake(recipe)) {
-    toast(`Hết ${missingFor(recipe).join(', ')}! Vào Kho nhập thêm nha`, 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return
+    toast(L(`Hết ${missingFor(recipe).join(', ')}! Vào Kho nhập thêm nha`, `Out of ${missingFor(recipe).join(', ')}! Restock in the Pantry`), 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return
   }
   sfx('tap')
   vibrate(8)
@@ -1227,7 +1227,7 @@ export function startBrew(target: 'cust' | 'order', id: number) {
 
 export function brewStep(step: StepId) {
   const b = ui.brew
-  if (!b) { toast('Nhận order của khách trước nha ☕', 'info', 1400); sfx('wrong'); return }
+  if (!b) { toast(L('Nhận order của khách trước nha ☕', "Take a guest's order first ☕"), 'info', 1400); sfx('wrong'); return }
   if (b.busy) return
   const steps = recipeById[b.recipe].steps
   const expected = steps[b.done.length]
@@ -1243,7 +1243,7 @@ export function brewStep(step: StepId) {
   }
   const ing = stepIngredient(step)
   if (ing) {
-    if (save.stock[ing] < 1) { toast(`Hết ${ingredientById[ing].name}!`, 'bad'); sfx('wrong'); return }
+    if (save.stock[ing] < 1) { toast(L(`Hết ${ingredientById[ing].name}!`, `Out of ${ingredientById[ing].name}!`), 'bad'); sfx('wrong'); return }
     save.stock[ing]--
   }
   const info = STEPS[step]
@@ -1274,7 +1274,7 @@ export function brewStep(step: StepId) {
 function finishBrew() {
   const b = ui.brew
   if (!b) return
-  const name = b.target === 'cust' ? recipeById[b.recipe].name : `Đơn app · ${ui.orders.find((o) => o.id === b.id)?.name ?? ''}`
+  const name = b.target === 'cust' ? recipeById[b.recipe].name : L(`Đơn app · ${ui.orders.find((o) => o.id === b.id)?.name ?? ''}`, `App order · ${ui.orders.find((o) => o.id === b.id)?.name ?? ''}`)
   ui.present = { recipe: b.recipe, cup: b, target: b.target, name }
   sfx('done')
   presentDone = () => {
@@ -1286,11 +1286,11 @@ function finishBrew() {
     const perfect = b.mistakes === 0
     if (b.target === 'cust') {
       const c = ui.queue.find((x) => x.id === b.id)
-      if (!c) { toast('Khách đã đi mất rồi 😢', 'bad'); return }
+      if (!c) { toast(L('Khách đã đi mất rồi 😢', 'The guest already left 😢'), 'bad'); return }
       completeWalkIn(c, perfect, false, b.mistakes)
     } else {
       const o = ui.orders.find((x) => x.id === b.id)
-      if (!o) { toast('Đơn đã bị huỷ 😢', 'bad'); return }
+      if (!o) { toast(L('Đơn đã bị huỷ 😢', 'The order was cancelled 😢'), 'bad'); return }
       orderReady(o, perfect, false)
       bus.emit({ type: 'orderPacked', name: o.name })
     }
@@ -1307,7 +1307,7 @@ export function cancelBrew() {
   if (!ui.brew || ui.present) return
   ui.brew = null
   sfx('pour')
-  toast('Đã đổ bỏ, pha lại nha', 'info', 1200)
+  toast(L('Đã đổ bỏ, pha lại nha', 'Tossed it – try again!'), 'info', 1200)
 }
 
 
@@ -1327,13 +1327,13 @@ function seatCustomer(c: Customer, perfect: boolean) {
     ui.stats.noSeat = (ui.stats.noSeat ?? 0) + 1
     changeRep(-0.25)
     const dirty = ui.seats.some((x) => x.state === 'dirty')
-    float(dirty ? 'Bàn bẩn, khách đứng uống' : 'Hết bàn ngồi', 'bad')
-    if (dirty && ui.page === 0 && (ui.stats.noSeat ?? 0) <= 2) toast('Khu ngồi có bàn bẩn – vuốt sang để dọn', 'bad', 2400)
+    float(dirty ? L('Bàn bẩn, khách đứng uống', 'Dirty tables, guest drinks standing') : L('Hết bàn ngồi', 'No free seats'), 'bad')
+    if (dirty && ui.page === 0 && (ui.stats.noSeat ?? 0) <= 2) toast(L('Khu ngồi có bàn bẩn – vuốt sang để dọn', 'Dirty tables in the seating area – swipe over to clean'), 'bad', 2400)
     return
   }
-  const L = TABLE_LEVELS[save.seating.level] ?? TABLE_LEVELS[0]
+  const tl = TABLE_LEVELS[save.seating.level] ?? TABLE_LEVELS[0]
   const base = 2_000 + Math.round(Math.random() * 3) * 1_000 + (perfect ? 2_000 : 0)
-  ui.seats[i] = { state: 'busy', look: c.look, recipe: c.recipe, t: (16 + Math.random() * 14) * L.sit, tip: Math.round((base * L.tip) / 1000) * 1000, taps: 0 }
+  ui.seats[i] = { state: 'busy', look: c.look, recipe: c.recipe, t: (16 + Math.random() * 14) * tl.sit, tip: Math.round((base * tl.tip) / 1000) * 1000, taps: 0 }
   ui.stats.seated = (ui.stats.seated ?? 0) + 1
 }
 
@@ -1385,7 +1385,7 @@ function tickSeating(dt: number) {
       if (st.t >= DIRTY_PENALTY_T) {
         st.t = 0
         changeRep(-0.5)
-        if (ui.page === 1) float('Bàn bẩn lâu quá!', 'bad')
+        if (ui.page === 1) float(L('Bàn bẩn lâu quá!', 'Tables dirty way too long!'), 'bad')
       }
     }
   }
@@ -1410,12 +1410,12 @@ function tickSeating(dt: number) {
 export function buyTables() {
   const n = save.seating.tables
   const cost = TABLE_COSTS[n]
-  if (n >= maxTables.value || !cost) { toast(n >= 6 ? 'Đã đủ 6 bàn!' : 'Mặt bằng này hết chỗ – thuê mặt bằng lớn hơn để kê thêm bàn', 'bad'); sfx('wrong'); return }
-  if (save.money < cost) { toast('Không đủ tiền!', 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return }
+  if (n >= maxTables.value || !cost) { toast(n >= 6 ? L('Đã đủ 6 bàn!', 'Already at 6 tables!') : L('Mặt bằng này hết chỗ – thuê mặt bằng lớn hơn để kê thêm bàn', 'No room left here – rent a bigger space for more tables'), 'bad'); sfx('wrong'); return }
+  if (save.money < cost) { toast(L('Không đủ tiền!', 'Not enough money!'), 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return }
   save.money -= cost
   save.seating.tables = n + 2
   if (ui.phase === 'open') for (let k = 0; k < 2 * SEATS_PER_TABLE; k++) ui.seats.push(newSeat())
-  toast(n === 0 ? 'Quét sạch mạng nhện, kê 2 bàn đầu tiên! Khách đã có chỗ ngồi lại' : `Kê thêm 2 bàn → ${save.seating.tables} bàn`, 'good')
+  toast(n === 0 ? L('Quét sạch mạng nhện, kê 2 bàn đầu tiên! Khách đã có chỗ ngồi lại', 'Cobwebs swept, first 2 tables set! Guests can sit again') : L(`Kê thêm 2 bàn → ${save.seating.tables} bàn`, `2 more tables → ${save.seating.tables} tables`), 'good')
   sfx('done'); vibrate([10, 30, 10])
 }
 
@@ -1423,10 +1423,10 @@ export function upgradeTables() {
   const lv = save.seating.level
   const cost = TABLE_LEVEL_COSTS[lv]
   if (cost === undefined) return
-  if (save.money < cost) { toast('Không đủ tiền!', 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return }
+  if (save.money < cost) { toast(L('Không đủ tiền!', 'Not enough money!'), 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return }
   save.money -= cost
   save.seating.level = lv + 1
-  toast(`Đổi sang ${TABLE_LEVELS[lv + 1].name}!`, 'good')
+  toast(L(`Đổi sang ${TABLE_LEVELS[lv + 1].name}!`, `Upgraded to ${TABLE_LEVELS[lv + 1].name}!`), 'good')
   sfx('done'); vibrate([10, 30, 10])
 }
 
@@ -1434,11 +1434,11 @@ export function hireWaiter() {
   const n = save.seating.waiter
   const cost = WAITER_COSTS[n]
   if (cost === undefined) return
-  if (save.money < cost) { toast('Không đủ tiền!', 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return }
+  if (save.money < cost) { toast(L('Không đủ tiền!', 'Not enough money!'), 'bad'); sfx('wrong'); vibrate([30, 40, 30]); return }
   save.money -= cost
   save.seating.waiter = n + 1
   if (ui.phase === 'open') ui.waiters.push({ seat: null, t: 0, x: 100 - n * 14 })
-  toast(`Thuê phục vụ thứ ${n + 1} · lương ${moneyShort(WAITER_WAGE)}/ngày`, 'good')
+  toast(L(`Thuê phục vụ thứ ${n + 1} · lương ${moneyShort(WAITER_WAGE)}/ngày`, `Hired server #${n + 1} · wage ${moneyShort(WAITER_WAGE)}/day`), 'good')
   sfx('done'); vibrate([10, 30, 10])
 }
 
@@ -1505,7 +1505,7 @@ export function nextDay() {
     save.money += loan.amount
     save.debt += loan.owe
     save.loans++
-    toast(loan.who === 'me' ? `Mẹ chuyển khoản ${moneyShort(loan.amount)}: “Cố lên con, mẹ tin con.”` : `Bà Tư cho vay ${moneyShort(loan.amount)}: “Lãi 10% thôi, nhớ trả đó nghe.”`, 'heart', 4200)
+    toast(loan.who === 'me' ? L(`Mẹ chuyển khoản ${moneyShort(loan.amount)}: “Cố lên con, mẹ tin con.”`, `Mom sent ${moneyShort(loan.amount)}: “Hang in there, sweetie. I believe in you.”`) : L(`Bà Tư cho vay ${moneyShort(loan.amount)}: “Lãi 10% thôi, nhớ trả đó nghe.”`, `Mrs. Tư lent you ${moneyShort(loan.amount)}: “Just 10% interest – don't forget to pay me back!”`), 'heart', 4200)
   }
   save.day++
   save.weather = save.forecast

@@ -5,6 +5,7 @@ import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { ui, save, nextDay, forecast } from '../game/store'
 import { money, moneyShort, recipeById } from '../game/data'
 import { sfx } from '../game/audio'
+import { L, isEn } from '../game/i18n'
 import PixelIcon from './ui/PixelIcon.vue'
 import PixelNum from './ui/PixelNum.vue'
 
@@ -26,7 +27,7 @@ const stars = computed(() => {
   if (s === 2 && happyRatio.value >= 0.85 && r.value.profit > 0) s++
   return s
 })
-const verdict = computed(() => (r.value.bankrupt ? 'HẾT TIỀN RỒI…' : ['NGÀY KHÓ KHĂN', 'TẠM ỔN', 'LÀM TỐT LẮM!', 'NGÀY TUYỆT VỜI!'][stars.value]))
+const verdict = computed(() => (r.value.bankrupt ? L('HẾT TIỀN RỒI…', 'OUT OF CASH…') : L(['NGÀY KHÓ KHĂN', 'TẠM ỔN', 'LÀM TỐT LẮM!', 'NGÀY TUYỆT VỜI!'], ['TOUGH DAY', 'NOT BAD', 'GREAT JOB!', 'AMAZING DAY!'])[stars.value]))
 
 // ---- số lợi nhuận chạy từ 0 lên ----
 const shown = ref(0)
@@ -58,7 +59,7 @@ const weatherIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloud
 <template>
   <div class="backdrop">
     <div class="sheet">
-      <div class="ribbon"><span>KẾT THÚC NGÀY {{ save.day }}</span></div>
+      <div class="ribbon"><span>{{ L('KẾT THÚC NGÀY', 'END OF DAY') }} {{ save.day }}</span></div>
 
       <!-- sao + đánh giá -->
       <div class="stars">
@@ -70,66 +71,66 @@ const weatherIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloud
 
       <!-- lợi nhuận -->
       <div class="panel hero">
-        <div class="cap">LỢI NHUẬN HÔM NAY</div>
+        <div class="cap">{{ L('LỢI NHUẬN HÔM NAY', "TODAY'S PROFIT") }}</div>
         <PixelNum :text="profitText" :size="5" :color="r.profit >= 0 ? '#2f9e6b' : '#d9534f'" :shadow="r.profit >= 0 ? '#1d6b47' : '#8f2a26'" :light="r.profit >= 0 ? '#5fc98c' : '#f07a72'" />
       </div>
 
       <!-- sổ thu chi -->
       <div class="panel ledger">
-        <div class="ttl">SỔ THU CHI</div>
-        <div class="row"><PixelIcon name="coin" /><span class="lb">Doanh thu</span><b class="good">+{{ money(r.revenue) }}</b></div>
-        <div v-if="r.goodsRev" class="row sub"><PixelIcon name="gift" :size="2" /><span class="lb">gồm bán kèm {{ r.goodsSold }} món bánh / lưu niệm</span><span>{{ money(r.goodsRev) }}</span></div>
-        <div v-if="r.comboBonus" class="row sub"><PixelIcon name="star" :size="2" /><span class="lb">gồm thưởng COMBO (chuỗi dài nhất x{{ r.comboBest }})</span><span>{{ money(r.comboBonus) }}</span></div>
-        <div v-if="r.rushBonus" class="row sub"><PixelIcon name="trophy" :size="2" /><span class="lb">gồm thưởng vượt {{ r.rushWon }} giờ cao điểm</span><span>{{ money(r.rushBonus) }}</span></div>
-        <div v-if="r.foodSold || r.foodLost" class="row sub"><PixelIcon name="house" :size="2" /><span class="lb">gồm khu bếp: {{ r.foodSold || 0 }} món<template v-if="r.foodLost"> · {{ r.foodLost }} món bị huỷ</template></span><span>{{ money(r.foodRev || 0) }}</span></div>
-        <div v-if="r.tips" class="row sub"><PixelIcon name="heart" :size="2" /><span class="lb">gồm tiền tip</span><span>{{ money(r.tips) }}</span></div>
-        <div v-if="r.seated || r.noSeat" class="row sub"><PixelIcon name="crowd" :size="2" /><span class="lb">Khu ngồi: {{ r.seated || 0 }} khách ngồi<template v-if="r.noSeat"> · {{ r.noSeat }} khách hết chỗ</template></span><span>{{ money(r.seatTips || 0) }}</span></div>
-        <div class="row"><PixelIcon name="crate" /><span class="lb">Nhập hàng</span><b>{{ r.spent ? "-" + money(r.spent) : money(0) }}</b></div>
-        <div class="row"><PixelIcon name="house" /><span class="lb">Mặt bằng</span><b>-{{ money(r.rent) }}</b></div>
-        <div v-if="r.wages" class="row"><PixelIcon name="staff" /><span class="lb">Lương pha chế, phục vụ &amp; shipper</span><b>-{{ money(r.wages) }}</b></div>
-        <div v-if="r.meta && r.meta.spoiled" class="row sub"><PixelIcon name="cross" :size="2" /><span class="lb">Bánh tồn phải bỏ</span><span>{{ r.meta.spoiled }} cái</span></div>
-        <div v-if="r.meltedIce" class="row sub"><PixelIcon name="ice" :size="2" /><span class="lb">Đá bị tan</span><span>{{ r.meltedIce }} phần</span></div>
-        <div class="total"><span>CÒN LẠI</span><b :class="r.profit >= 0 ? 'good' : 'bad'">{{ fmt(r.profit) }}</b></div>
-        <div v-if="r.debtPaid" class="row sub debt"><PixelIcon name="house" :size="2" /><span class="lb">Đã trả nợ · còn nợ {{ money(save.debt) }}</span><span>-{{ money(r.debtPaid) }}</span></div>
+        <div class="ttl">{{ L('SỔ THU CHI', 'LEDGER') }}</div>
+        <div class="row"><PixelIcon name="coin" /><span class="lb">{{ L('Doanh thu', 'Revenue') }}</span><b class="good">+{{ money(r.revenue) }}</b></div>
+        <div v-if="r.goodsRev" class="row sub"><PixelIcon name="gift" :size="2" /><span class="lb">{{ L(`gồm bán kèm ${r.goodsSold} món bánh / lưu niệm`, `incl. ${r.goodsSold} pastries / souvenirs`) }}</span><span>{{ money(r.goodsRev) }}</span></div>
+        <div v-if="r.comboBonus" class="row sub"><PixelIcon name="star" :size="2" /><span class="lb">{{ L(`gồm thưởng COMBO (chuỗi dài nhất x${r.comboBest})`, `incl. COMBO bonus (best streak x${r.comboBest})`) }}</span><span>{{ money(r.comboBonus) }}</span></div>
+        <div v-if="r.rushBonus" class="row sub"><PixelIcon name="trophy" :size="2" /><span class="lb">{{ L(`gồm thưởng vượt ${r.rushWon} giờ cao điểm`, `incl. bonus for ${r.rushWon} rush hour(s) beaten`) }}</span><span>{{ money(r.rushBonus) }}</span></div>
+        <div v-if="r.foodSold || r.foodLost" class="row sub"><PixelIcon name="house" :size="2" /><span class="lb">{{ L(`gồm khu bếp: ${r.foodSold || 0} món`, `incl. kitchen: ${r.foodSold || 0} dishes`) }}<template v-if="r.foodLost"> · {{ L(`${r.foodLost} món bị huỷ`, `${r.foodLost} binned`) }}</template></span><span>{{ money(r.foodRev || 0) }}</span></div>
+        <div v-if="r.tips" class="row sub"><PixelIcon name="heart" :size="2" /><span class="lb">{{ L('gồm tiền tip', 'incl. tips') }}</span><span>{{ money(r.tips) }}</span></div>
+        <div v-if="r.seated || r.noSeat" class="row sub"><PixelIcon name="crowd" :size="2" /><span class="lb">{{ L(`Khu ngồi: ${r.seated || 0} khách ngồi`, `Seating: ${r.seated || 0} guests seated`) }}<template v-if="r.noSeat"> · {{ L(`${r.noSeat} khách hết chỗ`, `${r.noSeat} found no seat`) }}</template></span><span>{{ money(r.seatTips || 0) }}</span></div>
+        <div class="row"><PixelIcon name="crate" /><span class="lb">{{ L('Nhập hàng', 'Supplies') }}</span><b>{{ r.spent ? "-" + money(r.spent) : money(0) }}</b></div>
+        <div class="row"><PixelIcon name="house" /><span class="lb">{{ L('Mặt bằng', 'Rent') }}</span><b>-{{ money(r.rent) }}</b></div>
+        <div v-if="r.wages" class="row"><PixelIcon name="staff" /><span class="lb">{{ L('Lương pha chế, phục vụ & shipper', 'Wages: baristas, servers & riders') }}</span><b>-{{ money(r.wages) }}</b></div>
+        <div v-if="r.meta && r.meta.spoiled" class="row sub"><PixelIcon name="cross" :size="2" /><span class="lb">{{ L('Bánh tồn phải bỏ', 'Stale pastries tossed') }}</span><span>{{ r.meta.spoiled }} {{ L('cái', 'pcs') }}</span></div>
+        <div v-if="r.meltedIce" class="row sub"><PixelIcon name="ice" :size="2" /><span class="lb">{{ L('Đá bị tan', 'Ice melted') }}</span><span>{{ r.meltedIce }} {{ L('phần', 'portions') }}</span></div>
+        <div class="total"><span>{{ L('CÒN LẠI', 'NET') }}</span><b :class="r.profit >= 0 ? 'good' : 'bad'">{{ fmt(r.profit) }}</b></div>
+        <div v-if="r.debtPaid" class="row sub debt"><PixelIcon name="house" :size="2" /><span class="lb">{{ L(`Đã trả nợ · còn nợ ${money(save.debt)}`, `Debt repaid · ${money(save.debt)} left`) }}</span><span>-{{ money(r.debtPaid) }}</span></div>
       </div>
 
       <!-- chỉ số khách -->
       <div class="stats">
-        <div class="tile good"><i class="ic"><PixelIcon name="cup" /></i><b>{{ r.served }}</b><span>Hài lòng</span></div>
-        <div class="tile" :class="{ bad: r.angry }"><i class="ic"><PixelIcon name="clock" /></i><b>{{ r.angry }}</b><span>Chờ lâu bỏ đi</span></div>
-        <div class="tile" :class="{ bad: r.tooExpensive }"><i class="ic"><PixelIcon name="tag" /></i><b>{{ r.tooExpensive }}</b><span>Chê đắt</span></div>
-        <div class="tile" :class="{ bad: r.full }"><i class="ic"><PixelIcon name="crowd" /></i><b>{{ r.full }}</b><span>Quán đông</span></div>
+        <div class="tile good"><i class="ic"><PixelIcon name="cup" /></i><b>{{ r.served }}</b><span>{{ L('Hài lòng', 'Happy') }}</span></div>
+        <div class="tile" :class="{ bad: r.angry }"><i class="ic"><PixelIcon name="clock" /></i><b>{{ r.angry }}</b><span>{{ L('Chờ lâu bỏ đi', 'Gave up waiting') }}</span></div>
+        <div class="tile" :class="{ bad: r.tooExpensive }"><i class="ic"><PixelIcon name="tag" /></i><b>{{ r.tooExpensive }}</b><span>{{ L('Chê đắt', 'Too pricey') }}</span></div>
+        <div class="tile" :class="{ bad: r.full }"><i class="ic"><PixelIcon name="crowd" /></i><b>{{ r.full }}</b><span>{{ L('Quán đông', 'Too crowded') }}</span></div>
       </div>
       <div v-if="r.comboBest || r.rushWon" class="stats three">
-        <div class="tile" :class="{ good: (r.comboBest ?? 0) >= 5 }"><i class="ic"><PixelIcon name="star" /></i><b>x{{ r.comboBest || 0 }}</b><span>Combo dài nhất</span></div>
-        <div class="tile" :class="{ good: r.rushWon }"><i class="ic"><PixelIcon name="trophy" /></i><b>{{ r.rushWon || 0 }}</b><span>Cao điểm vượt qua</span></div>
-        <div class="tile"><i class="ic"><PixelIcon name="coin" /></i><b>{{ moneyShort((r.comboBonus || 0) + (r.rushBonus || 0)) }}</b><span>Tiền thưởng</span></div>
+        <div class="tile" :class="{ good: (r.comboBest ?? 0) >= 5 }"><i class="ic"><PixelIcon name="star" /></i><b>x{{ r.comboBest || 0 }}</b><span>{{ L('Combo dài nhất', 'Best combo') }}</span></div>
+        <div class="tile" :class="{ good: r.rushWon }"><i class="ic"><PixelIcon name="trophy" /></i><b>{{ r.rushWon || 0 }}</b><span>{{ L('Cao điểm vượt qua', 'Rushes beaten') }}</span></div>
+        <div class="tile"><i class="ic"><PixelIcon name="coin" /></i><b>{{ moneyShort((r.comboBonus || 0) + (r.rushBonus || 0)) }}</b><span>{{ L('Tiền thưởng', 'Bonus cash') }}</span></div>
       </div>
       <div v-if="r.delivered || r.cancelled" class="stats three">
-        <div class="tile good"><i class="ic"><PixelIcon name="scooter" /></i><b>{{ r.delivered }}</b><span>Đơn app đã giao</span></div>
-        <div class="tile" :class="{ bad: r.cancelled }"><i class="ic"><PixelIcon name="cross" /></i><b>{{ r.cancelled }}</b><span>Đơn bị huỷ</span></div>
-        <div class="tile"><i class="ic"><PixelIcon name="star" /></i><b>{{ r.delivered ? (r.starsSum / r.delivered).toFixed(1) : '–' }}</b><span>Sao trung bình</span></div>
+        <div class="tile good"><i class="ic"><PixelIcon name="scooter" /></i><b>{{ r.delivered }}</b><span>{{ L('Đơn app đã giao', 'App orders delivered') }}</span></div>
+        <div class="tile" :class="{ bad: r.cancelled }"><i class="ic"><PixelIcon name="cross" /></i><b>{{ r.cancelled }}</b><span>{{ L('Đơn bị huỷ', 'Orders cancelled') }}</span></div>
+        <div class="tile"><i class="ic"><PixelIcon name="star" /></i><b>{{ r.delivered ? (r.starsSum / r.delivered).toFixed(1) : '–' }}</b><span>{{ L('Sao trung bình', 'Avg. rating') }}</span></div>
       </div>
 
 
       <!-- đua top phố -->
       <div v-if="r.meta" class="panel street" :class="{ contest: r.meta.contest }">
-        <div class="tag-ribbon"><PixelIcon name="trophy" :size="2" /> ĐUA TOP PHỐ<span v-if="r.meta.contest" class="x2">NGÀY HỘI X2</span></div>
+        <div class="tag-ribbon"><PixelIcon name="trophy" :size="2" /> {{ L('ĐUA TOP PHỐ', 'STREET RACE') }}<span v-if="r.meta.contest" class="x2">{{ L('NGÀY HỘI X2', 'FESTIVAL X2') }}</span></div>
         <div class="srow">
           <div class="rank" :class="'r' + Math.min(r.meta.rank, 3)">
-            <small>HẠNG</small><b>{{ r.meta.rank + 1 }}</b>
+            <small>{{ L('HẠNG', 'RANK') }}</small><b>{{ r.meta.rank + 1 }}</b>
           </div>
           <div class="grow">
-            <div class="ttl">ĐIỂM PHỐ HÔM NAY</div>
+            <div class="ttl">{{ L('ĐIỂM PHỐ HÔM NAY', "TODAY'S STREET SCORE") }}</div>
             <PixelNum :text="String(r.meta.dayScore)" :size="4" color="#f2c14e" shadow="#7a4e1f" light="#fff1a8" />
-            <div v-if="r.meta.rank < r.meta.prevRank" class="move up"><PixelIcon name="up" :size="2" /> LÊN {{ r.meta.prevRank - r.meta.rank }} HẠNG</div>
-            <div v-else-if="r.meta.rank > r.meta.prevRank" class="move down"><PixelIcon name="down" :size="2" /> TỤT {{ r.meta.rank - r.meta.prevRank }} HẠNG</div>
-            <div v-else class="move">GIỮ HẠNG</div>
+            <div v-if="r.meta.rank < r.meta.prevRank" class="move up"><PixelIcon name="up" :size="2" /> {{ L(`LÊN ${r.meta.prevRank - r.meta.rank} HẠNG`, `UP ${r.meta.prevRank - r.meta.rank}`) }}</div>
+            <div v-else-if="r.meta.rank > r.meta.prevRank" class="move down"><PixelIcon name="down" :size="2" /> {{ L(`TỤT ${r.meta.rank - r.meta.prevRank} HẠNG`, `DOWN ${r.meta.rank - r.meta.prevRank}`) }}</div>
+            <div v-else class="move">{{ L('GIỮ HẠNG', 'HELD RANK') }}</div>
           </div>
         </div>
         <div v-if="r.meta.week" class="week">
           <PixelIcon name="crown" :size="3" />
-          <div class="grow"><small>CHỐT BẢNG TUẦN</small><b>Hạng {{ r.meta.week.rank + 1 }} · {{ r.meta.week.title }}</b></div>
+          <div class="grow"><small>{{ L('CHỐT BẢNG TUẦN', 'WEEKLY RESULTS') }}</small><b>{{ L('Hạng', 'Rank') }} {{ r.meta.week.rank + 1 }} · {{ r.meta.week.title }}</b></div>
           <span class="rw"><PixelIcon name="bean" :size="2" />+{{ r.meta.week.beans }}</span>
           <span v-if="r.meta.week.money" class="rw money">+{{ moneyShort(r.meta.week.money) }}</span>
         </div>
@@ -137,26 +138,27 @@ const weatherIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloud
 
       <!-- phần thưởng: nhiệm vụ, thành tựu, hạt vàng -->
       <div v-if="r.meta && (r.meta.quests.length || r.meta.achievements.length || r.meta.beans)" class="panel loot">
-        <div class="tag-ribbon gold"><PixelIcon name="gift" :size="2" /> PHẦN THƯỞNG HÔM NAY</div>
+        <div class="tag-ribbon gold"><PixelIcon name="gift" :size="2" /> {{ L('PHẦN THƯỞNG HÔM NAY', "TODAY'S REWARDS") }}</div>
         <div v-for="q in r.meta.quests" :key="'q' + q" class="lrow">
-          <span class="ic q"><PixelIcon name="check" :size="2" /></span><span class="grow">{{ q }}</span><span class="kind">NHIỆM VỤ</span>
+          <span class="ic q"><PixelIcon name="check" :size="2" /></span><span class="grow">{{ q }}</span><span class="kind">{{ L('NHIỆM VỤ', 'QUEST') }}</span>
         </div>
         <div v-for="a in r.meta.achievements" :key="'a' + a" class="lrow">
-          <span class="ic a"><PixelIcon name="trophy" :size="2" /></span><span class="grow">{{ a }}</span><span class="kind ach">THÀNH TỰU</span>
+          <span class="ic a"><PixelIcon name="trophy" :size="2" /></span><span class="grow">{{ a }}</span><span class="kind ach">{{ L('THÀNH TỰU', 'ACHIEVEMENT') }}</span>
         </div>
-        <div v-if="r.meta.beans" class="beans"><PixelIcon name="bean" :size="3" /><b>+{{ r.meta.beans }}</b><span>HẠT VÀNG</span></div>
+        <div v-if="r.meta.beans" class="beans"><PixelIcon name="bean" :size="3" /><b>+{{ r.meta.beans }}</b><span>{{ L('HẠT VÀNG', 'GOLD BEANS') }}</span></div>
       </div>
 
       <!-- phần thưởng: món mới -->
       <div v-if="r.newRecipe" class="panel new-recipe">
-        <b>XONG NGÀY · MỞ KHOÁ MÓN MỚI</b>
-        <div>Mở khoá <b>{{ recipeById[r.newRecipe].name }}</b> + tặng nguyên liệu dùng thử. Từ mai khách sẽ gọi món này!</div>
+        <b>{{ L('XONG NGÀY · MỞ KHOÁ MÓN MỚI', 'DAY DONE · NEW DRINK UNLOCKED') }}</b>
+        <div v-if="isEn">Unlocked <b>{{ recipeById[r.newRecipe].name }}</b> + free trial ingredients. Guests will start ordering it tomorrow!</div>
+        <div v-else>Mở khoá <b>{{ recipeById[r.newRecipe].name }}</b> + tặng nguyên liệu dùng thử. Từ mai khách sẽ gọi món này!</div>
       </div>
 
       <!-- danh tiếng -->
       <div class="panel rep">
         <div class="rep-top">
-          <span class="ttl">DANH TIẾNG</span>
+          <span class="ttl">{{ L('DANH TIẾNG', 'REPUTATION') }}</span>
           <span class="val"><b>{{ Math.round(r.repEnd) }}</b>/100</span>
           <span class="delta" :class="repDelta >= 0 ? 'up' : 'down'">{{ repDelta >= 0 ? '▲' : '▼' }} {{ Math.abs(repDelta).toFixed(1) }}</span>
         </div>
@@ -167,7 +169,7 @@ const weatherIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloud
 
       <!-- 7 ngày gần nhất -->
       <div v-if="save.history.length > 1" class="panel chart-wrap">
-        <div class="ttl">LỢI NHUẬN 7 NGÀY</div>
+        <div class="ttl">{{ L('LỢI NHUẬN 7 NGÀY', '7-DAY PROFIT') }}</div>
         <div class="chart">
           <div v-for="(h, i) in save.history" :key="i" class="col" :class="{ today: i === save.history.length - 1 }">
             <span class="v">{{ moneyShort(h) }}</span>
@@ -178,16 +180,23 @@ const weatherIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloud
 
       <!-- hết tiền: không phá sản mất trắng – mẹ / Bà Tư cho vay để mở cửa tiếp -->
       <div v-if="r.bankrupt && r.loan" class="panel loan">
-        <div class="tag-ribbon"><PixelIcon name="heart" :size="2" /> {{ r.loan.who === 'me' ? 'TIN NHẮN CỦA MẸ' : 'BÀ TƯ GÕ CỬA' }}</div>
+        <div class="tag-ribbon"><PixelIcon name="heart" :size="2" /> {{ r.loan.who === 'me' ? L('TIN NHẮN CỦA MẸ', 'A TEXT FROM MOM') : L('BÀ TƯ GÕ CỬA', 'MRS. TƯ KNOCKS') }}</div>
+        <template v-if="isEn">
+          <p v-if="r.loan.who === 'me'">“Heard the shop's short on cash, sweetie. I'm sending you <b>{{ money(r.loan.amount) }}</b> — pay me back when things pick up. Don't give up, okay?”</p>
+          <p v-else>“Your mom's bailed you out twice already, dear. This time I'll lend you <b>{{ money(r.loan.amount) }}</b> at 10% – you'll owe <b>{{ money(r.loan.owe) }}</b>. This little hill still needs your café, I'm sure of it.”</p>
+          <small>30% of each profitable day goes to the debt automatically. Try nudging prices up, buying just enough stock, and not keeping guests waiting!</small>
+        </template>
+        <template v-else>
         <p v-if="r.loan.who === 'me'">“Mẹ nghe nói quán kẹt tiền. Mẹ chuyển con <b>{{ money(r.loan.amount) }}</b>, khi nào khá thì trả mẹ. Đừng bỏ cuộc nha con.”</p>
         <p v-else>“Mẹ cháu giúp hai lần rồi đó. Lần này bà cho vay <b>{{ money(r.loan.amount) }}</b>, lãi 10% – trả <b>{{ money(r.loan.owe) }}</b>. Bà tin cái dốc này còn cần quán cháu.”</p>
         <small>Nợ được tự trừ 30% lợi nhuận mỗi ngày có lời. Thử tăng giá nhẹ, nhập hàng vừa đủ và đừng để khách chờ lâu!</small>
+        </template>
       </div>
 
       <button class="go" :class="{ retry: r.bankrupt }" @click="nextDay">
-        <template v-if="r.bankrupt">NHẬN TIỀN · MỞ CỬA NGÀY {{ save.day + 1 }}</template>
+        <template v-if="r.bankrupt">{{ L('NHẬN TIỀN · MỞ CỬA NGÀY', 'TAKE THE CASH · OPEN DAY') }} {{ save.day + 1 }}</template>
         <template v-else>
-          <span>SANG NGÀY {{ save.day + 1 }}</span>
+          <span>{{ L('SANG NGÀY', 'ON TO DAY') }} {{ save.day + 1 }}</span>
           <span class="wx"><PixelIcon :name="weatherIcon" :size="3" />{{ forecast.name }}</span>
         </template>
       </button>

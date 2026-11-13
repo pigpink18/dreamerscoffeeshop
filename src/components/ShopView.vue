@@ -23,6 +23,7 @@ import PixelIcon from './ui/PixelIcon.vue'
 import DrinkIcon from './ui/DrinkIcon.vue'
 import PersonPortrait from './ui/PersonPortrait.vue'
 import { isXmasSeason, XMAS_END } from '../game/season'
+import { L, isEn } from '../game/i18n'
 
 // sự kiện Giáng Sinh: còn bao nhiêu ngày (đồng hồ thật)
 const xmas = isXmasSeason()
@@ -103,39 +104,40 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
     <div class="card hero">
       <div class="hero-weather"><PixelIcon :name="WX[save.weather] || 'sunny'" :size="6" /></div>
       <div class="grow">
-        <div class="kicker">NGÀY {{ save.day }} · HÔM NAY</div>
+        <div class="kicker">{{ L(`NGÀY ${save.day} · HÔM NAY`, `DAY ${save.day} · TODAY`) }}</div>
         <div class="hero-title">{{ weather.name }}</div>
         <div class="muted small">
-          Dự kiến ~<b>{{ expected }}</b> khách
-          <template v-if="save.upgrades.shipper"> · ~<b>{{ expectedApp }}</b> đơn app</template>
+          {{ L('Dự kiến', 'Expect') }} ~<b>{{ expected }}</b> {{ L('khách', 'guests') }}
+          <template v-if="save.upgrades.shipper"> · ~<b>{{ expectedApp }}</b> {{ L('đơn app', 'app orders') }}</template>
         </div>
       </div>
       <div class="tomorrow">
-        <div class="tiny">NGÀY MAI</div>
+        <div class="tiny">{{ L('NGÀY MAI', 'TOMORROW') }}</div>
         <PixelIcon :name="WX[save.forecast] || 'sunny'" :size="3" />
         <div class="tiny fn">{{ forecast.name }}</div>
       </div>
     </div>
 
     <div v-if="xmas" class="card xmas-card">
-      <div class="tiny sk">SỰ KIỆN GIÁNG SINH · còn {{ xmasDays }} ngày</div>
+      <div class="tiny sk">{{ L(`SỰ KIỆN GIÁNG SINH · còn ${xmasDays} ngày`, `CHRISTMAS EVENT · ${xmasDays} days left`) }}</div>
       <div class="xm-row">
         <DrinkIcon id="latteNoel" :scale="2" /><DrinkIcon id="cacaoNoel" :scale="2" />
-        <div class="grow small">Món mới <b>Latte quế Noel</b> &amp; <b>Cacao nóng Giáng Sinh</b> đã lên menu, khách gọi nhiều hơn. Khách đội mũ Noel, Cáo quàng khăn đỏ. Hết sự kiện vào ngày 3/1.</div>
+        <div v-if="isEn" class="grow small">New <b>Cinnamon Noel Latte</b> &amp; <b>Christmas Hot Cocoa</b> are on the menu, and guests order more. Guests wear Santa hats, Cáo sports a red scarf. Event ends Jan 3.</div>
+        <div v-else class="grow small">Món mới <b>Latte quế Noel</b> &amp; <b>Cacao nóng Giáng Sinh</b> đã lên menu, khách gọi nhiều hơn. Khách đội mũ Noel, Cáo quàng khăn đỏ. Hết sự kiện vào ngày 3/1.</div>
       </div>
     </div>
 
     <div v-if="save.debt > 0" class="card debt-card">
-      <PixelIcon name="house" :size="2" /><span class="grow small">Đang nợ <b>{{ moneyShort(save.debt) }}</b> · tự trả 30% lợi nhuận mỗi ngày có lời</span>
+      <PixelIcon name="house" :size="2" /><span class="grow small">{{ L('Đang nợ', 'Debt') }} <b>{{ moneyShort(save.debt) }}</b> · {{ L('tự trả 30% lợi nhuận mỗi ngày có lời', '30% of profit repays it on good days') }}</span>
     </div>
 
     <div v-if="currentChapter" class="card story-card">
-      <div class="tiny sk"><PixelIcon name="star" :size="2" /> {{ storyDone ? 'CỐT TRUYỆN ĐÃ XONG' : currentChapter.title.toUpperCase() }}</div>
+      <div class="tiny sk"><PixelIcon name="star" :size="2" /> {{ storyDone ? L('CỐT TRUYỆN ĐÃ XONG', 'STORY COMPLETE') : currentChapter.title.toUpperCase() }}</div>
       <template v-if="!storyDone">
         <b>{{ currentChapter.goal }}</b>
         <div class="srow">
-          <span class="pxtag warn">Còn {{ Math.max(0, finaleDay - save.day) }} ngày tới chung kết</span>
-          <span class="small">Điểm hiện tại <b>{{ endingScore() }}</b> / 95</span>
+          <span class="pxtag warn">{{ L(`Còn ${Math.max(0, finaleDay - save.day)} ngày tới chung kết`, `${Math.max(0, finaleDay - save.day)} days to the finale`) }}</span>
+          <span class="small">{{ L('Điểm hiện tại', 'Score') }} <b>{{ endingScore() }}</b> / 95</span>
         </div>
         <i class="pbar"><b :style="{ width: Math.min(100, (endingScore() / 95) * 100) + '%' }" /></i>
       </template>
@@ -147,69 +149,70 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
         <div v-for="(lk, n) in guestFaces" :key="n" class="g-pt" :style="{ marginLeft: n ? '-14px' : '0', zIndex: 9 - n }"><PersonPortrait :look="lk" mood="happy" :scale="2" /></div>
       </div>
       <div class="grow">
-        <div class="tiny gk"><PixelIcon name="megaphone" :size="2" /> HÔM NAY Ở ĐÀ LẠT</div>
+        <div class="tiny gk"><PixelIcon name="megaphone" :size="2" /> {{ L('HÔM NAY Ở ĐÀ LẠT', 'TODAY IN ĐÀ LẠT') }}</div>
         <b>{{ featuredGroup.headline }}</b>
-        <div class="small gt">{{ featuredGroup.blurb }}. Ghé quán nhiều hơn thường ngày!</div>
+        <div class="small gt">{{ featuredGroup.blurb }}. {{ L('Ghé quán nhiều hơn thường ngày!', 'Expect more visitors than usual!') }}</div>
       </div>
     </div>
 
-    <div v-if="isContestDay" class="card contest"><PixelIcon name="trophy" :size="4" /><div class="grow"><b>NGÀY HỘI BARISTA PHỐ NÚI</b><div class="small">Điểm phố hôm nay x2 · cuối ngày chốt bảng xếp hạng tuần và trao thưởng!</div></div></div>
+    <div v-if="isContestDay" class="card contest"><PixelIcon name="trophy" :size="4" /><div class="grow"><b>{{ L('NGÀY HỘI BARISTA PHỐ NÚI', 'HIGHLAND BARISTA FESTIVAL') }}</b><div class="small">{{ L('Điểm phố hôm nay x2 · cuối ngày chốt bảng xếp hạng tuần và trao thưởng!', 'Street points x2 today · weekly rankings close tonight with prizes!') }}</div></div></div>
     <div v-if="save.meta.news && save.meta.news.day === save.day" class="card news"><PixelIcon name="megaphone" :size="3" /><span class="small">{{ save.meta.news.text }}</span></div>
 
     <div class="duo">
       <button class="card mini" @click="ui.tab = 'compete'">
-        <div class="tiny">ĐUA TOP PHỐ</div>
-        <b>Hạng #{{ myRank + 1 }}</b>
-        <small class="muted">Điểm tuần {{ save.meta.week.my }}</small>
+        <div class="tiny">{{ L('ĐUA TOP PHỐ', 'STREET RANKING') }}</div>
+        <b>{{ L('Hạng', 'Rank') }} #{{ myRank + 1 }}</b>
+        <small class="muted">{{ L('Điểm tuần', 'Week pts') }} {{ save.meta.week.my }}</small>
       </button>
       <button class="card mini" @click="ui.tab = 'app'">
-        <div class="tiny">NHIỆM VỤ HÔM NAY</div>
-        <b>{{ save.meta.quests.list.filter((q) => q.done).length }}/3 xong</b>
-        <small class="muted"><PixelIcon name="bean" :size="2" /> {{ save.meta.beans }} hạt vàng</small>
+        <div class="tiny">{{ L('NHIỆM VỤ HÔM NAY', 'DAILY QUESTS') }}</div>
+        <b>{{ save.meta.quests.list.filter((q) => q.done).length }}/3 {{ L('xong', 'done') }}</b>
+        <small class="muted"><PixelIcon name="bean" :size="2" /> {{ save.meta.beans }} {{ L('hạt vàng', 'gold beans') }}</small>
       </button>
     </div>
 
-    <div class="section-title">Món sẵn sàng bán</div>
+    <div class="section-title">{{ L('Món sẵn sàng bán', 'Ready to sell') }}</div>
     <div class="card list">
       <div v-for="id in save.unlocked" :key="id" class="row item">
         <DrinkIcon :id="id" :scale="2" />
         <div class="grow">
           <div class="name">{{ recipeById[id].name }}</div>
-          <div class="muted small">{{ moneyShort(save.prices[id]) }} / ly</div>
+          <div class="muted small">{{ moneyShort(save.prices[id]) }} / {{ L('ly', 'cup') }}</div>
         </div>
         <span class="pxtag" :class="portionsLeft(id) === 0 ? 'bad' : portionsLeft(id) < 8 ? 'warn' : 'good'">
-          {{ portionsLeft(id) === 0 ? 'HẾT' : `còn ${portionsLeft(id)} ly` }}
+          {{ portionsLeft(id) === 0 ? L('HẾT', 'OUT') : L(`còn ${portionsLeft(id)} ly`, `${portionsLeft(id)} cups`) }}
         </span>
       </div>
     </div>
 
     <template v-if="shelf.length">
-      <div class="section-title">Kệ hàng bán kèm</div>
+      <div class="section-title">{{ L('Kệ hàng bán kèm', 'Side shelf') }}</div>
       <div class="card list">
         <div v-for="g in shelf" :key="g.id" class="row item">
           <img :src="iconUrl(g.id)" class="gimg" alt="" />
           <div class="grow">
             <div class="name">{{ g.name }}</div>
-            <div class="muted small">{{ moneyShort(g.price) }} / món · {{ g.kind === 'bakery' ? 'bánh tươi, chỉ bán trong ngày' : 'không hư' }}</div>
+            <div class="muted small">{{ moneyShort(g.price) }} / {{ L('món', 'item') }} · {{ g.kind === 'bakery' ? L('bánh tươi, chỉ bán trong ngày', 'fresh-baked, sells today only') : L('không hư', 'keeps forever') }}</div>
           </div>
           <span class="pxtag" :class="(save.meta.goods[g.id] ?? 0) === 0 ? 'bad' : (save.meta.goods[g.id] ?? 0) < 5 ? 'warn' : 'good'">
-            {{ (save.meta.goods[g.id] ?? 0) === 0 ? 'HẾT' : `còn ${save.meta.goods[g.id]}` }}
+            {{ (save.meta.goods[g.id] ?? 0) === 0 ? L('HẾT', 'OUT') : L(`còn ${save.meta.goods[g.id]}`, `${save.meta.goods[g.id]} left`) }}
           </span>
         </div>
-        <div class="muted small hintg">Khách gọi kèm món nào sẽ hiện trong khung thoại – bấm món đó ở <b>kệ hàng</b> dưới khay để trao. Nhập hàng ở tab Kho.</div>
+        <div v-if="isEn" class="muted small hintg">When a guest wants a side item it shows in their bubble – tap it on the <b>shelf</b> below the tray to hand it over. Restock in the Stock tab.</div>
+        <div v-else class="muted small hintg">Khách gọi kèm món nào sẽ hiện trong khung thoại – bấm món đó ở <b>kệ hàng</b> dưới khay để trao. Nhập hàng ở tab Kho.</div>
       </div>
     </template>
 
-    <div class="section-title">Cuối ngày</div>
+    <div class="section-title">{{ L('Cuối ngày', 'End of day') }}</div>
     <div class="card list small-list">
-      <div class="row"><PixelIcon name="house" /><span class="grow">Tiền thuê {{ premise.name }}</span><b>{{ money(rentToday) }}</b></div>
-      <div class="row" v-if="wages"><PixelIcon name="staff" /><span class="grow">Lương pha chế, phục vụ & shipper</span><b>{{ money(wages) }}</b></div>
-      <div class="row" v-if="!save.upgrades.freezer"><PixelIcon name="ice" /><span class="grow muted">Đá còn dư sẽ tan hết</span></div>
+      <div class="row"><PixelIcon name="house" /><span class="grow">{{ L('Tiền thuê', 'Rent:') }} {{ premise.name }}</span><b>{{ money(rentToday) }}</b></div>
+      <div class="row" v-if="wages"><PixelIcon name="staff" /><span class="grow">{{ L('Lương pha chế, phục vụ & shipper', 'Wages: baristas, waiters & riders') }}</span><b>{{ money(wages) }}</b></div>
+      <div class="row" v-if="!save.upgrades.freezer"><PixelIcon name="ice" /><span class="grow muted">{{ L('Đá còn dư sẽ tan hết', 'Leftover ice will melt') }}</span></div>
     </div>
 
     <div class="cta">
-      <button class="btn big accent" @click="openShop"><PixelIcon name="shop" :size="3" /> MỞ CỬA BÁN HÀNG</button>
-      <div v-if="!save.unlocked.some(canMake)" class="muted small center">Kho trống — vào tab <b>Kho</b> để nhập hàng</div>
+      <button class="btn big accent" @click="openShop"><PixelIcon name="shop" :size="3" /> {{ L('MỞ CỬA BÁN HÀNG', 'OPEN THE SHOP') }}</button>
+      <div v-if="!save.unlocked.some(canMake)" class="muted small center">{{ L('Kho trống — vào tab', 'Out of stock — go to the') }} <b>{{ L('Kho', 'Stock') }}</b> {{ L('để nhập hàng', 'tab to restock') }}</div>
     </div>
   </div>
 
@@ -249,14 +252,14 @@ const lost = computed(() => ui.stats.angry + ui.stats.full + ui.stats.tooExpensi
         <div class="card pause-card">
           <template v-if="ui.resumed">
             <PixelIcon name="play" :size="6" />
-            <b>CHƠI TIẾP CA BÁN</b>
-            <div class="muted small">Ngày {{ save.day }} · {{ clock }} · đã lưu đúng chỗ bạn rời đi</div>
-            <span class="btn accent sm resume-btn">CHẠM ĐỂ CHƠI TIẾP</span>
+            <b>{{ L('CHƠI TIẾP CA BÁN', 'RESUME YOUR SHIFT') }}</b>
+            <div class="muted small">{{ L('Ngày', 'Day') }} {{ save.day }} · {{ clock }} · {{ L('đã lưu đúng chỗ bạn rời đi', 'saved right where you left off') }}</div>
+            <span class="btn accent sm resume-btn">{{ L('CHẠM ĐỂ CHƠI TIẾP', 'TAP TO CONTINUE') }}</span>
           </template>
           <template v-else>
             <PixelIcon name="pause" :size="6" />
-            <b>TẠM DỪNG</b>
-            <div class="muted small">Chạm để tiếp tục</div>
+            <b>{{ L('TẠM DỪNG', 'PAUSED') }}</b>
+            <div class="muted small">{{ L('Chạm để tiếp tục', 'Tap to resume') }}</div>
           </template>
         </div>
       </div>

@@ -7,6 +7,7 @@ import { isXmasSeason, drawXmasTree } from '../game/xmas'
 import { SCENE_W, SCENE_H, px, box, sky, mixWeighted, drawPerson, drawPlant, CZ, woodFrame, brassLamp } from '../game/pixel'
 import type { Look } from '../game/data'
 import PixelIcon from './ui/PixelIcon.vue'
+import { L } from '../game/i18n'
 
 const cv = ref<HTMLCanvasElement>()
 let ctx: CanvasRenderingContext2D | null = null
@@ -571,7 +572,7 @@ function onTap(e: MouseEvent) {
     const s = slot(i)
     if (sx >= s.cx - TW && sx <= s.cx + TW && sy >= s.ty - 30 && sy <= s.ty + FLOOR) {
       if (i < save.seating.tables) cleanSeat(i)
-      else toast(save.seating.tables ? 'Góc này bỏ hoang đầy bụi. Vào Nâng cấp › Khu ngồi để kê thêm bàn nhé!' : 'Khu ngồi còn bỏ hoang. Vào Nâng cấp › Khu ngồi để dọn dẹp nhé!')
+      else toast(save.seating.tables ? L('Góc này bỏ hoang đầy bụi. Vào Nâng cấp › Khu ngồi để kê thêm bàn nhé!', 'This dusty corner is empty. Go to Upgrades › Seating to add tables!') : L('Khu ngồi còn bỏ hoang. Vào Nâng cấp › Khu ngồi để dọn dẹp nhé!', 'The seating area is abandoned. Go to Upgrades › Seating to clean it up!'))
       return
     }
   }
@@ -596,11 +597,11 @@ onBeforeUnmount(() => { cancelAnimationFrame(raf); off?.(); ro?.disconnect() })
   <div class="seat-wrap">
     <canvas ref="cv" class="pix" @click="onTap" />
     <div class="hud">
-      <span v-if="!save.seating.tables" class="chip">Bỏ hoang · chưa dọn</span>
+      <span v-if="!save.seating.tables" class="chip">{{ L('Bỏ hoang · chưa dọn', 'Abandoned · not cleaned') }}</span>
       <span v-else class="chip"><PixelIcon name="crowd" :size="2" /> {{ busyN }}/{{ save.seating.tables * 2 }}</span>
-      <span v-if="dirtyN" class="chip bad"><PixelIcon name="warn" :size="2" /> {{ dirtyN }} bàn bẩn</span>
+      <span v-if="dirtyN" class="chip bad"><PixelIcon name="warn" :size="2" /> {{ L(`${dirtyN} bàn bẩn`, `${dirtyN} dirty`) }}</span>
     </div>
-    <div v-if="dirtyN && !save.seating.waiter" class="tip-hint">Chạm {{ CLEAN_TAPS }} lần vào bàn bẩn để dọn & nhận tiền boa</div>
+    <div v-if="dirtyN && !save.seating.waiter" class="tip-hint">{{ L(`Chạm ${CLEAN_TAPS} lần vào bàn bẩn để dọn & nhận tiền boa`, `Tap a dirty table ${CLEAN_TAPS} times to clear it & get tips`) }}</div>
     <div v-for="f in fx" :key="f.id" class="fx" :style="{ left: f.x + '%', top: f.y + '%' }">{{ f.text }}</div>
   </div>
 </template>

@@ -24,6 +24,7 @@ import { drawCeiling, drawFloor, drawFloorProps, drawSideWalls, drawCounterWings
 import { foodById, type FoodId } from '../game/kitchen'
 import { drawRoomMid, drawRoomBig, drawCounterMid, drawCounterBig, drawStools, drawDecorItems, drawSouvenirShelf } from '../game/rooms'
 import { rareById, GOODS } from '../game/metaData'
+import { L } from '../game/i18n'
 const goodName = (id: string) => GOODS.find((g) => g.id === id)?.name ?? id
 
 const wrap = ref<HTMLDivElement>()
@@ -64,11 +65,11 @@ const who = computed(() => {
   const c = cur.value
   if (!c) return ''
   if (reg.value) return `${reg.value.name} · ${BOND_LEVELS[bondLevel(save.bonds[reg.value.id] ?? 0)].name}`
-  if (c.needy !== undefined) return `${NEEDY[c.needy].who} · ly treo`
-  if (c.rare) return `${rareById[c.rare]?.name ?? c.name} · khách hiếm`
+  if (c.needy !== undefined) return `${NEEDY[c.needy].who} · ${L('ly treo', 'pay-it-forward')}`
+  if (c.rare) return `${rareById[c.rare]?.name ?? c.name} · ${L('khách hiếm', 'rare guest')}`
   const g = c.group ? GUEST_GROUPS.find((x) => x.id === c.group) : undefined
   if (g) return `${c.name} · ${g.label}`
-  return c.name ?? 'Khách'
+  return c.name ?? L('Khách', 'Guest')
 })
 const whoKind = computed(() => (cur.value?.rare ? 'rare' : cur.value?.regular ? 'reg' : cur.value?.group && GUEST_GROUPS.find((g) => g.id === cur.value!.group)?.foreign ? 'intl' : ''))
 const talkHere = computed(() => ui.talk && cur.value && ui.talk.custId === cur.value.id ? ui.talk : null)
@@ -133,10 +134,10 @@ function onEvent(e: GameEvent) {
     if (e.n % 5 === 0) { popText(`COMBO x${e.n}!`, scenePt(SCENE_W / 2, 30)); flash(); sparkle(at, 20) } else sparkle(at, 8)
     return
   }
-  if (e.type === 'comboBreak') { popText(`VỠ COMBO x${e.n}`, scenePt(SCENE_W / 2, 34), 'red'); return }
+  if (e.type === 'comboBreak') { popText(L(`VỠ COMBO x${e.n}`, `COMBO LOST x${e.n}`), scenePt(SCENE_W / 2, 34), 'red'); return }
   if (e.type === 'rush') {
-    if (e.on) showRush('GIỜ CAO ĐIỂM!', 'Khách tới dồn dập · đừng để ai bỏ về để nhận thưởng', 'start')
-    else if (e.ok) { showRush('VƯỢT CAO ĐIỂM!', `Không ai bỏ về · thưởng +${moneyShort(e.bonus ?? 0)}`, 'win'); flash('rgba(160, 255, 200, 0.35)'); coinsFly(scenePt(SCENE_W / 2, 40), 8) }
+    if (e.on) showRush(L('GIỜ CAO ĐIỂM!', 'RUSH HOUR!'), L('Khách tới dồn dập · đừng để ai bỏ về để nhận thưởng', 'Guests pouring in · keep everyone happy for a bonus'), 'start')
+    else if (e.ok) { showRush(L('VƯỢT CAO ĐIỂM!', 'RUSH CLEARED!'), L(`Không ai bỏ về · thưởng +${moneyShort(e.bonus ?? 0)}`, `Nobody walked out · bonus +${moneyShort(e.bonus ?? 0)}`), 'win'); flash('rgba(160, 255, 200, 0.35)'); coinsFly(scenePt(SCENE_W / 2, 40), 8) }
     return
   }
   if (e.type === 'served' && actor && actor.id === e.id) {
@@ -613,7 +614,7 @@ const bubbleStyle = computed(() => {
     <div v-if="ui.phase === 'open' && ui.combo >= 2" :key="comboKey" class="combo" :class="{ hot: ui.combo >= 5, fire: ui.combo >= 10 }">
       <span class="cx">COMBO</span><b>x{{ ui.combo }}</b><small>+{{ Math.round(comboRate(ui.combo) * 100) }}%</small>
     </div>
-    <div v-if="ui.phase === 'open' && ui.rush" class="rush-chip">CAO ĐIỂM</div>
+    <div v-if="ui.phase === 'open' && ui.rush" class="rush-chip">{{ L('CAO ĐIỂM', 'RUSH') }}</div>
     <Transition name="rush">
       <div v-if="rushBanner" class="rush-banner" :class="rushBanner.kind"><b>{{ rushBanner.text }}</b><small>{{ rushBanner.sub }}</small></div>
     </Transition>
@@ -624,7 +625,7 @@ const bubbleStyle = computed(() => {
     <!-- HUD gọn: số khách chờ + tiến độ từng nhân viên (chỉ icon, không chữ) -->
     <div v-if="ui.phase === 'open' && (waiting > 0 || ui.staffProgress.length)" class="hud">
       <span v-if="waiting > 0" class="hchip"><PixelIcon name="crowd" :size="2" />{{ waiting }}</span>
-      <span v-for="(p, i) in ui.staffProgress" :key="i" class="hstaff" :class="{ idle: !ui.staffJob[i] }" :title="ui.staffJob[i] ? 'Nhân viên đang pha ' + ui.staffJob[i] : 'Nhân viên rảnh'">
+      <span v-for="(p, i) in ui.staffProgress" :key="i" class="hstaff" :class="{ idle: !ui.staffJob[i] }" :title="ui.staffJob[i] ? L('Nhân viên đang pha ', 'Barista making ') + ui.staffJob[i] : L('Nhân viên rảnh', 'Barista idle')">
         <PixelIcon name="staff" :size="2" /><i><b :style="{ width: ui.staffJob[i] ? Math.min(100, (p / staffServeTime) * 100) + '%' : '0%' }" /></i>
       </span>
     </div>
@@ -639,28 +640,28 @@ const bubbleStyle = computed(() => {
       <div v-else-if="angry" key="an" class="bubble angry" :style="bubbleStyle"><div class="txt"><TypeText :text="`“${angry}”`" :pitch="340" :speed="24" /></div></div>
       <div v-else-if="cur && actorView?.state === 'idle'" :style="bubbleStyle" :key="'c' + cur.id + (talkHere?.mode ?? '') + (brewingHere ? 'b' : '')" class="bubble" :class="{ compact: staffCompact }" @click="typer?.skip()">
         <template v-if="staffCompact">
-          <div class="cmp"><PixelIcon name="staff" :size="2" /> <span class="cmp-t">Đang pha <b>{{ recipeById[cur.recipe].name }}</b></span>
-            <button v-if="!cur.chatted && cur.needy === undefined" @click.stop="talkHere ? talkChat() : (openTalk(cur.id), talkChat())"><PixelIcon name="chat" :size="2" /> Tám</button>
+          <div class="cmp"><PixelIcon name="staff" :size="2" /> <span class="cmp-t">{{ L('Đang pha', 'Making') }} <b>{{ recipeById[cur.recipe].name }}</b></span>
+            <button v-if="!cur.chatted && cur.needy === undefined" @click.stop="talkHere ? talkChat() : (openTalk(cur.id), talkChat())"><PixelIcon name="chat" :size="2" /> {{ L('Tám', 'Chat') }}</button>
           </div>
         </template>
         <template v-else>
         <div class="who" :class="whoKind">{{ who }}</div>
         <div class="txt" :class="{ hurry: cur.line && cur.patience / cur.maxPatience < 0.5 && !talkHere }"><TypeText ref="typer" :text="bubbleText" :pitch="voice" :instant="lineInstant" @done="onTyped" /></div>
-        <div v-if="cur.addon" class="addon" :class="{ done: cur.addonDone }"><img :src="iconUrl(cur.addon)" alt="" /><span>{{ cur.addonDone ? 'Đã trao' : 'Kèm' }}: <b>{{ goodName(cur.addon) }}</b></span></div>
-        <div v-if="cur.food" class="addon food"><img :src="iconUrl(cur.food)" alt="" /><span>Món bếp: <b>{{ foodById[cur.food as FoodId]?.name }}</b></span></div>
+        <div v-if="cur.addon" class="addon" :class="{ done: cur.addonDone }"><img :src="iconUrl(cur.addon)" alt="" /><span>{{ cur.addonDone ? L('Đã trao', 'Given') : L('Kèm', 'Plus') }}: <b>{{ goodName(cur.addon) }}</b></span></div>
+        <div v-if="cur.food" class="addon food"><img :src="iconUrl(cur.food)" alt="" /><span>{{ L('Món bếp', 'Food') }}: <b>{{ foodById[cur.food as FoodId]?.name }}</b></span></div>
         <div v-if="brewingHere" class="order"><PixelIcon name="menu" :size="2" /> {{ recipeById[cur.recipe].name }}</div>
         <div v-else-if="talkHere?.mode === 'chat'" class="choices">
-          <button v-for="(r, i) in talkHere.topic!.replies" :key="i" :class="{ sassy: r.sassy }" @click="talkReply(i)"><PixelIcon :name="r.sassy ? 'megaphone' : 'chat'" :size="2" /> <span v-if="r.sassy" class="sass">XÉO SẮC</span> {{ noEmoji(r.text) }}</button>
+          <button v-for="(r, i) in talkHere.topic!.replies" :key="i" :class="{ sassy: r.sassy }" @click="talkReply(i)"><PixelIcon :name="r.sassy ? 'megaphone' : 'chat'" :size="2" /> <span v-if="r.sassy" class="sass">{{ L('XÉO SẮC', 'SASSY') }}</span> {{ noEmoji(r.text) }}</button>
         </div>
         <div v-else-if="staffAll && !ui.present" class="choices row">
-          <span class="staff-note"><PixelIcon name="staff" :size="2" /> Nhân viên đang pha: {{ recipeById[cur.recipe].name }}</span>
-          <button v-if="!cur.chatted && cur.needy === undefined" @click="talkHere ? talkChat() : (openTalk(cur.id), talkChat())"><PixelIcon name="chat" :size="2" /> Tám</button>
+          <span class="staff-note"><PixelIcon name="staff" :size="2" /> {{ L('Nhân viên đang pha', 'Barista making') }}: {{ recipeById[cur.recipe].name }}</span>
+          <button v-if="!cur.chatted && cur.needy === undefined" @click="talkHere ? talkChat() : (openTalk(cur.id), talkChat())"><PixelIcon name="chat" :size="2" /> {{ L('Tám', 'Chat') }}</button>
         </div>
         <div v-else-if="!ui.present" class="choices row">
           <button class="main" :class="{ dis: !canMake(cur.recipe), guide: tutOn && !ui.brew }" @click="talkHere ? brewFromTalk() : startBrew('cust', cur.id)">
-            <PixelIcon name="cup" :size="2" /> {{ cur.needy !== undefined ? 'Dạ có, con pha liền!' : `Nhận order: ${recipeById[cur.recipe].name}` }}
+            <PixelIcon name="cup" :size="2" /> {{ cur.needy !== undefined ? L('Dạ có, con pha liền!', 'Of course, coming right up!') : L(`Nhận order: ${recipeById[cur.recipe].name}`, `Take order: ${recipeById[cur.recipe].name}`) }}
           </button>
-           <button v-if="!cur.chatted && cur.needy === undefined" @click="talkHere ? talkChat() : (openTalk(cur.id), talkChat())"><PixelIcon name="chat" :size="2" /> Tám</button>
+           <button v-if="!cur.chatted && cur.needy === undefined" @click="talkHere ? talkChat() : (openTalk(cur.id), talkChat())"><PixelIcon name="chat" :size="2" /> {{ L('Tám', 'Chat') }}</button>
         </div>
         </template>
       </div>
@@ -672,7 +673,7 @@ const bubbleStyle = computed(() => {
         <div class="rays" />
         <canvas ref="presentCv" width="200" height="260" class="pixel big-cup" />
         <div class="pname"><PixelIcon name="star" :size="2" /> {{ ui.present.target === 'cust' ? recipeById[ui.present.recipe].name : ui.present.name }} <PixelIcon name="star" :size="2" /></div>
-        <div class="psub">{{ ui.present.cup.mistakes === 0 ? 'Pha chuẩn từng bước!' : `Sai ${ui.present.cup.mistakes} bước…` }}</div>
+        <div class="psub">{{ ui.present.cup.mistakes === 0 ? L('Pha chuẩn từng bước!', 'Perfect brew!') : L(`Sai ${ui.present.cup.mistakes} bước…`, `${ui.present.cup.mistakes} step${ui.present.cup.mistakes === 1 ? '' : 's'} wrong…`) }}</div>
       </div>
     </Transition>
 

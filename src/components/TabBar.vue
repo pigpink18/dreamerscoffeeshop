@@ -3,17 +3,18 @@ import { computed } from 'vue'
 import { ui, save, canMake, vibrate, type Tab } from '../game/store'
 import { isContestDay } from '../game/meta'
 import PixelIcon from './ui/PixelIcon.vue'
+import { L } from '../game/i18n'
 
 const lowStock = computed(() => !save.unlocked.some((r) => canMake(r)) || save.unlocked.some((r) => !canMake(r)))
 
 const questsLeft = computed(() => save.meta.quests.list.some((q) => !q.done) && ui.phase !== 'open')
 const tabs: { id: Tab; icon: string; label: string }[] = [
-  { id: 'shop', icon: 'shop', label: 'Quán' },
-  { id: 'stock', icon: 'crate', label: 'Kho' },
+  { id: 'shop', icon: 'shop', label: L('Quán', 'Café') },
+  { id: 'stock', icon: 'crate', label: L('Kho', 'Stock') },
   { id: 'menu', icon: 'menu', label: 'Menu' },
-  { id: 'compete', icon: 'trophy', label: 'Đua top' },
-  { id: 'app', icon: 'mail', label: 'Sổ tay' },
-  { id: 'upgrade', icon: 'up', label: 'Nâng cấp' },
+  { id: 'compete', icon: 'trophy', label: L('Đua top', 'Rank') },
+  { id: 'app', icon: 'mail', label: L('Sổ tay', 'Notes') },
+  { id: 'upgrade', icon: 'up', label: L('Nâng cấp', 'Upgrade') },
 ]
 
 function go(t: Tab) {

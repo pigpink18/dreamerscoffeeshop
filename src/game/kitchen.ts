@@ -7,6 +7,7 @@ import { save, ui, toast, vibrate, persist, comboUp, breakCombo, changeRep, floa
 import { hooks } from './hooks'
 import { sfx } from './audio'
 import { moneyShort, pick, type SoundName } from './data'
+import { L } from './i18n'
 
 // ---------- Dữ liệu ----------
 export type FoodIng = 'banhMi' | 'pate' | 'xucXich' | 'trungGa' | 'mi' | 'sotCay' | 'botWaffle' | 'socola' | 'dau' | 'phoMai' | 'laDua'
@@ -16,51 +17,51 @@ export type KStep = FoodIng | KTool | KAct
 export type FoodId = 'banhMiChao' | 'miTronCay' | 'waffleSocola' | 'waffleDau' | 'wafflePhoMai' | 'waffleLaDua'
 
 export const FOOD_INGS: { id: FoodIng; name: string; packSize: number; packPrice: number }[] = [
-  { id: 'banhMi', name: 'Bánh mì', packSize: 10, packPrice: 40_000 },
-  { id: 'pate', name: 'Pate gan', packSize: 15, packPrice: 45_000 },
-  { id: 'xucXich', name: 'Xúc xích', packSize: 15, packPrice: 60_000 },
-  { id: 'trungGa', name: 'Trứng gà', packSize: 20, packPrice: 50_000 },
-  { id: 'mi', name: 'Mì trứng', packSize: 15, packPrice: 45_000 },
-  { id: 'sotCay', name: 'Sốt cay', packSize: 20, packPrice: 40_000 },
-  { id: 'botWaffle', name: 'Bột waffle', packSize: 15, packPrice: 60_000 },
-  { id: 'socola', name: 'Nhân sô-cô-la', packSize: 10, packPrice: 50_000 },
-  { id: 'dau', name: 'Nhân dâu Đà Lạt', packSize: 10, packPrice: 50_000 },
-  { id: 'phoMai', name: 'Nhân phô mai', packSize: 10, packPrice: 60_000 },
-  { id: 'laDua', name: 'Nhân lá dứa', packSize: 10, packPrice: 40_000 },
+  { id: 'banhMi', name: L('Bánh mì', 'Baguette'), packSize: 10, packPrice: 40_000 },
+  { id: 'pate', name: L('Pate gan', 'Liver pâté'), packSize: 15, packPrice: 45_000 },
+  { id: 'xucXich', name: L('Xúc xích', 'Sausage'), packSize: 15, packPrice: 60_000 },
+  { id: 'trungGa', name: L('Trứng gà', 'Eggs'), packSize: 20, packPrice: 50_000 },
+  { id: 'mi', name: L('Mì trứng', 'Egg noodles'), packSize: 15, packPrice: 45_000 },
+  { id: 'sotCay', name: L('Sốt cay', 'Chili sauce'), packSize: 20, packPrice: 40_000 },
+  { id: 'botWaffle', name: L('Bột waffle', 'Waffle batter'), packSize: 15, packPrice: 60_000 },
+  { id: 'socola', name: L('Nhân sô-cô-la', 'Chocolate filling'), packSize: 10, packPrice: 50_000 },
+  { id: 'dau', name: L('Nhân dâu Đà Lạt', 'Đà Lạt strawberry filling'), packSize: 10, packPrice: 50_000 },
+  { id: 'phoMai', name: L('Nhân phô mai', 'Cheese filling'), packSize: 10, packPrice: 60_000 },
+  { id: 'laDua', name: L('Nhân lá dứa', 'Pandan filling'), packSize: 10, packPrice: 40_000 },
 ]
 
 export const KSTEPS: Record<KStep, { label: string; kind: 'ing' | 'tool' | 'act'; ms: number; sound: SoundName | 'sizzle' | 'boil' }> = {
-  banhMi: { label: 'Bánh mì', kind: 'ing', ms: 250, sound: 'plop' },
-  pate: { label: 'Pate', kind: 'ing', ms: 250, sound: 'squeeze' },
-  xucXich: { label: 'Xúc xích', kind: 'ing', ms: 250, sound: 'plop' },
-  trungGa: { label: 'Trứng', kind: 'ing', ms: 250, sound: 'plop' },
-  mi: { label: 'Mì', kind: 'ing', ms: 250, sound: 'plop' },
-  sotCay: { label: 'Sốt cay', kind: 'ing', ms: 300, sound: 'squeeze' },
-  botWaffle: { label: 'Bột waffle', kind: 'ing', ms: 300, sound: 'pour' },
-  socola: { label: 'Sô-cô-la', kind: 'ing', ms: 250, sound: 'squeeze' },
-  dau: { label: 'Dâu', kind: 'ing', ms: 250, sound: 'squeeze' },
-  phoMai: { label: 'Phô mai', kind: 'ing', ms: 250, sound: 'squeeze' },
-  laDua: { label: 'Lá dứa', kind: 'ing', ms: 250, sound: 'squeeze' },
-  chao: { label: 'Chảo', kind: 'tool', ms: 200, sound: 'cup' },
-  to: { label: 'Tô', kind: 'tool', ms: 200, sound: 'cup' },
-  khuon: { label: 'Khuôn', kind: 'tool', ms: 200, sound: 'cup' },
-  dia: { label: 'Ra đĩa', kind: 'tool', ms: 200, sound: 'cup' },
-  chien: { label: 'Áp chảo', kind: 'act', ms: 1200, sound: 'sizzle' },
-  luoc: { label: 'Trụng mì', kind: 'act', ms: 1100, sound: 'boil' },
-  tron: { label: 'Trộn', kind: 'act', ms: 700, sound: 'stir' },
-  nuong: { label: 'Nướng', kind: 'act', ms: 1300, sound: 'sizzle' },
+  banhMi: { label: L('Bánh mì', 'Bread'), kind: 'ing', ms: 250, sound: 'plop' },
+  pate: { label: L('Pate', 'Pâté'), kind: 'ing', ms: 250, sound: 'squeeze' },
+  xucXich: { label: L('Xúc xích', 'Sausage'), kind: 'ing', ms: 250, sound: 'plop' },
+  trungGa: { label: L('Trứng', 'Egg'), kind: 'ing', ms: 250, sound: 'plop' },
+  mi: { label: L('Mì', 'Noodles'), kind: 'ing', ms: 250, sound: 'plop' },
+  sotCay: { label: L('Sốt cay', 'Chili sauce'), kind: 'ing', ms: 300, sound: 'squeeze' },
+  botWaffle: { label: L('Bột waffle', 'Batter'), kind: 'ing', ms: 300, sound: 'pour' },
+  socola: { label: L('Sô-cô-la', 'Chocolate'), kind: 'ing', ms: 250, sound: 'squeeze' },
+  dau: { label: L('Dâu', 'Strawberry'), kind: 'ing', ms: 250, sound: 'squeeze' },
+  phoMai: { label: L('Phô mai', 'Cheese'), kind: 'ing', ms: 250, sound: 'squeeze' },
+  laDua: { label: L('Lá dứa', 'Pandan'), kind: 'ing', ms: 250, sound: 'squeeze' },
+  chao: { label: L('Chảo', 'Pan'), kind: 'tool', ms: 200, sound: 'cup' },
+  to: { label: L('Tô', 'Bowl'), kind: 'tool', ms: 200, sound: 'cup' },
+  khuon: { label: L('Khuôn', 'Mold'), kind: 'tool', ms: 200, sound: 'cup' },
+  dia: { label: L('Ra đĩa', 'Plate it'), kind: 'tool', ms: 200, sound: 'cup' },
+  chien: { label: L('Áp chảo', 'Pan-fry'), kind: 'act', ms: 1200, sound: 'sizzle' },
+  luoc: { label: L('Trụng mì', 'Boil'), kind: 'act', ms: 1100, sound: 'boil' },
+  tron: { label: L('Trộn', 'Toss'), kind: 'act', ms: 700, sound: 'stir' },
+  nuong: { label: L('Nướng', 'Bake'), kind: 'act', ms: 1300, sound: 'sizzle' },
 }
 
 export interface Food { id: FoodId; name: string; steps: KStep[]; price: number; filling?: string /* màu nhân waffle */ }
 const waffle = (id: FoodId, name: string, nhan: FoodIng, price: number, filling: string): Food =>
   ({ id, name, steps: ['khuon', 'botWaffle', nhan, 'nuong', 'dia'], price, filling })
 export const FOODS: Food[] = [
-  { id: 'banhMiChao', name: 'Bánh mì chảo', steps: ['chao', 'pate', 'trungGa', 'xucXich', 'chien', 'banhMi'], price: 45_000 },
-  { id: 'miTronCay', name: 'Mì trộn cay', steps: ['mi', 'luoc', 'to', 'sotCay', 'trungGa', 'tron'], price: 40_000 },
-  waffle('waffleSocola', 'Waffle sô-cô-la', 'socola', 38_000, '#6b3f2a'),
-  waffle('waffleDau', 'Waffle dâu', 'dau', 38_000, '#e8506a'),
-  waffle('wafflePhoMai', 'Waffle phô mai', 'phoMai', 40_000, '#f2c14e'),
-  waffle('waffleLaDua', 'Waffle lá dứa', 'laDua', 35_000, '#7fb34d'),
+  { id: 'banhMiChao', name: L('Bánh mì chảo', 'Skillet bánh mì'), steps: ['chao', 'pate', 'trungGa', 'xucXich', 'chien', 'banhMi'], price: 45_000 },
+  { id: 'miTronCay', name: L('Mì trộn cay', 'Spicy tossed noodles'), steps: ['mi', 'luoc', 'to', 'sotCay', 'trungGa', 'tron'], price: 40_000 },
+  waffle('waffleSocola', L('Waffle sô-cô-la', 'Chocolate waffle'), 'socola', 38_000, '#6b3f2a'),
+  waffle('waffleDau', L('Waffle dâu', 'Strawberry waffle'), 'dau', 38_000, '#e8506a'),
+  waffle('wafflePhoMai', L('Waffle phô mai', 'Cheese waffle'), 'phoMai', 40_000, '#f2c14e'),
+  waffle('waffleLaDua', L('Waffle lá dứa', 'Pandan waffle'), 'laDua', 35_000, '#7fb34d'),
 ]
 export const foodById = Object.fromEntries(FOODS.map((f) => [f.id, f])) as Record<FoodId, Food>
 export const KITCHEN_COST = 500_000
@@ -90,13 +91,13 @@ export const canCook = (f: FoodId) => foodById[f].steps.every((s) => KSTEPS[s].k
 
 export function unlockKitchen() {
   if (kitchenOpen()) return
-  if (save.money < KITCHEN_COST) { toast(`Cần ${moneyShort(KITCHEN_COST)} để mở bếp`, 'bad'); sfx('wrong'); return }
+  if (save.money < KITCHEN_COST) { toast(L(`Cần ${moneyShort(KITCHEN_COST)} để mở bếp`, `You need ${moneyShort(KITCHEN_COST)} to open the kitchen`), 'bad'); sfx('wrong'); return }
   save.money -= KITCHEN_COST
   ui.stats.spent += KITCHEN_COST
   save.kitchen.open = true
   // quà khai trương bếp: mỗi nguyên liệu 1 gói
   for (const i of FOOD_INGS) addStock(i.id, i.packSize)
-  toast('Khu bếp đã mở! Khách bắt đầu gọi kèm bánh mì chảo, mì trộn cay, waffle. Tặng mỗi nguyên liệu 1 gói.', 'heart', 4200)
+  toast(L('Khu bếp đã mở! Khách bắt đầu gọi kèm bánh mì chảo, mì trộn cay, waffle. Tặng mỗi nguyên liệu 1 gói.', "The kitchen is open! Guests will start ordering skillet bánh mì, spicy noodles and waffles. Here's a free pack of every ingredient."), 'heart', 4200)
   sfx('heart'); vibrate([20, 40, 20])
   persist()
 }
@@ -104,7 +105,7 @@ export function unlockKitchen() {
 export function buyFoodPack(id: FoodIng, packs = 1) {
   const ing = FOOD_INGS.find((i) => i.id === id)!
   const cost = ing.packPrice * packs
-  if (save.money < cost) { toast('Không đủ tiền', 'bad'); sfx('wrong'); return }
+  if (save.money < cost) { toast(L('Không đủ tiền', 'Not enough money'), 'bad'); sfx('wrong'); return }
   save.money -= cost
   ui.stats.spent += cost
   addStock(id, ing.packSize * packs)
@@ -115,12 +116,12 @@ export function buyFoodPack(id: FoodIng, packs = 1) {
 // ---------- Nấu ----------
 export function startCook(ticketId: number) {
   if (kitchen.cook) return
-  if (ui.closing) { toast('Quán đã đóng cửa – không nấu thêm món mới', 'info', 1600); return }
+  if (ui.closing) { toast(L('Quán đã đóng cửa – không nấu thêm món mới', "We're closed – no new dishes"), 'info', 1600); return }
   const tk = kitchen.tickets.find((x) => x.id === ticketId)
   if (!tk) return
   if (!canCook(tk.food)) {
     const miss = foodById[tk.food].steps.filter((s) => KSTEPS[s].kind === 'ing' && foodStock(s as FoodIng) < 1).map((s) => KSTEPS[s].label)
-    toast(`Hết ${[...new Set(miss)].join(', ')}! Vào Kho › Nguyên liệu bếp nhập thêm`, 'bad'); sfx('wrong'); return
+    toast(L(`Hết ${[...new Set(miss)].join(', ')}! Vào Kho › Nguyên liệu bếp nhập thêm`, `Out of ${[...new Set(miss)].join(', ')}! Restock in Pantry › Kitchen`), 'bad'); sfx('wrong'); return
   }
   sfx('tap'); vibrate(8)
   kitchen.cook = { ticketId, food: tk.food, done: [], mistakes: 0, busy: false, action: null, actionAt: 0, shake: 0, mini: null }
@@ -135,7 +136,7 @@ function autoIngredients(ck: Cooking) {
   ck.auto = true
   setTimeout(() => {
     if (kitchen.cook !== ck) return
-    if (foodStock(next as FoodIng) < 1) { ck.auto = false; toast(`Hết ${KSTEPS[next].label}!`, 'bad'); sfx('wrong'); return }
+    if (foodStock(next as FoodIng) < 1) { ck.auto = false; toast(L(`Hết ${KSTEPS[next].label}!`, `Out of ${KSTEPS[next].label}!`), 'bad'); sfx('wrong'); return }
     addStock(next as FoodIng, -1)
     completeStep(ck, next)
   }, AUTO_MS)
@@ -161,7 +162,7 @@ function completeStep(ck: Cooking, step: KStep) {
 
 export function cookStep(step: KStep) {
   const ck = kitchen.cook
-  if (!ck) { toast('Chạm vào 1 phiếu đơn trên thanh treo để bắt đầu nấu', 'info', 1500); sfx('wrong'); return }
+  if (!ck) { toast(L('Chạm vào 1 phiếu đơn trên thanh treo để bắt đầu nấu', 'Tap a ticket on the rail to start cooking'), 'info', 1500); sfx('wrong'); return }
   if (ck.busy || ck.mini || ck.auto) return
   const f = foodById[ck.food]
   const expected = f.steps[ck.done.length]
@@ -182,7 +183,7 @@ export function cookStep(step: KStep) {
     return
   }
   if (info.kind === 'ing') {
-    if (foodStock(step as FoodIng) < 1) { toast(`Hết ${info.label}!`, 'bad'); sfx('wrong'); return }
+    if (foodStock(step as FoodIng) < 1) { toast(L(`Hết ${info.label}!`, `Out of ${info.label}!`), 'bad'); sfx('wrong'); return }
     addStock(step as FoodIng, -1)
   }
   completeStep(ck, step)
@@ -216,7 +217,7 @@ export function trashCook() {
   kitchen.cook.mini = null
   kitchen.cook = null
   sfx('angry')
-  toast('Đã đổ bỏ món đang nấu', 'info', 1400)
+  toast(L('Đã đổ bỏ món đang nấu', 'Tossed the dish'), 'info', 1400)
 }
 
 function serveFood() {
@@ -224,7 +225,7 @@ function serveFood() {
   if (!ck) return
   kitchen.cook = null
   const i = kitchen.tickets.findIndex((x) => x.id === ck.ticketId)
-  if (i < 0) { toast('Khách đã huỷ món 😢', 'bad'); return }
+  if (i < 0) { toast(L('Khách đã huỷ món 😢', 'The guest cancelled the dish 😢'), 'bad'); return }
   const tk = kitchen.tickets[i]
   kitchen.tickets.splice(i, 1)
   const f = foodById[ck.food]
@@ -245,8 +246,8 @@ function serveFood() {
   toast(`${perfect ? '⭐ ' : ''}${tk.name}: “${pick(perfect ? GOOD_LINES : MEH_LINES).replace('{f}', f.name.toLowerCase())}”`, perfect ? 'good' : 'info', 2400)
 }
 
-const GOOD_LINES = ['{f} ngon xỉu, giòn rụm luôn!', 'Trời ơi {f} thơm quá, mai ghé tiếp', 'Ăn {f} xong muốn gọi thêm phần nữa', '{f} chuẩn vị, 10 điểm!']
-const MEH_LINES = ['{f} hơi lạ lạ, mà cũng được', '{f} ổn, lần sau làm kỹ hơn nha', 'Ăn tạm được, hơi nguội xíu']
+const GOOD_LINES = L(['{f} ngon xỉu, giòn rụm luôn!', 'Trời ơi {f} thơm quá, mai ghé tiếp', 'Ăn {f} xong muốn gọi thêm phần nữa', '{f} chuẩn vị, 10 điểm!'], ['This {f} is sooo good, so crispy!', 'Oh wow, the {f} smells amazing, I\'ll be back tomorrow', 'Finished the {f} and I want another one', 'Perfect {f}, 10 out of 10!'])
+const MEH_LINES = L(['{f} hơi lạ lạ, mà cũng được', '{f} ổn, lần sau làm kỹ hơn nha', 'Ăn tạm được, hơi nguội xíu'], ['The {f} is a bit odd, but okay', 'The {f} is fine, a little more care next time?', 'Not bad, just a tad cold'])
 
 // ---------- Nối vào vòng chơi ----------
 const MAX_TICKETS = 5
@@ -270,8 +271,8 @@ export function initKitchen() {
         ui.stats.foodLost = (ui.stats.foodLost ?? 0) + 1
         changeRep(-1)
         breakCombo()
-        float('🍳 Huỷ món', 'bad')
-        toast(`${tk.name} chờ lâu quá, huỷ ${foodById[tk.food].name.toLowerCase()} rồi`, 'bad', 2400)
+        float(L('🍳 Huỷ món', '🍳 Dish cancelled'), 'bad')
+        toast(L(`${tk.name} chờ lâu quá, huỷ ${foodById[tk.food].name.toLowerCase()} rồi`, `${tk.name} waited too long and cancelled the ${foodById[tk.food].name.toLowerCase()}`), 'bad', 2400)
         sfx('angry')
       }
     }

@@ -7,12 +7,13 @@ import { audio, unlockAudio, TRACK_LIST, REPORT_TRACKS, previewReport, type Trac
 import PixelIcon from './ui/PixelIcon.vue'
 import PixelNum from './ui/PixelNum.vue'
 import logoUrl from '../assets/logo.png'
+import { L } from '../game/i18n'
 
 function toggle(k: 'music' | 'sfx') { unlockAudio(); audio[k] = !audio[k] }
 const menu = ref(false)
 const BUILD = __BUILD__
 function choose(id: TrackChoice) { unlockAudio(); audio.track = id; audio.music = true; menu.value = false }
-const playingName = () => (audio.playing === 'report' ? `${REPORT_TRACKS.find((r) => r.file === audio.reportTrack)?.name ?? ''} (tổng kết ngày)` : TRACK_LIST.find((t) => t.id === audio.playing)?.name ?? '')
+const playingName = () => (audio.playing === 'report' ? `${REPORT_TRACKS.find((r) => r.file === audio.reportTrack)?.name ?? ''} (${L('tổng kết ngày', 'day summary')})` : TRACK_LIST.find((t) => t.id === audio.playing)?.name ?? '')
 
 // ---- số tiền chạy dần tới giá trị mới + ô tiền nảy khi đồng xu bay tới ----
 const shownMoney = ref(save.money)
@@ -59,22 +60,22 @@ const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, 
 <template>
   <header class="topbar" :class="{ compact: ui.phase === 'open' }">
     <div class="brandrow">
-      <button class="brand" title="Xem lại truyện mở đầu" @click="ui.phase !== 'open' && (ui.showIntro = true)"><img :src="logoUrl" class="blogo" alt="" /> DREAMERS COFFEE <small class="owner">· {{ save.player }} & Cáo</small></button>
+      <button class="brand" :title="L('Xem lại truyện mở đầu', 'Replay the opening story')" @click="ui.phase !== 'open' && (ui.showIntro = true)"><img :src="logoUrl" class="blogo" alt="" /> DREAMERS COFFEE <small class="owner">· {{ save.player }} & Cáo</small></button>
       <div class="snd">
-        <button @click="settings = !settings; menu = false" aria-label="Cài đặt"><PixelIcon name="gear" :size="2" /></button>
-        <button :class="{ off: !audio.music }" @click="unlockAudio(); menu = !menu; settings = false" aria-label="Nhạc"><PixelIcon name="music" :size="2" /></button>
-        <button :class="{ off: !audio.sfx }" @click="toggle('sfx')" aria-label="Âm thanh"><PixelIcon :name="audio.sfx ? 'speaker' : 'speakerOff'" :size="2" /></button>
+        <button @click="settings = !settings; menu = false" :aria-label="L('Cài đặt', 'Settings')"><PixelIcon name="gear" :size="2" /></button>
+        <button :class="{ off: !audio.music }" @click="unlockAudio(); menu = !menu; settings = false" :aria-label="L('Nhạc', 'Music')"><PixelIcon name="music" :size="2" /></button>
+        <button :class="{ off: !audio.sfx }" @click="toggle('sfx')" :aria-label="L('Âm thanh', 'Sound')"><PixelIcon :name="audio.sfx ? 'speaker' : 'speakerOff'" :size="2" /></button>
       </div>
     </div>
     <Transition name="drop">
       <div v-if="menu" class="music-menu" @click.stop>
         <div class="mm-head">
-          <b>NHẠC QUÁN</b>
-          <button class="sw" :class="{ on: audio.music }" @click="toggle('music')">{{ audio.music ? 'BẬT' : 'TẮT' }}</button>
+          <b>{{ L('NHẠC QUÁN', 'CAFÉ MUSIC') }}</b>
+          <button class="sw" :class="{ on: audio.music }" @click="toggle('music')">{{ audio.music ? L('BẬT', 'ON') : L('TẮT', 'OFF') }}</button>
         </div>
         <label class="vol">
           <PixelIcon :name="audio.volume > 0 ? 'speaker' : 'speakerOff'" :size="2" />
-          <input type="range" min="0" max="1" step="0.05" v-model.number="audio.volume" aria-label="Âm lượng" />
+          <input type="range" min="0" max="1" step="0.05" v-model.number="audio.volume" :aria-label="L('Âm lượng', 'Volume')" />
           <b>{{ Math.round(audio.volume * 100) }}</b>
         </label>
         <button v-for="t in TRACK_LIST" :key="t.id" class="trk" :class="{ sel: audio.track === t.id }" @click="choose(t.id)">
@@ -82,45 +83,45 @@ const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, 
           <span class="tt"><b>{{ t.name }}</b><small>{{ t.desc }}</small></span>
           <span v-if="audio.track === t.id" class="chk"><PixelIcon name="play" :size="2" /></span>
         </button>
-        <div v-if="audio.music && audio.playing" class="now">Đang phát: {{ playingName() }}</div>
-        <div class="note">Nhạc quán: bossa nova sáng tác riêng cho Dreamers Coffee · Bản cập nhật: {{ BUILD }}</div>
+        <div v-if="audio.music && audio.playing" class="now">{{ L('Đang phát', 'Now playing') }}: {{ playingName() }}</div>
+        <div class="note">{{ L('Nhạc quán: bossa nova sáng tác riêng cho Dreamers Coffee · Bản cập nhật', 'Café music: original bossa nova made for Dreamers Coffee · Build') }}: {{ BUILD }}</div>
       </div>
     </Transition>
     <Transition name="drop">
       <div v-if="settings" class="music-menu" @click.stop>
-        <div class="mm-head"><b>CÀI ĐẶT</b><button class="sw" @click="settings = false">ĐÓNG</button></div>
-        <div class="srow"><span>Nhạc nền</span><button class="sw" :class="{ on: audio.music }" @click="toggle('music')">{{ audio.music ? 'BẬT' : 'TẮT' }}</button></div>
-        <div class="srow"><span>Âm thanh hiệu ứng</span><button class="sw" :class="{ on: audio.sfx }" @click="toggle('sfx')">{{ audio.sfx ? 'BẬT' : 'TẮT' }}</button></div>
-        <div class="srow col"><span>Nhạc tổng kết ngày<small>chạm để nghe thử vài giây</small></span>
+        <div class="mm-head"><b>{{ L('CÀI ĐẶT', 'SETTINGS') }}</b><button class="sw" @click="settings = false">{{ L('ĐÓNG', 'CLOSE') }}</button></div>
+        <div class="srow"><span>{{ L('Nhạc nền', 'Music') }}</span><button class="sw" :class="{ on: audio.music }" @click="toggle('music')">{{ audio.music ? L('BẬT', 'ON') : L('TẮT', 'OFF') }}</button></div>
+        <div class="srow"><span>{{ L('Âm thanh hiệu ứng', 'Sound effects') }}</span><button class="sw" :class="{ on: audio.sfx }" @click="toggle('sfx')">{{ audio.sfx ? L('BẬT', 'ON') : L('TẮT', 'OFF') }}</button></div>
+        <div class="srow col"><span>{{ L('Nhạc tổng kết ngày', 'Day summary music') }}<small>{{ L('chạm để nghe thử vài giây', 'tap for a short preview') }}</small></span>
           <div class="rpick"><button v-for="r in REPORT_TRACKS" :key="r.file" class="sw" :class="{ on: audio.reportTrack === r.file }" @click="unlockAudio(); previewReport(r.file)">{{ r.name }}</button></div>
         </div>
-        <div class="srow"><span>Hiệu ứng màn hình<small>tiền bay, lấp lánh, chớp sáng</small></span><button class="sw" :class="{ on: fxPrefs.on }" @click="fxPrefs.on = !fxPrefs.on">{{ fxPrefs.on ? 'BẬT' : 'TẮT' }}</button></div>
+        <div class="srow"><span>{{ L('Hiệu ứng màn hình', 'Screen effects') }}<small>{{ L('tiền bay, lấp lánh, chớp sáng', 'flying coins, sparkles, flashes') }}</small></span><button class="sw" :class="{ on: fxPrefs.on }" @click="fxPrefs.on = !fxPrefs.on">{{ fxPrefs.on ? L('BẬT', 'ON') : L('TẮT', 'OFF') }}</button></div>
         <label class="vol">
           <PixelIcon :name="audio.volume > 0 ? 'speaker' : 'speakerOff'" :size="2" />
-          <input type="range" min="0" max="1" step="0.05" v-model.number="audio.volume" aria-label="Âm lượng" />
+          <input type="range" min="0" max="1" step="0.05" v-model.number="audio.volume" :aria-label="L('Âm lượng', 'Volume')" />
           <b>{{ Math.round(audio.volume * 100) }}</b>
         </label>
-        <div v-if="save.debt > 0" class="srow debt"><span>Đang nợ<small>tự trả 30% lợi nhuận mỗi ngày</small></span><b>{{ moneyShort(save.debt) }}</b></div>
-        <button class="btn sm ghost wide" :disabled="ui.phase === 'open'" @click="settings = false; ui.showSetup = true">HỒ SƠ CHỦ QUÁN · NGÔN NGỮ</button>
-        <button class="btn sm ghost wide" :disabled="ui.phase === 'open'" @click="replayIntro">XEM LẠI TRUYỆN MỞ ĐẦU</button>
+        <div v-if="save.debt > 0" class="srow debt"><span>{{ L('Đang nợ', 'Debt') }}<small>{{ L('tự trả 30% lợi nhuận mỗi ngày', '30% of daily profit goes to repaying it') }}</small></span><b>{{ moneyShort(save.debt) }}</b></div>
+        <button class="btn sm ghost wide" :disabled="ui.phase === 'open'" @click="settings = false; ui.showSetup = true">{{ L('HỒ SƠ CHỦ QUÁN · NGÔN NGỮ / LANGUAGE', 'OWNER PROFILE · LANGUAGE / NGÔN NGỮ') }}</button>
+        <button class="btn sm ghost wide" :disabled="ui.phase === 'open'" @click="replayIntro">{{ L('XEM LẠI TRUYỆN MỞ ĐẦU', 'REPLAY OPENING STORY') }}</button>
         <button class="btn sm ghost wide" :class="{ danger: confirmReset }" :disabled="ui.phase === 'open'" @click="onReset">
-          {{ confirmReset ? 'CHẠM LẦN NỮA ĐỂ XOÁ DỮ LIỆU' : 'CHƠI LẠI TỪ ĐẦU' }}
+          {{ confirmReset ? L('CHẠM LẦN NỮA ĐỂ XOÁ DỮ LIỆU', 'TAP AGAIN TO ERASE ALL DATA') : L('CHƠI LẠI TỪ ĐẦU', 'START OVER') }}
         </button>
-        <div class="note">Dreamers Coffee · Bản cập nhật: {{ BUILD }}</div>
+        <div class="note">Dreamers Coffee · {{ L('Bản cập nhật', 'Build') }}: {{ BUILD }}</div>
       </div>
     </Transition>
     <div class="money" :class="{ bump: bump > 0 }">
-      <span v-if="ui.phase !== 'open'" class="label">TIỀN QUÁN</span>
+      <span v-if="ui.phase !== 'open'" class="label">{{ L('TIỀN QUÁN', 'CASH') }}</span>
       <PixelNum :text="moneyText" :size="ui.phase === 'open' ? 3 : 4" :color="save.money < 0 ? '#ff9a8c' : '#ffd77a'" shadow="#2a1a10" :light="save.money < 0 ? '#ffc4bb' : '#fff1a8'" />
     </div>
     <div class="chips">
       <div class="chip">
         <PixelIcon :name="wxIcon" :size="2.4" />
         <span v-if="ui.phase === 'open'" class="mono">{{ clock }}</span>
-        <span v-else>NGÀY {{ save.day }}</span>
+        <span v-else>{{ L('NGÀY', 'DAY') }} {{ save.day }}</span>
       </div>
-      <div class="chip beans" title="Hạt vàng"><PixelIcon name="bean" :size="2" />{{ save.meta.beans }}</div>
-      <div class="chip rep" :title="`Danh tiếng ${Math.round(save.reputation)}/100`">
+      <div class="chip beans" :title="L('Hạt vàng', 'Golden beans')"><PixelIcon name="bean" :size="2" />{{ save.meta.beans }}</div>
+      <div class="chip rep" :title="`${L('Danh tiếng', 'Reputation')} ${Math.round(save.reputation)}/100`">
         <PixelIcon name="star" :size="2" />{{ stars.toFixed(1) }}
       </div>
     </div>

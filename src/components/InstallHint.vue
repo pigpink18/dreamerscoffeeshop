@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import PixelIcon from './ui/PixelIcon.vue'
 import { ref, onMounted } from 'vue'
+import { L } from '../game/i18n'
 
 // Gợi ý "cài app" – Android dùng beforeinstallprompt, iOS hướng dẫn thủ công
 const DISMISS_KEY = 'dreamers-install-dismissed'
@@ -39,12 +40,12 @@ function dismiss() {
   <div v-if="show" class="card hint">
     <PixelIcon name="phone" :size="4" />
     <div class="grow">
-      <b>Cài game như app</b>
-      <div v-if="isIOS" class="muted small">Bấm <b>Chia sẻ</b> <PixelIcon name="up" :size="2" /> rồi <b>Thêm vào MH chính</b></div>
-      <div v-else class="muted small">Chơi toàn màn hình, không cần mạng</div>
+      <b>{{ L('Cài game như app', 'Install as an app') }}</b>
+      <div v-if="isIOS" class="muted small">{{ L('Bấm', 'Tap') }} <b>{{ L('Chia sẻ', 'Share') }}</b> <PixelIcon name="up" :size="2" /> {{ L('rồi', 'then') }} <b>{{ L('Thêm vào MH chính', 'Add to Home Screen') }}</b></div>
+      <div v-else class="muted small">{{ L('Chơi toàn màn hình, không cần mạng', 'Full screen, plays offline') }}</div>
     </div>
-    <button v-if="!isIOS" class="btn sm accent" @click="install">CÀI ĐẶT</button>
-    <button class="close" @click="dismiss" aria-label="Đóng"><PixelIcon name="cross" :size="2" /></button>
+    <button v-if="!isIOS" class="btn sm accent" @click="install">{{ L('CÀI ĐẶT', 'INSTALL') }}</button>
+    <button class="close" @click="dismiss" :aria-label="L('Đóng', 'Close')"><PixelIcon name="cross" :size="2" /></button>
   </div>
 </template>
 

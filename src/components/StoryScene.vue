@@ -10,6 +10,7 @@ import {
   type Chapter, type Choice, type Line, type Speaker,
 } from '../game/story'
 import TypeText from './TypeText.vue'
+import { L, DEFAULT_NAME, GENDER } from '../game/i18n'
 import PixelIcon from './ui/PixelIcon.vue'
 
 const props = defineProps<{ chapter: Chapter }>()
@@ -19,7 +20,9 @@ const isFinale = ch.id === CHAPTERS[CHAPTERS.length - 1].id
 const queue = ref<Line[]>(visibleLines(ch.lines))
 const i = ref(0)
 const line = computed(() => queue.value[i.value])
-const text = computed(() => line.value.text.replace(/\{name\}/g, save.player || 'Yến'))
+const ownerName = () => save.player || DEFAULT_NAME[GENDER]
+const withName = (s: string) => s.replace(/\{name\}/g, ownerName())
+const text = computed(() => withName(line.value.text))
 const typer = ref<InstanceType<typeof TypeText> | null>(null)
 const typed = ref(false)
 const picked = ref(false)
@@ -150,8 +153,8 @@ const score = computed(() => endingScore())
   <div class="story" @click="tap">
     <div class="wrap">
       <div class="top">
-        <span class="ttl"><PixelIcon name="star" :size="2" /> {{ ch.title }}</span>
-        <span class="day">NGÀY {{ save.day }}</span>
+        <span class="ttl"><PixelIcon name="star" :size="2" /> {{ withName(ch.title) }}</span>
+        <span class="day">{{ L('NGÀY', 'DAY') }} {{ save.day }}</span>
       </div>
       <div class="stage"><canvas ref="cv" :width="SCENE_W * K" :height="SCENE_H * K" class="cv" /></div>
 
@@ -160,18 +163,18 @@ const score = computed(() => endingScore())
         <div class="txt"><TypeText ref="typer" :key="i + ':' + text" :text="text" :pitch="pitch" :speed="28" @done="onTyped" /></div>
         <div v-if="showChoices" class="choices" @click.stop>
           <button v-for="(c, k) in line.choices" :key="k" :class="{ sassy: c.sassy }" @click="choose(c)">
-            <PixelIcon :name="c.sassy ? 'megaphone' : 'chat'" :size="2" /> <span v-if="c.sassy" class="sass">XÉO SẮC</span> {{ c.text }}
+            <PixelIcon :name="c.sassy ? 'megaphone' : 'chat'" :size="2" /> <span v-if="c.sassy" class="sass">{{ L('XÉO SẮC', 'SASSY') }}</span> {{ withName(c.text) }}
           </button>
         </div>
-        <div v-else class="nav"><span class="hint">{{ typed ? 'chạm để tiếp ▸' : '' }}</span></div>
+        <div v-else class="nav"><span class="hint">{{ typed ? L('chạm để tiếp ▸', 'tap to continue ▸') : '' }}</span></div>
       </div>
 
       <div v-else class="box end" @click.stop>
-        <div class="etag">KẾT THÚC CỐT TRUYỆN</div>
+        <div class="etag">{{ L('KẾT THÚC CỐT TRUYỆN', 'THE END OF THE STORY') }}</div>
         <b class="etitle">{{ ENDING_TITLE[ending] }}</b>
-        <div class="escore">Danh tiếng {{ Math.round(save.reputation) }} + lòng phố {{ (save.story.flags.support ?? 0) * 2 }} = <b>{{ score }}</b> điểm</div>
-        <div class="muted">Quán vẫn mở tiếp, bạn cứ chơi thoả thích. {{ ending === 'retry' ? 'Mùa sau thử chọn khác xem sao nhé!' : '' }}</div>
-        <button class="go" @click="done"><PixelIcon name="play" :size="2" /> TIẾP TỤC BÁN</button>
+        <div class="escore">{{ L('Danh tiếng', 'Reputation') }} {{ Math.round(save.reputation) }} + {{ L('lòng phố', 'neighborhood love') }} {{ (save.story.flags.support ?? 0) * 2 }} = <b>{{ score }}</b> {{ L('điểm', 'points') }}</div>
+        <div class="muted">{{ L('Quán vẫn mở tiếp, bạn cứ chơi thoả thích.', 'The café stays open, so play as long as you like.') }} {{ ending === 'retry' ? L('Mùa sau thử chọn khác xem sao nhé!', 'Next season, try some different choices!') : '' }}</div>
+        <button class="go" @click="done"><PixelIcon name="play" :size="2" /> {{ L('TIẾP TỤC BÁN', 'BACK TO WORK') }}</button>
       </div>
     </div>
   </div>
