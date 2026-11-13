@@ -92,8 +92,7 @@ export const canCook = (f: FoodId) => foodById[f].steps.every((s) => KSTEPS[s].k
 export function unlockKitchen() {
   if (kitchenOpen()) return
   if (save.money < KITCHEN_COST) { toast(L(`Cần ${moneyShort(KITCHEN_COST)} để mở bếp`, `You need ${moneyShort(KITCHEN_COST)} to open the kitchen`), 'bad'); sfx('wrong'); return }
-  save.money -= KITCHEN_COST
-  ui.stats.spent += KITCHEN_COST
+  save.money -= KITCHEN_COST // đầu tư mở bếp (như nâng cấp) – không tính vào "Nhập hàng" của ngày
   save.kitchen.open = true
   // quà khai trương bếp: mỗi nguyên liệu 1 gói
   for (const i of FOOD_INGS) addStock(i.id, i.packSize)

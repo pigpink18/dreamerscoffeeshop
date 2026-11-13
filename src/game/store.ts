@@ -364,6 +364,12 @@ function compensateMoneyBug(readRaw: () => Partial<SaveData> | null) {
   } catch { /* bỏ qua */ }
 }
 
+function prepSpent(): number {
+  try {
+    const p = JSON.parse(localStorage.getItem('dc-prep-spent') || 'null')
+    return p && p.day === save.day && Number.isFinite(p.spent) && p.spent > 0 ? p.spent : 0
+  } catch { return 0 }
+}
 export const ui = reactive({
   tab: 'shop' as Tab,
   phase: 'prep' as Phase,
@@ -384,7 +390,7 @@ export const ui = reactive({
   brew: null as Brew | null,
   talk: null as Talk | null,
   present: null as null | { recipe: RecipeId; cup: Brew; target: 'cust' | 'order'; name: string },
-  stats: emptyStats(save.reputation),
+  stats: { ...emptyStats(save.reputation), spent: prepSpent() },
   report: null as DayReport | null,
   toasts: [] as { id: number; text: string; kind: 'info' | 'bad' | 'good' | 'say' | 'rap' | 'heart' }[],
   floats: [] as { id: number; text: string; kind: 'good' | 'bad'; x: number; y: number }[],
@@ -398,9 +404,12 @@ export const ui = reactive({
 let uid = 1
 const nextId = () => uid++
 
+const PREP_SPENT_KEY = 'dc-prep-spent'
 export function persist() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(save))
+    // tiền nhập hàng lúc chuẩn bị (chưa mở cửa) – đóng app rồi mở lại vẫn tính vào "Nhập hàng" của ngày đó
+    if (ui.phase === 'prep') localStorage.setItem(PREP_SPENT_KEY, JSON.stringify({ day: save.day, spent: ui.stats.spent }))
     if (Number.isFinite(save.money)) localStorage.setItem(MONEY_BAK, JSON.stringify({ money: save.money, day: save.day }))
   } catch { /* đầy bộ nhớ / chế độ ẩn danh */ }
   saveSession()
@@ -668,6 +677,7 @@ function unlockNextRecipe(): RecipeId | null {
 // ---------- Mô phỏng ngày bán ----------
 let raf = 0
 let last = 0
+const staffTarget: string[] = [] // khách/đơn mỗi nhân viên đang pha
 
 export function openShop() {
   if (ui.phase !== 'prep') return
@@ -855,6 +865,9 @@ function tick(dt: number) {
   for (let s = 0; s < ui.staffProgress.length; s++) {
     const cust = custs[s]
     const order = cust ? undefined : ords[s - custs.length]
+    // việc của nhân viên đổi (khách bỏ đi / bạn nhận khách đó) → pha lại từ đầu, không "ăn" tiến độ của ly trước
+    const key = cust ? `c${cust.id}` : order ? `o${order.id}` : ''
+    if (staffTarget[s] !== key) { staffTarget[s] = key; ui.staffProgress[s] = 0 }
     ui.staffJob[s] = cust ? L(`${recipeById[cust.recipe].name} cho ${cust.name ?? 'khách'}`, `${recipeById[cust.recipe].name} for ${cust.name ?? 'a guest'}`) : order ? L(`đơn app của ${order.name}`, `${order.name}'s app order`) : null
     ui.staffRecipe[s] = cust?.recipe ?? order?.recipe ?? null
     // đã đóng cửa: nhân viên chỉ làm nốt ly đang pha dở, không nhận ly mới
