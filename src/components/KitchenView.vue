@@ -16,6 +16,9 @@ import {
 import PixelIcon from './ui/PixelIcon.vue'
 import PixelNum from './ui/PixelNum.vue'
 import { L } from '../game/i18n'
+import { drawCeiling } from '../game/depth'
+import { drawSeasonCeiling } from '../game/seasonArt'
+import { season } from '../game/season'
 
 const root = ref<HTMLDivElement>()
 const cv = ref<HTMLCanvasElement>()
@@ -59,7 +62,7 @@ watch(() => cook.value?.shake, (n, o) => { if (n && n !== o) { shaking.value = t
 function scenePt(sx: number, sy: number): Pt {
   const r = cv.value?.getBoundingClientRect()
   if (!r) return { x: innerWidth / 2, y: innerHeight / 3 }
-  return { x: r.left + (sx / KART_W) * r.width, y: r.top + (sy / KART_H) * r.height }
+  return { x: r.left + (sx / KART_W) * r.width, y: r.top + ((sy + kg.top) / kH()) * r.height }
 }
 watch(() => kitchen.served?.at, () => {
   const s = kitchen.served
@@ -161,19 +164,44 @@ const gauge = computed(() => {
 
 // ---- kích thước ----
 // Cảnh bếp pixel 2D (kitchenArt.ts) trong không gian KART_W x KART_H. Mỗi điểm ảnh = kscale điểm ảnh màn hình (số nguyên → nét).
+// Màn hình dư chỗ: bếp MỞ RỘNG theo chiều dọc (thêm trần phía trên + sàn phía dưới), không phóng to – giống quầy nước.
+const kg = { top: 0, bot: 0 }
+const kH = () => KART_H + kg.top + kg.bot
+function measure(w: number) {
+  const el = root.value!, page = el.parentElement, scene = el.firstElementChild as HTMLElement | null
+  if (ui.phase !== 'open' || !page || !scene) return { top: 0, bot: 0 }
+  let others = parseFloat(getComputedStyle(el).paddingTop) + 7 + 6 // + bóng đổ dưới khung + chừa chút dư
+  for (const ch of Array.from(el.children) as HTMLElement[]) {
+    if (ch === scene) continue
+    const st = getComputedStyle(ch)
+    others += ch.getBoundingClientRect().height + parseFloat(st.marginTop) + parseFloat(st.marginBottom)
+  }
+  const H = Math.floor(((page.clientHeight - others) * KART_W) / w)
+  const extra = Math.min(170, H - KART_H)
+  if (extra < 8) return { top: 0, bot: 0 }
+  const top = Math.min(44, Math.round(extra * 0.4))
+  return { top, bot: extra - top }
+}
 function resize() {
   const el = root.value, c = cv.value
   if (!el || !c) return
   const w = Math.min(488, el.clientWidth - 6)
   if (w < 50) return
   cssW.value = w
+  // đang nấu (khay nấu thay cho menu, cao thấp khác nhau): giữ nguyên khung, không đo lại
+  if (!kitchen.cook) Object.assign(kg, measure(w))
+  const H = kH()
   const dpr = window.devicePixelRatio || 1
   scale = Math.max(1, Math.ceil((w * dpr) / KART_W))
-  if (c.width !== KART_W * scale || c.height !== KART_H * scale) { c.width = KART_W * scale; c.height = KART_H * scale }
-  c.style.width = `${Math.floor(w)}px`
-  c.style.height = `${Math.round((w * KART_H) / KART_W)}px`
+  if (c.width !== KART_W * scale || c.height !== H * scale) { c.width = KART_W * scale; c.height = H * scale }
+  const set = (st: CSSStyleDeclaration, key: 'width' | 'height', v: string) => { if (st[key] !== v) st[key] = v }
+  set(c.style, 'width', `${Math.floor(w)}px`)
+  set(c.style, 'height', `${Math.round((w * H) / KART_W)}px`)
   ctx = c.getContext('2d')
 }
+watch(() => [ui.page, ui.phase, !!kitchen.cook], () => requestAnimationFrame(() => requestAnimationFrame(resize)))
+window.addEventListener('resize', resize)
+onBeforeUnmount(() => window.removeEventListener('resize', resize))
 let ro: ResizeObserver | null = null
 let lastBg = 0
 function frame(now: number) {
@@ -234,11 +262,42 @@ function arm(c: Ctx, x0: number, y0: number, x1: number, y1: number, skin: strin
   px(c, Math.round(x1) - 1, Math.round(y1) - 1, 4, 4, INK); px(c, Math.round(x1), Math.round(y1), 2, 2, skin)
 }
 
+/** bếp mở rộng: đồ trên phần sàn thêm – thảm bếp trước bếp gas, thùng rau củ, bao gạo */
+function floorProps(c: Ctx, t: number) {
+  const fy = KART_H - 11, b = kg.bot
+  // thảm bếp sọc trước bếp gas (phối cảnh: hình thang)
+  const my = fy + 4 + Math.round(b * 0.12), mh = 5 + Math.round(b * 0.16), cx = 88
+  for (let y = 0; y < mh; y++) {
+    const half = 20 + Math.round((y / mh) * 5)
+    px(c, cx - half - 1, my + y, half * 2 + 2, 1, CZ.ink)
+    if (y > 0 && y < mh - 1) px(c, cx - half, my + y, half * 2, 1, Math.floor(y / 2) % 2 ? '#c94f3d' : '#e9c58a')
+  }
+  for (let x = cx - 24; x <= cx + 24; x += 3) px(c, x, my + mh, 1, 2, '#e9c58a') // tua thảm
+  // thùng gỗ rau củ (trái, gần người xem)
+  const kx = 14, ky = fy + Math.round(b * 0.55)
+  box(c, kx, ky, 22, 12, '#b07b52', CZ.ink)
+  px(c, kx + 1, ky + 5, 20, 1, '#8a5a3c'); px(c, kx + 1, ky + 1, 20, 1, '#c99a6a')
+  for (const [dx, col, hi] of [[2, '#e8703a', '#ffb07a'], [7, '#7fb34d', '#b5e07a'], [12, '#d8333a', '#ff8a8a'], [16, '#f2c14e', '#fff1a8']] as const) {
+    px(c, kx + dx, ky - 3, 4, 4, CZ.ink); px(c, kx + dx + 1, ky - 2, 2, 2, col); px(c, kx + dx + 1, ky - 2, 1, 1, hi)
+  }
+  px(c, kx + 8, ky - 6, 1, 3, '#4f8a2e'); px(c, kx + 9, ky - 7, 2, 1, '#7fb34d') // lá hành
+  // bao gạo (phải)
+  const gx = KART_W - 34, gy = fy + Math.round(b * 0.45)
+  box(c, gx, gy, 16, 14, '#efe3c8', CZ.ink)
+  px(c, gx + 2, gy - 2, 12, 2, CZ.ink); px(c, gx + 3, gy - 1, 10, 1, '#d9c9a4')
+  px(c, gx + 4, gy + 5, 8, 4, '#d8333a'); px(c, gx + 5, gy + 6, 6, 2, '#fff4dc')
+  px(c, gx + 1, gy + 12, 14, 1, '#d9c9a4')
+  // hơi ấm loang trên sàn trước bếp
+  if (kitchen.cook) { c.fillStyle = `rgba(255, 170, 90, ${0.06 + 0.03 * Math.sin(t * 4)})`; c.fillRect(cx - 26, fy, 52, Math.round(b * 0.4)) }
+}
+
 function draw(t: number) {
   const c = ctx
   if (!c) return
   c.setTransform(scale, 0, 0, scale, 0, 0)
   c.imageSmoothingEnabled = false
+  if (kg.top > 0) { drawCeiling(c, kg.top, save.meta.premise, t, season() === 'xmas', KART_W); drawSeasonCeiling(c, kg.top, t, KART_W) }
+  c.setTransform(scale, 0, 0, scale, 0, kg.top * scale) // cảnh bếp gốc nằm dưới phần trần thêm
   const ck = kitchen.cook
   const act = ck?.action && KSTEPS[ck.action].kind === 'act' ? ck.action : null
   const done = new Set(ck?.done ?? [])
@@ -258,7 +317,8 @@ function draw(t: number) {
   const look = CAST.yen.look
   drawPerson(c, look, Math.round(yenX) - 8, YEN_Y + yb, ck ? 'happy' : 'neutral', Math.floor(t * 10) % 41 === 0)
 
-  drawKitchenFront(c, save.meta.premise)
+  drawKitchenFront(c, save.meta.premise, kg.bot)
+  if (kg.bot >= 18) floorProps(c, t)
 
   // --- chảo: bánh mì chảo ---
   if (act === 'chien') fire(c, A('burnerL'), t)
@@ -386,11 +446,11 @@ function draw(t: number) {
   const sv = kitchen.served
   if (sv && performance.now() - sv.at < 1400) {
     const a = 1 - (performance.now() - sv.at) / 1400
-    c.fillStyle = `rgba(255, 240, 180, ${0.35 * a})`; c.fillRect(0, 0, KART_W, KART_H)
+    c.fillStyle = `rgba(255, 240, 180, ${0.35 * a})`; c.fillRect(0, -kg.top, KART_W, kH())
   }
   // bếp chưa mở: tối + mạng nhện
   if (!kitchenOpen()) {
-    c.fillStyle = 'rgba(40, 30, 25, 0.6)'; c.fillRect(0, 0, KART_W, KART_H)
+    c.fillStyle = 'rgba(40, 30, 25, 0.6)'; c.fillRect(0, -kg.top, KART_W, kH())
     for (const x of [0, KART_W - 18]) for (let i = 0; i < 18; i++) px(c, x + (x ? 17 - i : i), 0, 1, 18 - i, 'rgba(230,230,230,0.1)')
   }
 }

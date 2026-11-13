@@ -144,7 +144,7 @@ export function drawKitchenBack(c: Ctx, dayFrac: number, rainy: boolean) {
   c.save(); c.translate(KOX, 0); backWall(c, dayFrac, rainy); c.restore()
 }
 /** lớp trước: quầy gỗ (giống quầy nước) + bếp gas + tủ lạnh + thớt + sàn */
-export function drawKitchenFront(c: Ctx, premise: number) {
+export function drawKitchenFront(c: Ctx, premise: number, extraFloor = 0) {
   c.save(); c.translate(KOX, 0); drawCounter(c); c.restore()
   drawCounterWings(c, KOX, KART_W, premise)
   stove(c)
@@ -155,7 +155,7 @@ export function drawKitchenFront(c: Ctx, premise: number) {
   // giá úp đĩa cuối quầy phải
   for (let i = 0; i < 3; i++) { px(c, 150 + i * 3, Y - 9 + i, 3, 9 - i, CZ.ink); px(c, 151 + i * 3, Y - 8 + i, 1, 7 - i, '#fbf6ec') }
   px(c, 148, Y - 1, 12, 1, STEEL_D)
-  drawFloor(c, FLOOR_Y, KART_H - FLOOR_Y, premise, KART_W)
+  drawFloor(c, FLOOR_Y, KART_H - FLOOR_Y + extraFloor, premise, KART_W) // extraFloor: bếp mở rộng xuống dưới khi màn hình dư chỗ
 }
 
 // ---------- đồ động ----------
