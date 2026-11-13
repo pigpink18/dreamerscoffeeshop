@@ -5,7 +5,7 @@ import { save, ui, staffAll, DAY_LENGTH } from '../game/store'
 import { moneyShort } from '../game/data'
 import { iconUrl, px, box, CZ, drawPerson, type Ctx } from '../game/pixel'
 import { DRAW16 } from '../game/icons16'
-import { KART_W, KART_H, KANCHOR, drawKitchenBack, drawKitchenFront, drawPan, drawPot, drawBowl, drawPlate } from '../game/kitchenArt'
+import { KART_W, KART_H, KANCHOR, drawKitchenBack, drawKitchenFront, drawPan, drawPot, drawBowl, drawPlate, drawKitchenFloorProps, kitchenMat } from '../game/kitchenArt'
 import { coinsFly, sparkle, popText, type Pt } from '../game/fx'
 import { sfx } from '../game/audio'
 import { CAST } from '../game/story'
@@ -248,7 +248,21 @@ function stationOf(food: string, step: KStep | null): Station {
   if (food === 'miTronCay') return step === 'mi' || step === 'luoc' ? 'pot' : 'bowl'
   return step === 'dia' ? 'board' : 'waffle'
 }
-const YEN_Y = 34 // đỉnh đầu (giống khách ở quầy)
+const YEN_Y = 34 // đỉnh đầu (giống khách ở quầy) – toạ độ thân Yến chưa phóng to
+// Yến vẽ to hơn cảnh ~1.5 lần cho dễ thấy thao tác: phóng quanh mép quầy (YEN_AY) với hệ số sao cho
+// mỗi điểm ảnh của Yến = số nguyên điểm ảnh màn hình (nét, không nhoè). Thân vẽ trước lớp quầy → vẫn đứng sau quầy.
+const YEN_AY = 62
+const yenS = () => Math.max(scale, Math.round(scale * 1.5)) / scale
+/** chạy fn trong hệ toạ độ đã phóng của Yến (gốc = (ax, YEN_AY)) */
+function inYen(c: Ctx, ax: number, fn: () => void) {
+  const S = yenS()
+  c.save(); c.translate(ax, YEN_AY); c.scale(S, S); c.translate(-ax, -YEN_AY); fn(); c.restore()
+}
+/** điểm trong cảnh (nồi, chảo, thớt…) → toạ độ thân Yến chưa phóng, để bàn tay chạm đúng chỗ */
+const toYen = (ax: number, [x, y]: readonly [number, number]): [number, number] => {
+  const S = yenS()
+  return [ax + (x - ax) / S, YEN_AY + (y - YEN_AY) / S]
+}
 let yenX: number = STATION_X.board, lastT = 0
 let seenDone = 0, carry: { step: KStep; until: number } | null = null // món vừa lấy: cầm trên tay rồi thả vào
 /** cánh tay: vai → bàn tay; nửa trên là tay áo */
@@ -262,33 +276,13 @@ function arm(c: Ctx, x0: number, y0: number, x1: number, y1: number, skin: strin
   px(c, Math.round(x1) - 1, Math.round(y1) - 1, 4, 4, INK); px(c, Math.round(x1), Math.round(y1), 2, 2, skin)
 }
 
-/** bếp mở rộng: đồ trên phần sàn thêm – thảm bếp trước bếp gas, thùng rau củ, bao gạo */
+/** bếp mở rộng: đồ trên phần sàn thêm – thảm dệt trước bếp gas, thùng rau củ, bao gạo (kitchenArt.ts) + hơi ấm khi đang nấu */
 function floorProps(c: Ctx, t: number) {
-  const fy = KART_H - 11, b = kg.bot
-  // thảm bếp sọc trước bếp gas (phối cảnh: hình thang)
-  const my = fy + 4 + Math.round(b * 0.12), mh = 5 + Math.round(b * 0.16), cx = 88
-  for (let y = 0; y < mh; y++) {
-    const half = 20 + Math.round((y / mh) * 5)
-    px(c, cx - half - 1, my + y, half * 2 + 2, 1, CZ.ink)
-    if (y > 0 && y < mh - 1) px(c, cx - half, my + y, half * 2, 1, Math.floor(y / 2) % 2 ? '#c94f3d' : '#e9c58a')
+  drawKitchenFloorProps(c, kg.bot)
+  if (kitchen.cook) {
+    const m = kitchenMat(kg.bot), a = (0.07 + 0.03 * Math.sin(t * 4)).toFixed(3)
+    for (let y = KART_H - 11; y < m.y + m.h; y++) px(c, m.cx - 24, y, 48, 1, `rgba(255, 170, 90, ${a})`)
   }
-  for (let x = cx - 24; x <= cx + 24; x += 3) px(c, x, my + mh, 1, 2, '#e9c58a') // tua thảm
-  // thùng gỗ rau củ (trái, gần người xem)
-  const kx = 14, ky = fy + Math.round(b * 0.55)
-  box(c, kx, ky, 22, 12, '#b07b52', CZ.ink)
-  px(c, kx + 1, ky + 5, 20, 1, '#8a5a3c'); px(c, kx + 1, ky + 1, 20, 1, '#c99a6a')
-  for (const [dx, col, hi] of [[2, '#e8703a', '#ffb07a'], [7, '#7fb34d', '#b5e07a'], [12, '#d8333a', '#ff8a8a'], [16, '#f2c14e', '#fff1a8']] as const) {
-    px(c, kx + dx, ky - 3, 4, 4, CZ.ink); px(c, kx + dx + 1, ky - 2, 2, 2, col); px(c, kx + dx + 1, ky - 2, 1, 1, hi)
-  }
-  px(c, kx + 8, ky - 6, 1, 3, '#4f8a2e'); px(c, kx + 9, ky - 7, 2, 1, '#7fb34d') // lá hành
-  // bao gạo (phải)
-  const gx = KART_W - 34, gy = fy + Math.round(b * 0.45)
-  box(c, gx, gy, 16, 14, '#efe3c8', CZ.ink)
-  px(c, gx + 2, gy - 2, 12, 2, CZ.ink); px(c, gx + 3, gy - 1, 10, 1, '#d9c9a4')
-  px(c, gx + 4, gy + 5, 8, 4, '#d8333a'); px(c, gx + 5, gy + 6, 6, 2, '#fff4dc')
-  px(c, gx + 1, gy + 12, 14, 1, '#d9c9a4')
-  // hơi ấm loang trên sàn trước bếp
-  if (kitchen.cook) { c.fillStyle = `rgba(255, 170, 90, ${0.06 + 0.03 * Math.sin(t * 4)})`; c.fillRect(cx - 26, fy, 52, Math.round(b * 0.4)) }
 }
 
 function draw(t: number) {
@@ -315,7 +309,8 @@ function draw(t: number) {
   if (walking) yenX += Math.sign(goal - yenX) * Math.min(Math.abs(goal - yenX), 70 * dt)
   const yb = walking ? Math.floor(t * 12) % 2 : doing ? Math.floor(t * 6) % 2 : Math.floor(t * 1.5) % 2
   const look = CAST.yen.look
-  drawPerson(c, look, Math.round(yenX) - 8, YEN_Y + yb, ck ? 'happy' : 'neutral', Math.floor(t * 10) % 41 === 0)
+  const ax = Math.round(yenX)
+  inYen(c, ax, () => drawPerson(c, look, ax - 8, YEN_Y + yb, ck ? 'happy' : 'neutral', Math.floor(t * 10) % 41 === 0))
 
   drawKitchenFront(c, save.meta.premise, kg.bot)
   if (kg.bot >= 18) floorProps(c, t)
@@ -390,54 +385,58 @@ function draw(t: number) {
   // tay Yến làm theo thao tác (vẽ đè lên quầy) + dụng cụ cầm tay + nguyên liệu thả vào
   {
     const now = performance.now()
-    const sy = YEN_Y + 17 + yb, sl = yenX - 6, sr = yenX + 6
+    const sy = YEN_Y + 17 + yb, sl = ax - 6, sr = ax + 6
     const sleeve = look.shirt, skin = look.skin
     const w = Math.sin(t * 14), slow = Math.sin(t * 3)
-    let hl: [number, number] = [yenX - 7, 59], hr: [number, number] = [yenX + 6, 59]
+    // tư thế quanh thân (hl/hr toạ độ thân chưa phóng) · thao tác ở chỗ nấu (hlS/hrS toạ độ cảnh, đổi qua toYen)
+    let hl: [number, number] = [ax - 7, 59], hr: [number, number] = [ax + 6, 59]
+    let hlS: [number, number] | null = null, hrS: [number, number] | null = null
     let tool: null | (() => void) = null
     const nd = ck?.done.length ?? 0
     if (nd > seenDone && ck) { const s = ck.done[nd - 1]; if (KSTEPS[s].kind !== 'act') carry = { step: s, until: now + 900 } }
     seenDone = nd
     if (!ck) carry = null
     const cp = carry && !doing && now < carry.until ? 1 - (carry.until - now) / 900 : -1 // 0..1: cầm → thả vào
-    if (cp >= 0 && cp < 0.5) { hl = [yenX - 5, 57]; hr = [yenX + 4, 57] }
-    else if (walking) { hl = [yenX - 8, 57 + Math.round(w)]; hr = [yenX + 7, 57 - Math.round(w)] }
+    if (cp >= 0 && cp < 0.5) { hl = [ax - 5, 57]; hr = [ax + 4, 57] }
+    else if (walking) { hl = [ax - 8, 57 + Math.round(w)]; hr = [ax + 7, 57 - Math.round(w)] }
     else if (doing === 'chien') {
       // tay trái lắc cán chảo, tay phải cầm xẻng đảo
-      hl = [px0 - 12 + jig, py0]; hr = [px0 + 3 + Math.round(w * 3), py0 - 7]
-      tool = () => { px(c, hr[0], hr[1] + 2, 1, 4, CZ.w1); px(c, hr[0] - 2, hr[1] + 6, 5, 1, STEEL_D) }
+      hlS = [px0 - 12 + jig, py0]; const h = hrS = [px0 + 3 + Math.round(w * 3), py0 - 7]
+      tool = () => { px(c, h[0], h[1] + 2, 1, 4, CZ.w1); px(c, h[0] - 2, h[1] + 6, 5, 1, STEEL_D) }
     } else if (doing === 'luoc') {
       // tay trái giữ quai nồi, tay phải cầm đũa dài khuấy vòng
       const a = t * 8
-      hl = [qx - 10, qy + 2]; hr = [qx + 2 + Math.round(Math.cos(a) * 3), qy - 9 + Math.round(Math.sin(a))]
-      tool = () => { for (const d of [0, 2]) for (let k = 0; k < 9; k++) px(c, hr[0] + d + Math.round(((qx - hr[0]) * k) / 9), hr[1] + 2 + k, 1, 1, '#c9875a') }
+      hlS = [qx - 10, qy + 2]; const h = hrS = [qx + 2 + Math.round(Math.cos(a) * 3), qy - 9 + Math.round(Math.sin(a))]
+      tool = () => { for (const d of [0, 2]) for (let k = 0; k < 9; k++) px(c, h[0] + d + Math.round(((qx - h[0]) * k) / 9), h[1] + 2 + k, 1, 1, '#c9875a') }
     } else if (doing === 'tron') {
       // tay trái giữ tô, tay phải đảo đũa nhanh trong tô
       const [bx, by] = A('bowl'); const ww = Math.round(Math.sin(t * 30) * 2)
-      hl = [bx - 9, by - 3]; hr = [bx + ww, by - 13]
-      tool = () => { px(c, hr[0], hr[1] + 2, 1, 8, '#c9875a'); px(c, hr[0] + 2, hr[1] + 2, 1, 8, '#c9875a') }
+      hlS = [bx - 9, by - 3]; const h = hrS = [bx + ww, by - 13]
+      tool = () => { px(c, h[0], h[1] + 2, 1, 8, '#c9875a'); px(c, h[0] + 2, h[1] + 2, 1, 8, '#c9875a') }
     } else if (doing === 'nuong') {
       // ấn nắp khuôn, tay kia giữ tay cầm
-      hr = [wx + 12, wy - 5]; hl = [wx - 3, wy - 11 + Math.round(Math.abs(w))]
+      hrS = [wx + 12, wy - 5]; hlS = [wx - 3, wy - 11 + Math.round(Math.abs(w))]
     } else if (!ck) {
       // rảnh tay: thái rau trên thớt (dao lên xuống)
       const [x, y] = A('plate'); const up = Math.abs(Math.sin(t * 9)) * 4
-      hl = [x - 5, y - 3]; hr = [x + 4, Math.round(y - 4 - up)]
-      tool = () => { px(c, hr[0] + 2, hr[1], 2, 1, CZ.w1); px(c, hr[0] - 4, hr[1] + 1, 6, 1, STEEL); px(c, hr[0] - 4, hr[1] + 2, 6, 1, STEEL_L) }
+      hlS = [x - 5, y - 3]; const h = hrS = [x + 4, Math.round(y - 4 - up)]
+      tool = () => { px(c, h[0] + 2, h[1], 2, 1, CZ.w1); px(c, h[0] - 4, h[1] + 1, 6, 1, STEEL); px(c, h[0] - 4, h[1] + 2, 6, 1, STEEL_L) }
       for (let k = 0; k < 4; k++) px(c, x - 2 + k * 2, y - 3, 1, 1, k % 2 ? '#7fb34d' : '#e8703a')
     } else {
       // chờ bước tiếp: tay đặt sẵn ở chỗ nấu, đung đưa nhẹ
-      hl = [yenX - 6, 59 + Math.round(slow * 0.6)]; hr = [yenX + 5, 59 - Math.round(slow * 0.6)]
+      hl = [ax - 6, 59 + Math.round(slow * 0.6)]; hr = [ax + 5, 59 - Math.round(slow * 0.6)]
     }
-    arm(c, sl, sy, hl[0], hl[1], skin, sleeve)
-    arm(c, sr, sy, hr[0], hr[1], skin, sleeve)
+    if (hlS) hl = toYen(ax, hlS)
+    if (hrS) hr = toYen(ax, hrS)
+    inYen(c, ax, () => { arm(c, sl, sy, hl[0], hl[1], skin, sleeve); arm(c, sr, sy, hr[0], hr[1], skin, sleeve) })
     tool?.()
     // nguyên liệu vừa lấy: cầm trước ngực rồi thả vào chảo / nồi / tô / khuôn (icon thu nhỏ một nửa)
     if (cp >= 0 && carry && DRAW16[carry.step] && f) {
       const s2 = stationOf(f.id, carry.step)
       const [tx, ty] = s2 === 'pan' ? A('panIn') : s2 === 'pot' ? A('potIn') : s2 === 'bowl' ? A('bowl') : s2 === 'waffle' ? A('waffle') : A('plate')
       const k = Math.max(0, (cp - 0.5) / 0.5)
-      const ix = yenX + (tx - yenX) * k, iy = 52 + (ty - 6 - 52) * k - Math.sin(k * Math.PI) * 3
+      const chest = YEN_AY + (52 - YEN_AY) * yenS() // trước ngực Yến (đã phóng)
+      const ix = yenX + (tx - yenX) * k, iy = chest + (ty - 6 - chest) * k - Math.sin(k * Math.PI) * 3
       c.save(); c.translate(Math.round(ix) - 4, Math.round(iy)); c.scale(0.5, 0.5); DRAW16[carry.step](c as any); c.restore()
     }
   }
