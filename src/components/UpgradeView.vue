@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { save, buyUpgrade, UPGRADES } from '../game/store'
+import { save, ui, buyUpgrade, resetGame, UPGRADES } from '../game/store'
 import { moneyShort } from '../game/data'
 import PixelIcon from './ui/PixelIcon.vue'
 import PremisePanel from './meta/PremisePanel.vue'
@@ -9,6 +9,14 @@ import SeatingPanel from './SeatingPanel.vue'
 import { L } from '../game/i18n'
 
 const seg = ref<'up' | 'seat' | 'prem' | 'cao'>('up')
+
+const confirmReset = ref(false)
+let resetTimer = 0
+function onReset() {
+  if (!confirmReset.value) { confirmReset.value = true; clearTimeout(resetTimer); resetTimer = window.setTimeout(() => (confirmReset.value = false), 3000); return }
+  confirmReset.value = false
+  resetGame()
+}
 
 const UICON: Record<string, string> = { staff: 'staff', machine: 'gear', shipper: 'scooter', decor: 'plant', sign: 'megaphone', freezer: 'snow', green: 'plant', farmer: 'bean' }
 
@@ -62,7 +70,12 @@ const UICON: Record<string, string> = { staff: 'staff', machine: 'gear', shipper
       <div class="tile"><PixelIcon name="trophy" /><b>{{ moneyShort(save.totals.bestProfit) }}</b><span>{{ L('Lời cao nhất/ngày', 'Best day profit') }}</span></div>
     </div>
 
-    <p class="muted tiny center">{{ L('Chơi lại từ đầu: bấm nút bánh răng (Cài đặt) ở góc trên.', 'To start over: tap the gear (Settings) button up top.') }}</p>
+    <div class="reset">
+      <button class="btn sm ghost wide" :class="{ danger: confirmReset }" :disabled="ui.phase === 'open'" @click="onReset">
+        {{ confirmReset ? L('CHẠM LẦN NỮA ĐỂ XOÁ DỮ LIỆU', 'TAP AGAIN TO ERASE ALL DATA') : L('CHƠI LẠI TỪ ĐẦU', 'START OVER') }}
+      </button>
+      <p class="muted tiny center">{{ confirmReset ? L('Toàn bộ tiền, món, nâng cấp sẽ mất và bắt đầu lại từ ngày 1', 'All money, recipes and upgrades will be lost – back to day 1') : L('Cũng có trong Cài đặt (nút bánh răng)', 'Also in Settings (gear button)') }}</p>
+    </div>
     </template>
   </div>
 </template>
@@ -88,6 +101,7 @@ const UICON: Record<string, string> = { staff: 'staff', machine: 'gear', shipper
 .stats span { font-size: 12px; color: var(--muted); }
 .center { text-align: center; margin-top: 18px; }
 .reset { text-align: center; margin-top: 24px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.reset { margin: 18px 0 8px; display: flex; flex-direction: column; gap: 6px; }
 .danger { background: var(--bad) !important; color: #fff !important; }
 .tiny { font-size: 11px; }
 </style>
