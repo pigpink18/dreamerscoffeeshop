@@ -200,14 +200,14 @@ function pickOrder(id: number) {
 }
 .item {
   position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: #fffaf2; min-height: 46px;
+  background: #fffaf2; min-height: 60px;
   box-shadow: var(--px-border-2), inset 0 -3px 0 #e6d6c2, 0 4px 0 rgba(59, 42, 32, 0.5); transition: transform 0.06s;
 }
 .item:active { transform: translateY(3px); box-shadow: var(--px-border-2); }
 .item.out { opacity: 0.45; }
-.ic { width: 32px; height: 32px; }
-.lbl { font-size: 10px; font-weight: 800; margin-top: 1px; }
-.qty { position: absolute; top: 2px; right: 4px; font-size: 9px; font-weight: 900; color: #8a7566; }
+.ic { width: 40px; height: 40px; }
+.lbl { font-size: 11px; font-weight: 800; margin-top: 1px; }
+.qty { position: absolute; top: 2px; right: 4px; font-size: 10px; font-weight: 900; color: #8a7566; }
 
 .actions { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 10px 3px 0; }
 .action {
@@ -221,9 +221,9 @@ function pickOrder(id: number) {
 .action small { font-size: 9px; font-weight: 800; color: #6f4e37; }
 /* màn hình thấp (iPhone nhỏ / đang mở trong trình duyệt): khay gọn hơn để cảnh quán to hơn */
 @media (max-height: 720px) {
-  .item { min-height: 40px; }
-  .ic { width: 24px; height: 24px; }
-  .lbl { font-size: 9px; }
+  .item { min-height: 50px; }
+  .ic { width: 32px; height: 32px; }
+  .lbl { font-size: 10px; }
   .action { padding: 2px 0 4px; }
   .aic { width: 22px; height: 22px; }
   .tray { margin-top: 6px; }
@@ -232,22 +232,22 @@ function pickOrder(id: number) {
 /* thiếu chỗ (ShopView thêm class tight): khay gọn lại – nút thấp hơn, icon nhỏ hơn */
 .panel.tight .recipe { min-height: 40px; }
 .panel.tight .tray { gap: 3px; padding: 3px; margin-top: 4px; }
-.panel.tight .item { min-height: 32px; }
-.panel.tight .ic { width: 20px; height: 20px; }
-.panel.tight .lbl { font-size: 8px; }
+.panel.tight .item { min-height: 46px; } /* gọn nhưng vẫn đủ to cho ngón tay (≥44px) */
+.panel.tight .ic { width: 28px; height: 28px; }
+.panel.tight .lbl { font-size: 9px; }
 .panel.tight .actions { margin-top: 5px; gap: 4px; }
 .panel.tight .action { padding: 1px 0 3px; font-size: 10px; }
-.panel.tight .aic { width: 18px; height: 18px; }
+.panel.tight .aic { width: 22px; height: 22px; }
 .panel.tight .shelf { margin-top: 4px; padding: 2px 6px; }
 @media (max-height: 600px) {
   .lbl, .action small { display: none; }
-  .item { min-height: 34px; }
+  .item { min-height: 44px; }
 }
 /* màn thấp (iPhone SE, mini…): khay gọn lại để khung cảnh quán đủ chỗ, vẫn rộng bằng khay */
 @media (max-height: 720px) {
   .tray { gap: 4px; padding: 4px; margin-top: 5px; }
-  .item { min-height: 38px; }
-  .ic { width: 24px; height: 24px; }
+  .item { min-height: 50px; }
+  .ic { width: 32px; height: 32px; }
   .shelf { margin-top: 5px; padding: 2px 6px; }
   .actions { margin-top: 6px; gap: 4px; }
   .aic { width: 22px; height: 22px; }
