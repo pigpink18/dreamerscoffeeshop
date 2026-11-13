@@ -105,7 +105,31 @@ def vibes(freq, dur, vel):
     return s * env * trem * vel
 
 
-LEADS = {'flute': flute, 'vibes': vibes, 'rhodes': rhodes}
+def tranh(freq, dur, vel):
+    """Đàn tranh: gảy sáng, tắt dài, luyến nhẹ lên nốt (nhấn) + rung cuối nốt."""
+    n = int(SR * (dur + 1.4))
+    t = np.arange(n) / SR
+    bend = 1 + 0.03 * np.exp(-t / 0.05) * (-1)  # vào nốt hơi thấp rồi nắn lên
+    vib = 1 + 0.006 * np.sin(2 * np.pi * 5.5 * t) * np.clip((t - 0.25) / 0.3, 0, 1)
+    ph = 2 * np.pi * freq * np.cumsum(bend * vib) / SR
+    s = np.zeros(n)
+    for h in range(1, 9):
+        s += (1 / h ** 1.1) * np.sin(h * ph) * np.exp(-t * (1.2 + 1.6 * h))
+    k = int(0.006 * SR)
+    s[:k] += rng.normal(0, 0.3, k) * np.linspace(1, 0, k)
+    rel = np.where(t > dur + 0.5, np.exp(-(t - dur - 0.5) / 0.3), 1.0)
+    return s * np.clip(t / 0.002, 0, 1) * rel * vel
+
+
+def glock(freq, dur, vel):
+    """Chuông lấp lánh (glockenspiel) – Tết Tây."""
+    n = int(SR * 1.6)
+    t = np.arange(n) / SR
+    s = np.sin(2 * np.pi * freq * t) + 0.4 * np.sin(2 * np.pi * freq * 2.76 * t) * np.exp(-t / 0.2) + 0.2 * np.sin(2 * np.pi * freq * 5.4 * t) * np.exp(-t / 0.08)
+    return s * np.exp(-t / 0.5) * vel
+
+
+LEADS = {'flute': flute, 'vibes': vibes, 'rhodes': rhodes, 'tranh': tranh}
 
 
 def bp_noise(n, lo, hi):
@@ -304,6 +328,9 @@ def compose(track, seed):
                 sym = chord_at(bt + 0.01)
                 root, pcs, ints = chord(sym)
                 tones = set(pcs)
+                if track.get('scale'):  # ngũ cung: chỉ dùng nốt trong thang, ưu tiên nốt thuộc hợp âm
+                    sc = set(track['scale'])
+                    tones = (tones & sc) or sc
                 target = last + steps[i % len(steps)] * 2
                 cands = [m for m in range(lo, hi + 1) if m % 12 in tones]
                 m = min(cands, key=lambda x: (abs(x - target), r.random()))
@@ -312,7 +339,7 @@ def compose(track, seed):
                 last = m
                 vel = 0.55 + 0.25 * r.random() if st % 1 == 0 else 0.5
                 sg = lead(midi_hz(m), d * beat * 0.95, vel)
-                g = {'flute': 0.17, 'vibes': 0.2, 'rhodes': 0.22}[track['lead']]
+                g = {'flute': 0.17, 'vibes': 0.2, 'rhodes': 0.22, 'tranh': 0.24}[track['lead']]
                 dry.add(sg, bt * beat + hum(), pan=0.08, gain=g)
                 wet.add(sg, bt * beat, pan=0.08, gain=g * 0.55)
 
@@ -333,6 +360,24 @@ def compose(track, seed):
                 wet.add(s, (bar * 4 + k / 4) * beat, pan=-0.15, gain=0.04)
             for kb in (0, 2.5, 3):
                 dry.add(kick(0.6 if kb == 0 else 0.4), (bar * 4 + kb) * beat, gain=0.22)
+
+    # --- chuông lấp lánh rải hợp âm (Tết Tây) / đàn tranh rải ngũ cung đệm (Tết) ---
+    if track.get('sparkle'):
+        inst = glock if track['sparkle'] == 'glock' else tranh
+        for bar in range(2, total_beats // 4):
+            if bar % 2:
+                continue
+            sym = chord_at(bar * 4 + 0.01)
+            _, pcs, _ = chord(sym)
+            pool = [pc for pc in pcs if not track.get('scale') or pc in track['scale']] or pcs
+            for j in range(4):
+                m = 84 + ((pool[j % len(pool)] - 0) % 12) + (12 if j == 3 else 0)
+                if inst is tranh:
+                    m -= 12
+                sg = inst(midi_hz(m), beat * 0.5, 0.35)
+                tt = (bar * 4 + 3 + j * 0.25) * beat
+                dry.add(sg, tt, pan=0.45 if j % 2 else -0.35, gain=0.05)
+                wet.add(sg, tt, pan=0.45 if j % 2 else -0.35, gain=0.06)
 
     # --- tích tắc kim đồng hồ (chỉ cho nhạc boss nhẹ): hồi hộp nhưng không ồn ---
     if track.get('tick'):
@@ -387,6 +432,20 @@ TRACKS = [
     dict(id='boss-hoi-hop', name='Hồi hộp nhẹ', bpm=138, lead='rhodes', range=(62, 76), tick=True, intro=False,
          prog=[('A:m9', 4), ('A:m9', 4), ('F:maj7', 4), ('E:7b9', 4), ('A:m9', 4), ('D:m9', 4), ('B:m7b5', 4), ('E:7b9', 4),
                ('D:m9', 4), ('G:13', 4), ('C:maj7', 4), ('F:maj7', 4), ('B:m7b5', 4), ('E:7b9', 4), ('A:m9', 2), ('F:maj7', 2), ('B:m7b5', 2), ('E:7b9', 2)]),
+    # ---- Tết Tây (27/12 → 3/1): tươi sáng, nhanh hơn, chuông lấp lánh ----
+    dict(id='newyear-phao-hoa', name='Pháo hoa', bpm=140, lead='vibes', range=(65, 84), sparkle='glock',
+         prog=[('C:maj9', 4), ('A:m9', 4), ('D:m9', 4), ('G:13', 4), ('E:m7', 4), ('A:7b9', 4), ('D:m9', 4), ('G:13', 4),
+               ('F:maj7', 4), ('F:m6', 4), ('E:m7', 4), ('A:7b9', 4), ('D:m9', 4), ('G:13', 4), ('C:69', 2), ('A:7b9', 2), ('D:m9', 2), ('G:13', 2)]),
+    dict(id='newyear-dem-giao-thua', name='Đêm giao thừa', bpm=134, lead='flute', range=(64, 82), sparkle='glock',
+         prog=[('Bb:maj7', 4), ('G:m9', 4), ('C:m9', 4), ('F:13', 4), ('D:m7', 4), ('G:7b9', 4), ('C:m9', 4), ('F:13', 4),
+               ('Eb:maj7', 4), ('Eb:m6', 4), ('D:m7', 4), ('G:7b9', 4), ('C:m9', 4), ('F:13', 4), ('Bb:69', 2), ('G:7b9', 2), ('C:m9', 2), ('F:13', 2)]),
+    # ---- Tết Nguyên Đán (đếm ngược + Tết): giai điệu ngũ cung, đàn tranh + sáo ----
+    dict(id='tet-xuan-ve', name='Xuân về', bpm=118, lead='tranh', range=(62, 81), scale=[0, 2, 4, 7, 9], sparkle='tranh',
+         prog=[('C:69', 4), ('A:m7', 4), ('D:m7', 4), ('G:9', 4), ('C:69', 4), ('E:m7', 4), ('F:maj7', 4), ('G:9', 4),
+               ('A:m7', 4), ('E:m7', 4), ('F:maj7', 4), ('C:69', 4), ('D:m7', 4), ('G:9', 4), ('C:69', 2), ('A:m7', 2), ('D:m7', 2), ('G:9', 2)]),
+    dict(id='tet-mai-vang', name='Mai vàng', bpm=124, lead='flute', range=(64, 84), scale=[7, 9, 11, 2, 4], sparkle='tranh',
+         prog=[('G:69', 4), ('E:m7', 4), ('A:m7', 4), ('D:9', 4), ('G:69', 4), ('B:m7', 4), ('C:maj7', 4), ('D:9', 4),
+               ('E:m7', 4), ('B:m7', 4), ('C:maj7', 4), ('G:69', 4), ('A:m7', 4), ('D:9', 4), ('G:69', 2), ('E:m7', 2), ('A:m7', 2), ('D:9', 2)]),
 ]
 
 

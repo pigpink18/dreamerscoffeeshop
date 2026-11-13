@@ -1,12 +1,12 @@
 // Âm thanh: hiệu ứng tự tổng hợp bằng Web Audio + nhạc nền CC0 (Abstraction / Tallbeard Studios)
 import { reactive, watch } from 'vue'
-import { isXmasSeason } from './season'
+import { season } from './season'
 import { L } from './i18n'
 
 const KEY = 'dreamers-audio'
 // Nhạc nền trong quán: 5 vòng bossa nova nhẹ nhàng sáng tác riêng cho game (tools/bossa.py), phát luân phiên.
 // Nhạc khi boss tới: mặc định "Hồi hộp nhẹ" (tools/bossa.py, giọng thứ + tích tắc) hoặc "Out of Time" — Abstraction / Tallbeard (CC0, kịch tính)
-export type TrackId = 'lastXmas' | 'feliz' | 'somMai' | 'muaPhun' | 'hemNho' | 'chieuHien' | 'lyDenDa' | 'boss' | 'bossSoft' | 'report'
+export type TrackId = 'lastXmas' | 'feliz' | 'phaoHoa' | 'giaoThua' | 'xuanVe' | 'maiVang' | 'somMai' | 'muaPhun' | 'hemNho' | 'chieuHien' | 'lyDenDa' | 'boss' | 'bossSoft' | 'report'
 export type TrackChoice = Exclude<TrackId, 'boss' | 'bossSoft' | 'report'> | 'auto'
 export type BossMusic = 'soft' | 'drama' | 'off'
 export const BOSS_MUSIC_LIST: { id: BossMusic; name: string; desc: string }[] = [
@@ -19,6 +19,10 @@ const isBossTrack = (id: TrackId) => id === 'boss' || id === 'bossSoft'
 export const MUSIC_FILES: Record<TrackId, string> = {
   lastXmas: 'BOSSANOVAPOPLastChristmas', // file do chủ game thêm
   feliz: 'BOSSANOVAFelizNavidad', // file do chủ game thêm
+  phaoHoa: 'newyear-phao-hoa', // Tết Tây (tools/bossa.py)
+  giaoThua: 'newyear-dem-giao-thua',
+  xuanVe: 'tet-xuan-ve', // Tết Nguyên Đán: ngũ cung, đàn tranh + sáo (tools/bossa.py)
+  maiVang: 'tet-mai-vang',
   somMai: 'bossa-som-mai',
   muaPhun: 'bossa-mua-phun',
   hemNho: 'bossa-hem-nho',
@@ -29,16 +33,27 @@ export const MUSIC_FILES: Record<TrackId, string> = {
   report: 'mappy', // nhạc màn tổng kết cuối ngày – file thật chọn trong Cài đặt (audio.reportTrack)
 }
 /** Thứ tự phát luân phiên */
-const ALL_TRACKS: TrackId[] = ['lastXmas', 'feliz', 'somMai', 'muaPhun', 'hemNho', 'chieuHien', 'lyDenDa']
-/** nhạc Giáng Sinh chỉ phát trong mùa Noel (season.ts) */
-const XMAS_TRACKS: TrackId[] = ['lastXmas', 'feliz']
-const PLAYLIST: TrackId[] = isXmasSeason() ? ALL_TRACKS : ALL_TRACKS.filter((t) => !XMAS_TRACKS.includes(t))
+const BASE_TRACKS: TrackId[] = ['somMai', 'muaPhun', 'hemNho', 'chieuHien', 'lyDenDa']
+/** nhạc theo mùa (season.ts – tính theo ngày thật): phát mở đầu danh sách, hết mùa tự rút khỏi danh sách */
+const SEASON_TRACKS: Record<string, TrackId[]> = {
+  xmas: ['lastXmas', 'feliz'], // Giáng Sinh 10/11 → 26/12
+  newyear: ['phaoHoa', 'giaoThua'], // Tết Tây 27/12 → 3/1
+  tetwait: ['xuanVe', 'maiVang'], // đếm ngược Tết
+  tet: ['xuanVe', 'maiVang'], // mùng 1 → mùng 7
+}
+const SEASONAL: TrackId[] = SEASON_TRACKS[season() ?? ''] ?? []
+const PLAYLIST: TrackId[] = [...SEASONAL, ...BASE_TRACKS]
+const SEASON_NAME = { xmas: L('Giáng sinh', 'Christmas'), newyear: L('Tết Tây', 'New Year'), tetwait: L('Tết', 'Lunar New Year'), tet: L('Tết', 'Lunar New Year') } as Record<string, string>
 /** Mỗi bài lặp mấy vòng (~1 phút/vòng) rồi chuyển bài kế tiếp */
 const LOOPS_PER_TRACK = 2
 const ALL_TRACK_LIST: { id: TrackChoice; name: string; icon: string; desc: string }[] = [
-  { id: 'auto', name: L('Phát luân phiên', 'Shuffle all'), icon: '', desc: isXmasSeason() ? L('7 bài bossa nova lần lượt, mở đầu bằng 2 bài Giáng sinh', '7 bossa nova tunes in turn, starting with 2 Christmas songs') : L('5 bài bossa nova lần lượt', '5 bossa nova tunes in turn') },
+  { id: 'auto', name: L('Phát luân phiên', 'Shuffle all'), icon: '', desc: SEASONAL.length ? L(`${PLAYLIST.length} bài lần lượt, mở đầu bằng ${SEASONAL.length} bài ${SEASON_NAME[season()!]}`, `${PLAYLIST.length} tunes in turn, starting with ${SEASONAL.length} ${SEASON_NAME[season()!]} songs`) : L('5 bài bossa nova lần lượt', '5 bossa nova tunes in turn') },
   { id: 'lastXmas', name: 'Last Christmas (bossa)', icon: '', desc: L('Bossa pop Giáng sinh', 'Christmas bossa pop') },
   { id: 'feliz', name: 'Feliz Navidad (bossa)', icon: '', desc: L('Bossa Giáng sinh vui tươi', 'Cheerful Christmas bossa') },
+  { id: 'phaoHoa', name: L('Pháo hoa', 'Fireworks'), icon: '', desc: L('Tết Tây: vibraphone + chuông lấp lánh', 'New Year: vibraphone & sparkling bells') },
+  { id: 'giaoThua', name: L('Đêm giao thừa', "New Year's Eve"), icon: '', desc: L('Tết Tây: sáo + chuông, rộn ràng', 'New Year: flute & bells, upbeat') },
+  { id: 'xuanVe', name: L('Xuân về', 'Spring Is Here'), icon: '', desc: L('Tết: đàn tranh ngũ cung', 'Tết: pentatonic zither (đàn tranh)') },
+  { id: 'maiVang', name: L('Mai vàng', 'Golden Blossoms'), icon: '', desc: L('Tết: sáo ngũ cung + đàn tranh', 'Tết: pentatonic flute & zither') },
   { id: 'somMai', name: L('Sớm mai', 'Early Morning'), icon: '', desc: L('Bossa sáng sớm, sáo nhẹ', 'Morning bossa, soft flute') },
   { id: 'muaPhun', name: L('Mưa phùn', 'Drizzle'), icon: '', desc: L('Chậm, vibraphone êm', 'Slow, mellow vibraphone') },
   { id: 'hemNho', name: L('Hẻm nhỏ', 'Little Alley'), icon: '', desc: L('Rhodes ấm, hơi jazz', 'Warm Rhodes, a little jazzy') },
@@ -285,10 +300,10 @@ function loadTrack(id: TrackId): Promise<AudioBuffer | null> {
   const key = id === 'report' ? `report:${file}` : id
   if (buffers[key]) return Promise.resolve(buffers[key]!)
   if (!loading[key]) {
-    const url = `${base}assets/music/${file}.${canOgg ? 'ogg' : 'm4a'}`
-    loading[key] = fetch(url)
-      .then((r) => r.arrayBuffer())
-      .then((ab) => ctx!.decodeAudioData(ab))
+    const url = (ext: string) => `${base}assets/music/${file}.${ext}`
+    // ưu tiên .ogg nếu trình duyệt hỗ trợ; bài chỉ có .m4a (nhạc mùa mới) → tự lấy .m4a
+    const get = (ext: string) => fetch(url(ext)).then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.arrayBuffer() }).then((ab) => ctx!.decodeAudioData(ab))
+    loading[key] = (canOgg ? get('ogg').catch(() => get('m4a')) : get('m4a'))
       .then((b) => { buffers[key] = b; return b })
       .catch(() => null)
   }
