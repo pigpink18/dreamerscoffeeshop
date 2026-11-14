@@ -22,7 +22,7 @@ import {
 import { season } from '../game/season'
 import { drawCenterpiece, drawDao, drawSeasonCeiling, drawSeasonWallTop } from '../game/seasonArt'
 import { drawCeiling, drawFloor, drawFloorProps, drawSideWalls, drawCounterWings } from '../game/depth'
-import { foodById, type FoodId } from '../game/kitchen'
+import { foodById, kitchenOpen, type FoodId } from '../game/kitchen'
 import { drawRoomMid, drawRoomBig, drawCounterMid, drawCounterBig, drawStools, drawDecorItems, drawSouvenirShelf } from '../game/rooms'
 import { rareById, GOODS } from '../game/metaData'
 import { L } from '../game/i18n'
@@ -657,7 +657,7 @@ const bubbleStyle = computed(() => {
         <div class="who" :class="whoKind">{{ who }}</div>
         <div class="txt" :class="{ hurry: cur.line && cur.patience / cur.maxPatience < 0.5 && !talkHere }"><TypeText ref="typer" :text="bubbleText" :pitch="voice" :instant="lineInstant" @done="onTyped" /></div>
         <div v-if="cur.addon" class="addon" :class="{ done: cur.addonDone }"><img :src="iconUrl(cur.addon)" alt="" /><span>{{ cur.addonDone ? L('Đã trao', 'Given') : L('Kèm', 'Plus') }}: <b>{{ goodName(cur.addon) }}</b></span></div>
-        <div v-if="cur.food" class="addon food"><img :src="iconUrl(cur.food)" alt="" /><span>{{ L('Món bếp', 'Food') }}: <b>{{ foodById[cur.food as FoodId]?.name }}</b></span></div>
+        <div v-if="cur.food && kitchenOpen()" class="addon food"><img :src="iconUrl(cur.food)" alt="" /><span>{{ L('Món bếp', 'Food') }}: <b>{{ foodById[cur.food as FoodId]?.name }}</b></span></div>
         <div v-if="brewingHere" class="order"><PixelIcon name="menu" :size="2" /> {{ recipeById[cur.recipe].name }}</div>
         <div v-else-if="talkHere?.mode === 'chat'" class="choices">
           <button v-for="(r, i) in talkHere.topic!.replies" :key="i" :class="{ sassy: r.sassy }" @click="talkReply(i)"><PixelIcon :name="r.sassy ? 'megaphone' : 'chat'" :size="2" /> <span v-if="r.sassy" class="sass">{{ L('XÉO SẮC', 'SASSY') }}</span> {{ noEmoji(r.text) }}</button>

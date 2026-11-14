@@ -6,13 +6,20 @@ import { iconUrl } from '../game/pixel'
 import { knownIngredients, GOODS, goodUnlocked, goodsStock, buyGoods } from '../game/meta'
 import PixelIcon from './ui/PixelIcon.vue'
 import { L } from '../game/i18n'
-import { FOOD_INGS, foodStock, buyFoodPack, kitchenOpen, unlockKitchen, KITCHEN_COST } from '../game/kitchen'
+import { FOOD_INGS, foodStock, buyFoodPack, kitchenOpen, unlockKitchen, KITCHEN_COST, foodsOut, foodById, type FoodIng } from '../game/kitchen'
 
 const groups = computed(() => [
   { kind: 'souvenir', title: L('Đồ gốm & lưu niệm', 'Pottery & souvenirs'), lock: L('Thuê Quán gác gỗ đồi thông (Nâng cấp › Mặt bằng) để mở kệ lưu niệm', 'Rent the Pine Hill Wooden Loft (Upgrades › Premises) to open the souvenir shelf'), note: L('Khách mua kèm khi gọi nước. Không hư, để lâu được.', "Guests add these to their drink order. They never spoil." ) },
   { kind: 'bakery', title: L('Tủ bánh', 'Pastry case'), lock: L('Thuê Dreamers Flagship để mở tủ bánh', 'Rent Dreamers Flagship to open the pastry case'), note: L('Bánh tươi chỉ bán trong ngày – cuối ngày còn dư sẽ phải bỏ.', "Fresh pastries only last the day – leftovers get tossed at closing.") },
 ].map((g) => ({ ...g, open: GOODS.some((x) => x.kind === g.kind && goodUnlocked(x, save.meta.premise)), items: GOODS.filter((x) => x.kind === g.kind) })))
 
+/** nguyên liệu bếp đang thiếu (món nào không nấu được vì thiếu thứ này) */
+const outFoods = computed(() => foodsOut())
+const missingIng = computed(() => {
+  const set = new Set<FoodIng>()
+  for (const f of outFoods.value) for (const st of foodById[f.id].steps) { const i = FOOD_INGS.find((x) => x.id === st); if (i && foodStock(i.id) < foodById[f.id].steps.filter((x) => x === st).length) set.add(i.id) }
+  return set
+})
 const SECRET_ING = new Set<IngredientId>(['dua', 'trung', 'cacao'])
 
 const used = computed(() => {
@@ -50,14 +57,18 @@ const sorted = computed(() => INGREDIENTS.filter((i) => !SECRET_ING.has(i.id) ||
       <PixelIcon name="lock" :size="3" /><span class="muted small grow">{{ L('Mở khu bếp để bán bánh mì chảo, mì trộn cay, waffle (khi đang bán: vuốt sang trang thứ 3).', 'Open the kitchen to sell sizzling bánh mì, spicy noodles and waffles (while open: swipe to the 3rd screen).') }}</span>
       <button class="btn sm accent" :disabled="save.money < KITCHEN_COST" @click="unlockKitchen">{{ L('MỞ', 'OPEN') }} · {{ moneyShort(KITCHEN_COST) }}</button>
     </div>
-    <div v-else class="list">
-      <div v-for="i in FOOD_INGS" :key="i.id" class="card ing">
+    <div v-else-if="outFoods.length" class="card warnbox">
+      <PixelIcon name="crate" :size="3" />
+      <span class="small grow"><b>{{ L('Bếp hết nguyên liệu!', 'Kitchen is out of ingredients!') }}</b> {{ L('Không nấu được', "Can't cook") }}: {{ outFoods.map((f) => f.name).join(', ') }}. {{ L('Nhập thêm các món đang nhấp nháy đỏ bên dưới.', 'Restock the items flashing red below.') }}</span>
+    </div>
+    <div v-if="kitchenOpen()" class="list">
+      <div v-for="i in FOOD_INGS" :key="i.id" class="card ing" :class="{ miss: missingIng.has(i.id) }">
         <span class="slot"><img :src="iconUrl(i.id)" class="pix ic" alt="" /></span>
         <div class="grow">
           <div class="name">{{ i.name }}</div>
           <div class="muted small">{{ L(`Gói ${i.packSize} phần`, `Pack of ${i.packSize}`) }} · {{ moneyShort(i.packPrice) }}</div>
         </div>
-        <div class="qty" :class="{ low: foodStock(i.id) < 4 }"><small>{{ L('KHO', 'STOCK') }}</small>{{ foodStock(i.id) }}</div>
+        <div class="qty" :class="{ low: foodStock(i.id) < 4 || missingIng.has(i.id) }"><small>{{ L('KHO', 'STOCK') }}</small>{{ foodStock(i.id) }}</div>
         <div class="btns">
           <button class="btn sm accent" :disabled="save.money < i.packPrice" @click="buyFoodPack(i.id)">+1</button>
           <button class="btn sm ghost" :disabled="save.money < i.packPrice * 3" @click="buyFoodPack(i.id, 3)">+3</button>
@@ -100,6 +111,8 @@ const sorted = computed(() => INGREDIENTS.filter((i) => !SECRET_ING.has(i.id) ||
 .small { font-size: 12px; }
 .qty { display: flex; flex-direction: column; align-items: center; font-size: 18px; font-weight: 900; min-width: 40px; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .qty small { font-size: 8px; letter-spacing: 0.1em; color: #a9744f; }
+.warnbox { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; background: #fdecea; box-shadow: var(--px-border-2), inset 0 -3px 0 #f3c9c4; color: #8a2b22; }
+.ing.miss { box-shadow: 0 0 0 3px var(--bad), inset 0 -3px 0 #f3c9c4; }
 .qty.low { color: var(--bad); animation: lowBlink 1s steps(2) infinite; }
 @keyframes lowBlink { 50% { opacity: 0.5; } }
 .btns { display: flex; gap: 8px; }

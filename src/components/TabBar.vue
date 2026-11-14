@@ -4,8 +4,9 @@ import { ui, save, canMake, vibrate, type Tab } from '../game/store'
 import { isContestDay } from '../game/meta'
 import PixelIcon from './ui/PixelIcon.vue'
 import { L } from '../game/i18n'
+import { foodsOut } from '../game/kitchen'
 
-const lowStock = computed(() => !save.unlocked.some((r) => canMake(r)) || save.unlocked.some((r) => !canMake(r)))
+const lowStock = computed(() => !save.unlocked.some((r) => canMake(r)) || save.unlocked.some((r) => !canMake(r)) || foodsOut().length > 0) // hết nguyên liệu pha chế hoặc nguyên liệu bếp
 
 const questsLeft = computed(() => save.meta.quests.list.some((q) => !q.done) && ui.phase !== 'open')
 const tabs: { id: Tab; icon: string; label: string }[] = [

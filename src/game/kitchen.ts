@@ -64,6 +64,23 @@ export const FOODS: Food[] = [
   waffle('waffleLaDua', L('Waffle lá dứa', 'Pandan waffle'), 'laDua', 35_000, '#7fb34d'),
 ]
 export const foodById = Object.fromEntries(FOODS.map((f) => [f.id, f])) as Record<FoodId, Food>
+
+// ---- giá bán món bếp (chủ quán chỉnh ở Menu › Món bếp) ----
+export const foodPrice = (id: FoodId) => save.kitchen?.prices?.[id] ?? foodById[id].price
+export function setFoodPrice(id: FoodId, price: number) {
+  if (!save.kitchen.prices) save.kitchen.prices = {}
+  save.kitchen.prices[id] = Math.min(150_000, Math.max(10_000, Math.round(price / 1000) * 1000))
+}
+/** vốn nguyên liệu 1 phần món */
+export function foodCost(id: FoodId) {
+  let c = 0
+  for (const s of foodById[id].steps) { const i = FOOD_INGS.find((x) => x.id === s); if (i) c += i.packPrice / i.packSize }
+  return Math.round(c)
+}
+/** giá so với giá đề xuất: >1 đắt (khách ít gọi kèm hơn), <1 rẻ (khách gọi nhiều hơn) */
+export const foodRatio = (id: FoodId) => foodPrice(id) / foodById[id].price
+/** món nào đang thiếu nguyên liệu (không nấu được) */
+export const foodsOut = () => (kitchenOpen() ? FOODS.filter((f) => !canCook(f.id)) : [])
 export const KITCHEN_COST = 500_000
 const ACTS: KAct[] = ['chien', 'luoc', 'tron', 'nuong']
 export const KITCHEN_ACTIONS = ACTS
@@ -230,9 +247,10 @@ function serveFood() {
   const f = foodById[ck.food]
   const perfect = ck.mistakes === 0
   const fast = tk.t / tk.max > 0.5
-  const tip = perfect ? Math.max(3_000, Math.round((f.price * (fast ? 0.2 : 0.12)) / 1000) * 1000) : 0
-  const combo = perfect ? comboUp(f.price) : (breakCombo(), 0)
-  const money = f.price + tip + combo
+  const price = foodPrice(f.id)
+  const tip = perfect ? Math.max(3_000, Math.round((price * (fast ? 0.2 : 0.12)) / 1000) * 1000) : 0
+  const combo = perfect ? comboUp(price) : (breakCombo(), 0)
+  const money = price + tip + combo
   save.money += money
   ui.stats.revenue += money
   ui.stats.tips += tip
@@ -240,7 +258,7 @@ function serveFood() {
   ui.stats.foodSold = (ui.stats.foodSold ?? 0) + 1
   if (combo) ui.stats.comboBonus = (ui.stats.comboBonus ?? 0) + combo
   changeRep(perfect ? (fast ? 0.8 : 0.5) : 0.1)
-  kitchen.served = { food: f.id, perfect, money: f.price, tip, combo, at: performance.now() }
+  kitchen.served = { food: f.id, perfect, money: price, tip, combo, at: performance.now() }
   sfx('done'); setTimeout(() => sfx('coin'), 200)
   toast(`${perfect ? '⭐ ' : ''}${tk.name}: “${pick(perfect ? GOOD_LINES : MEH_LINES).replace('{f}', f.name.toLowerCase())}”`, perfect ? 'good' : 'info', 2400)
 }
@@ -256,6 +274,9 @@ export function initKitchen() {
     if (!kitchenOpen() || kitchen.tickets.length >= MAX_TICKETS) return null
     if (Math.random() > 0.33 + 0.05 * save.meta.premise) return null
     const food = pick(FOODS).id
+    // giá: đắt hơn đề xuất → khách hay bỏ không gọi kèm; rẻ hơn → gần như luôn gọi
+    const r = foodRatio(food)
+    if (r > 1 && Math.random() < Math.min(0.9, (r - 1) * 1.6)) { ui.stats.foodSkipped = (ui.stats.foodSkipped ?? 0) + 1; return null }
     const max = 80 * (1 + 0.1 * save.upgrades.decor)
     kitchen.tickets.push({ id: tid++, name, food, t: max, max })
     return food

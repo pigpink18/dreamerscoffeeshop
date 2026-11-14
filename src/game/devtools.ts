@@ -1,7 +1,6 @@
 // Lối tắt khi chạy LOCAL (npm run dev) – không có trong bản build.
-//   http://localhost:5173/            → MẶC ĐỊNH như ?dev=bep (chạy local là vào thẳng bếp)
-//   http://localhost:5173/?dev=off    → chơi bình thường từ đầu (không can thiệp)
-//   http://localhost:5173/?dev=bep    → bỏ qua mở đầu/hướng dẫn, mở ca bán, mở khoá bếp, đủ nguyên liệu,
+//   http://localhost:5173/            → MẶC ĐỊNH chơi bình thường như bản thật (bếp khoá, phải trả 500k mới mở)
+//   http://localhost:5173/?dev=bep    → [chỉ để thử bếp] bỏ qua mở đầu/hướng dẫn, mở ca bán, mở khoá bếp, đủ nguyên liệu,
 //                                        mỗi món 1 phiếu đơn (chờ rất lâu), chuyển thẳng sang trang Bếp
 //   thêm &staff=1                      → có nhân viên lo quầy nước (bạn chỉ nấu)
 // Trong console: dev.ticket('waffleDau') · dev.tickets() · dev.stock() · dev.money(1e6)
@@ -25,7 +24,7 @@ function tickets() { for (const f of FOODS) ticket(f.id, f.name.split(' ')[0] + 
 export function devBoot() {
   const q = new URLSearchParams(location.search)
   ;(window as any).dev = { ticket, tickets, stock, money: (n: number) => { save.money = n }, save, ui, kitchen }
-  if ((q.get('dev') ?? 'bep') !== 'bep') return
+  if (q.get('dev') !== 'bep') return // mặc định: không can thiệp gì (giống bản thật)
   save.introSeen = true
   save.tutDone = true
   // các chương truyện tới hôm nay coi như đã xem (không bật cảnh truyện chen ngang)

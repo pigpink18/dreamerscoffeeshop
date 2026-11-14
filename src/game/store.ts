@@ -11,7 +11,7 @@ import { voice, voiceTopic, type Gender, type Persona } from './voice'
 import { sfx, comboSfx, setDayFrac, setReportMode, preloadReport, audio } from './audio'
 import { isXmasSeason, season, SEASON } from './season'
 import { HAT_STYLES } from './pixel'
-import type { FoodIng } from './kitchen'
+import type { FoodIng, FoodId } from './kitchen'
 import { hooks, type MetaDayResult } from './hooks'
 import { PREMISES, rareById, newMeta, RIVALS, type MetaSave } from './metaData'
 
@@ -57,7 +57,7 @@ export interface SaveData {
   loans: number // số lần đã vay
   tutDone: boolean // đã qua màn hướng dẫn ly đầu tiên
   events: Record<string, boolean> // sự kiện theo mùa đã mở (để chỉ tặng quà 1 lần)
-  kitchen: { open: boolean; stock: Partial<Record<FoodIng, number>> } // khu bếp (kitchen.ts)
+  kitchen: { open: boolean; stock: Partial<Record<FoodIng, number>>; prices?: Partial<Record<FoodId, number>> } // khu bếp (kitchen.ts) · prices: giá bán món bếp do chủ quán chỉnh
 }
 
 export interface StorySave {
@@ -207,6 +207,7 @@ export interface DayStats {
   foodRev?: number // doanh thu khu bếp (gồm tip + combo)
   foodSold?: number
   foodLost?: number // phiếu bếp bị huỷ vì chờ lâu
+  foodSkipped?: number // khách không gọi món bếp vì giá đắt
 }
 
 /** Người cho vay khi quán hết tiền: mẹ (không lấy lãi, 2 lần đầu) → Bà Tư chủ nhà (lãi 10%) */

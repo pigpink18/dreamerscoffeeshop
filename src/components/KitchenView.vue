@@ -12,6 +12,7 @@ import { CAST } from '../game/story'
 import {
   kitchen, kitchenOpen, unlockKitchen, startCook, cookStep, trashCook, foodById, foodStock, canCook,
   KSTEPS, KITCHEN_COST, FOODS, finishMini, type KStep, type FoodIng,
+  foodPrice,
 } from '../game/kitchen'
 import PixelIcon from './ui/PixelIcon.vue'
 import PixelNum from './ui/PixelNum.vue'
@@ -36,7 +37,7 @@ const menuCards = computed(() => FOODS.map((f) => {
   for (const st of f.steps) if (KSTEPS[st].kind === 'ing') need[st] = (need[st] ?? 0) + 1
   const can = Math.min(...Object.entries(need).map(([id, n]) => Math.floor(foodStock(id as FoodIng) / n)))
   const tks = kitchen.tickets.filter((t) => t.food === f.id)
-  return { id: f.id, name: f.name, price: f.price, can, wait: tks.length, ticket: tks[0]?.id ?? 0 }
+  return { id: f.id, name: f.name, price: foodPrice(f.id), can, wait: tks.length, ticket: tks[0]?.id ?? 0 }
 }))
 // bàn nấu: dụng cụ + thao tác của món, xếp ĐÚNG THỨ TỰ LÀM (đọc trái → phải là ra quy trình); nguyên liệu Yến tự bỏ
 const ops = computed(() => {
@@ -575,7 +576,7 @@ const waiting = computed(() => ui.queue.length)
       </div>
     </template>
     <div v-else class="menu-preview">
-      <div v-for="f in FOODS" :key="f.id" class="mp"><img :src="iconUrl(f.id)" class="pix" alt="" /><span>{{ f.name }}<small>{{ moneyShort(f.price) }}</small></span></div>
+      <div v-for="f in FOODS" :key="f.id" class="mp"><img :src="iconUrl(f.id)" class="pix" alt="" /><span>{{ f.name }}<small>{{ moneyShort(foodPrice(f.id)) }}</small></span></div>
     </div>
   </div>
 </template>

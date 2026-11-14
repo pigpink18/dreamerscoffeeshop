@@ -7,8 +7,11 @@ import PixelIcon from './ui/PixelIcon.vue'
 import LabPanel from './meta/LabPanel.vue'
 import { computed, ref } from 'vue'
 import { L } from '../game/i18n'
+import { FOODS, KSTEPS, foodPrice, setFoodPrice, foodCost, foodRatio, kitchenOpen, KITCHEN_COST, unlockKitchen, type FoodId, type KStep } from '../game/kitchen'
 
-const seg = ref<'menu' | 'lab'>('menu')
+const seg = ref<'menu' | 'food' | 'lab'>('menu')
+function stepFood(id: FoodId, d: number) { setFoodPrice(id, foodPrice(id) + d); vibrate(5) }
+const kImg = (s: KStep) => iconUrl(s)
 const LIST = computed(() => RECIPES.filter((r) => !r.secret || save.unlocked.includes(r.id)))
 const normalCount = RECIPES.filter((r) => !r.secret).length
 
@@ -32,9 +35,41 @@ function priceLabel(r: number) {
   <div>
     <div class="segs">
       <button :class="{ on: seg === 'menu' }" @click="seg = 'menu'">{{ L('Menu & giá', 'Menu & prices') }}</button>
+      <button :class="{ on: seg === 'food' }" @click="seg = 'food'">{{ L('Món bếp', 'Kitchen') }}</button>
       <button :class="{ on: seg === 'lab' }" @click="seg = 'lab'">{{ L('Phòng thử món', 'Test kitchen') }}<span v-if="save.meta.hints.length" class="dotn">{{ save.meta.hints.length }}</span></button>
     </div>
     <LabPanel v-if="seg === 'lab'" />
+    <template v-else-if="seg === 'food'">
+      <div class="section-title" style="margin-top: 4px">{{ L('Giá món bếp', 'Kitchen prices') }}</div>
+      <div v-if="!kitchenOpen()" class="card klock">
+        <PixelIcon name="lock" :size="3" />
+        <span class="muted small grow">{{ L('Khu bếp chưa mở. Mở bếp để bán bánh mì chảo, mì trộn cay, waffle và chỉnh giá ở đây.', 'The kitchen is closed. Open it to sell skillet bánh mì, spicy noodles and waffles, and set their prices here.') }}</span>
+        <button class="btn sm accent" :disabled="save.money < KITCHEN_COST" @click="unlockKitchen">{{ L('MỞ', 'OPEN') }} · {{ moneyShort(KITCHEN_COST) }}</button>
+      </div>
+      <div class="list" :class="{ dim: !kitchenOpen() }">
+        <div v-for="f in FOODS" :key="f.id" class="card rec">
+          <div class="row">
+            <span class="slot"><img :src="iconUrl(f.id)" class="fic" alt="" /></span>
+            <div class="grow">
+              <div class="name">{{ f.name }}</div>
+              <div class="needs">
+                <span v-for="(s, i) in f.steps" :key="i" class="st"><img :src="kImg(s)" :title="KSTEPS[s].label" alt="" /><i v-if="i < f.steps.length - 1">›</i></span>
+              </div>
+            </div>
+            <span class="pxtag" :class="priceLabel(foodRatio(f.id)).c">{{ priceLabel(foodRatio(f.id)).t }}</span>
+          </div>
+          <div class="price-row">
+            <button class="btn sm ghost step" :disabled="!kitchenOpen()" @click="stepFood(f.id, -1000)">−</button>
+            <div class="price">
+              <b class="pr">{{ moneyShort(foodPrice(f.id)) }}</b>
+              <span class="muted">{{ L('vốn', 'cost') }} {{ moneyShort(foodCost(f.id)) }} · {{ L('lời', 'profit') }} {{ moneyShort(foodPrice(f.id) - foodCost(f.id)) }} · {{ L('đề xuất', 'suggested') }} {{ moneyShort(f.price) }}</span>
+            </div>
+            <button class="btn sm ghost step" :disabled="!kitchenOpen()" @click="stepFood(f.id, 1000)">+</button>
+          </div>
+        </div>
+      </div>
+      <p class="muted note">{{ L('Giá cao hơn đề xuất: khách ít gọi kèm món bếp hơn. Giá rẻ: khách gọi nhiều, lời mỗi món ít hơn.', 'Above the suggested price, fewer guests add food to their order. Cheaper means more orders but less profit each.') }}</p>
+    </template>
     <template v-else>
     <div class="section-title" style="margin-top: 4px">{{ L('Giá bán & công thức', 'Prices & recipes') }} · {{ save.unlocked.length }}/{{ normalCount + save.meta.secrets.length }} {{ L('món', 'drinks') }}</div>
     <div class="list">
@@ -79,6 +114,9 @@ function priceLabel(r: number) {
 
 <style scoped>
 .list { display: flex; flex-direction: column; gap: 14px; }
+.list.dim { opacity: 0.55; }
+.klock { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.fic { width: 40px; height: 40px; image-rendering: pixelated; }
 .rec.locked { background: #f4ebe0; }
 .slot { position: relative; width: 48px; height: 52px; flex: none; display: flex; align-items: center; justify-content: center; background: #f1e2cf; box-shadow: var(--px-border-2), inset 0 -3px 0 #e0c8a8; }
 .lk { position: absolute; right: -4px; bottom: -4px; }
