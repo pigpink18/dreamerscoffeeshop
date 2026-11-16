@@ -31,6 +31,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+        globIgnores: ['qr/**'], // poster QR để in – không cần tải sẵn vào máy
         // nhạc nền: tải khi cần rồi lưu cache để chơi offline
         runtimeCaching: [
           {

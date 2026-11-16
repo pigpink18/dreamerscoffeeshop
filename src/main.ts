@@ -15,6 +15,7 @@ initKitchen()
 const app = createApp(App)
 app.config.errorHandler = (err, _vm, info) => { console.error(err); showError(`${info}: ${(err as Error)?.stack || err}`) }
 app.mount('#app')
+try { sessionStorage.removeItem('dc-heal') } catch { /* bỏ qua */ } // game đã hiện → lần sau lỗi trắng màn vẫn tự sửa được
 // chạy local: ?dev=bep vào thẳng bếp (src/game/devtools.ts) – bản build bỏ hẳn đoạn này
 if (import.meta.env.DEV) import('./game/devtools').then((m) => m.devBoot())
 

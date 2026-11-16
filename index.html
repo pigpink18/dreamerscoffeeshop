@@ -28,9 +28,31 @@
       window.addEventListener('error', function (e) { if (/ResizeObserver loop/.test(e.message || '')) return; window.__showErr(e.message + ' @ ' + String(e.filename || '').split('/').pop() + ':' + e.lineno + ':' + e.colno) })
       window.addEventListener('unhandledrejection', function (e) { window.__showErr('Promise: ' + String((e.reason && e.reason.stack) || e.reason)) })
     </script>
+    <style>html,body{margin:0;background:#2a1b12;height:100%}#boot{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#ffe8b8;font:700 14px/1.5 -apple-system,sans-serif;text-align:center;padding:24px}#boot b{letter-spacing:.2em;color:#ffd77a}#boot button{font:900 14px -apple-system,sans-serif;padding:10px 18px;background:#f2c14e;color:#3b2a20;border:0;box-shadow:0 0 0 3px #261c1b}</style>
   </head>
   <body>
     <div id="app"></div>
+    <script>
+      // Chống màn hình trắng: iPhone đôi khi giữ bản cũ của game trỏ tới file đã bị thay khi cập nhật.
+      // Sau 7 giây mà game chưa hiện → tự xoá bộ nhớ tạm cũ và tải lại 1 lần; vẫn không được thì hiện nút tải lại.
+      setTimeout(function () {
+        var app = document.getElementById('app')
+        if (app && app.children.length) return
+        var tried = false
+        try { tried = sessionStorage.getItem('dc-heal') === '1'; sessionStorage.setItem('dc-heal', '1') } catch (e) {}
+        function wipe() {
+          var jobs = []
+          try { if (navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister() })) })) } catch (e) {}
+          try { if (window.caches) jobs.push(caches.keys().then(function (ks) { return Promise.all(ks.filter(function (k) { return k !== 'dreamers-music' }).map(function (k) { return caches.delete(k) })) })) } catch (e) {}
+          return Promise.all(jobs).catch(function () {})
+        }
+        if (!tried) { wipe().then(function () { location.reload() }); return }
+        var box = document.createElement('div'); box.id = 'boot'
+        box.innerHTML = '<b>DREAMERS COFFEE</b><span>Game đang cập nhật bản mới.<br>The game is updating.</span><button>TẢI LẠI · RELOAD</button>'
+        box.querySelector('button').onclick = function () { try { sessionStorage.removeItem('dc-heal') } catch (e) {} wipe().then(function () { location.reload() }) }
+        document.body.appendChild(box)
+      }, 7000)
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
