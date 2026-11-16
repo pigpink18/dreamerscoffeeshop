@@ -17,12 +17,11 @@ import StoryScene from './components/StoryScene.vue'
 import { pendingChapter } from './game/story'
 import WelcomeQR from './components/WelcomeQR.vue'
 
-// khách quét mã QR tại quán (đường dẫn có ?qr): màn chào mừng – chỉ hiện 1 lần trên mỗi máy (?qr=again để xem lại)
+// màn chào mừng (Cáo chào khách, giới thiệu pigpink18): hiện lần đầu mở game trên mỗi máy – link thường hay quét QR đều thấy
+// (?qr=again để xem lại)
 function wantWelcome() {
   try {
-    const q = new URLSearchParams(location.search).get('qr')
-    if (q === null) return false
-    if (q === 'again') return true
+    if (new URLSearchParams(location.search).get('qr') === 'again') return true
     return localStorage.getItem('dc-qr-welcome') !== '1'
   } catch { return false }
 }
