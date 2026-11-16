@@ -199,10 +199,38 @@ export const CHAPTERS: Chapter[] = [
     id: 'c9', at: 27, finale: true, title: L('Chung kết · Hội Barista Phố Núi', 'Finals · Hill Town Barista Fest'), bg: 'stage', cast: ['tu', 'thang'],
     goal: '',
     lines: [
-      { who: 'none', text: L('Sân khấu dựng giữa chợ Đà Lạt. Ban giám khảo: bà Tư, một nghệ nhân rang xay và… Linh Livestream.', 'A stage stands in the middle of Da Lat market. The judges: Mrs. Tư, a master roaster and… Linh Livestream.') },
-      { who: 'thang', text: L('MÂY xin giới thiệu: Cloud Latte, bọt sữa in logo bằng laser, kèm NFT.', 'MÂY presents: the Cloud Latte. Laser-etched logo foam. Comes with an NFT.'), mood: 'happy' },
+      { who: 'none', text: L('Đêm chung kết. Sân khấu dựng giữa chợ Đà Lạt, đèn lồng giăng kín, cả phố kéo ra xem. Ban giám khảo: bà Tư, ông Bảy – nghệ nhân rang xay 40 năm, và… Linh Livestream.', 'Finals night. A stage in the middle of Da Lat market, lanterns everywhere, the whole town packed in. The judges: Mrs. Tư, Mr. Bảy – a roaster for 40 years – and… Linh Livestream.') },
+      { who: 'linh', text: L('Cả nhà ơi, 12 nghìn người đang xem live nha! Ai thắng tối nay sẽ được bà Tư cho thuê con dốc!', 'Fam, 12,000 people are watching live! Whoever wins tonight gets Mrs. Tư’s slope!'), mood: 'happy' },
+      { who: 'thang', text: L('MÂY xin trình làng Cloud Latte: robot pha trong 9 giây, bọt sữa in logo bằng laser, mỗi ly kèm một NFT.', 'MÂY presents the Cloud Latte: brewed by robot in 9 seconds, laser-etched logo foam, and every cup comes with an NFT.'), mood: 'happy' },
       { who: 'linh', text: L('Ủa NFT là cái gì dạ anh?', 'Wait, what’s an NFT?'), mood: 'neutral' },
-      { who: 'none', text: L('Tới lượt Dreamers. {name} không nói gì nhiều, chỉ pha một ly cà phê sữa đá. Cáo ngồi nghiêm như giám khảo phụ.', 'Dreamers’ turn. {name} says very little, and simply makes one iced milk coffee. Cáo sits up straight like a junior judge.') },
+      { who: 'thang', text: L('Là tài sản số. Ly cà phê của em sẽ sống mãi trên blockchain.', 'A digital asset. Your coffee lives forever on the blockchain.'), mood: 'happy' },
+      { who: 'none', text: L('Máy phun khói xì một tiếng, khói trắng trùm cả sân khấu. Khán giả ồ lên. Bà Tư ho sặc sụa.', 'A fog machine hisses and white smoke swallows the stage. The crowd gasps. Mrs. Tư coughs her lungs out.') },
+      { who: 'thang', text: L('Và để công bằng, anh nói luôn: MÂY đã đặt cọc 5 tỷ để mua cả con dốc. Bà Tư chỉ cần gật đầu tối nay.', 'And to be fair, I’ll say it now: MÂY has put down 5 billion to buy the whole slope. Mrs. Tư only has to nod tonight.'), mood: 'grumpy' },
+      { who: 'none', text: L('Cả chợ im phăng phắc. Mọi ánh mắt dồn về bà Tư. Bà không nói gì, chỉ lặng lẽ nhìn về phía quầy Dreamers.', 'The market goes dead silent. Every eye turns to Mrs. Tư. She says nothing, only looks quietly toward the Dreamers counter.') },
+      { who: 'none', text: L('Tới lượt Dreamers. {name} mở hũ cà phê… và khựng lại. Bên trong không phải hạt rang, mà là thứ bột nâu nhạt, mùi hương liệu xộc lên mũi.', 'Dreamers’ turn. {name} opens the coffee jar… and freezes. It’s not roasted beans inside, but pale brown powder reeking of artificial flavor.') },
+      { who: 'yen', text: L('Ai… ai đã tráo hũ cà phê của mình?!', 'Who… who swapped our coffee?!'), mood: 'angry' },
+      { who: 'cao', text: L('GÂU! GÂU! (Cáo sủa dữ dội về phía một gã áo đen MÂY đang lủi vào đám đông.)', 'WOOF! WOOF! (Cáo barks furiously at a man in a black MÂY shirt slipping into the crowd.)') },
+      { who: 'none', if: 'kind', text: L('Anh tài xế MÂY đêm nọ bước ra, giơ tay: “Tui thấy hết! Quản lý biểu tui đổi hũ, tui không làm, ổng tự làm!”', 'The MÂY driver from that night steps forward, hand raised: “I saw everything! The manager told me to swap it. I refused, so he did it himself!”') },
+      { who: 'none', text: L('Đồng hồ trên màn hình lớn bắt đầu đếm ngược: 05:00. Không hạt, không cà phê.', 'The big screen starts counting down: 05:00. No beans. No coffee.') },
+      { who: 'kenny', if: 'kennyQuit', text: L('KHOAN ĐÃ! (Kenny chen qua đám đông, ôm một bao hạt Cầu Đất.) Anh mới rang sáng nay để bán kèm bánh mì. Lấy đi em!', 'WAIT! (Kenny shoves through the crowd hugging a bag of Cầu Đất beans.) I roasted these this morning for my bánh mì stand. Take them!'), mood: 'happy' },
+      { who: 'kenny', if: 'kennyRest', text: L('Anh gọi xe ôm chở hạt từ quán em lên rồi! Ba phút nữa tới, cố lên!', 'I called a bike taxi to bring beans from your café! Three minutes, hang on!'), mood: 'happy' },
+      { who: 'me', if: 'momVisit', text: L('(Mẹ len lên sân khấu, dúi vào tay {name} cái phin nhôm cũ.) Phin của ba con hồi xưa. Pha đi con, mẹ ở đây.', '(Mom squeezes onto the stage and presses an old aluminum phin into {name}’s hands.) Your dad’s phin. Brew, sweetie. I’m right here.'), mood: 'love' },
+      { who: 'none', if: 'locals', text: L('Mấy ông chú quen bật dậy hô: “DREAMERS! DREAMERS!” Cả chợ hô theo, rung cả mái tôn.', 'The regular uncles leap up: “DREAMERS! DREAMERS!” The whole market joins in until the tin roof rattles.') },
+      { who: 'yen', text: L('Còn bốn phút. Mình sẽ…', 'Four minutes left. I’m going to…'), choices: [
+        { text: L('Tố thẳng trên sân khấu: MÂY chơi xấu, đề nghị huỷ tư cách thi!', 'Call it out on stage: MÂY cheated, disqualify them!'), sassy: true, set: 'callout', support: 3, rep: 2, reply: [
+          { who: 'linh', text: L('Linh quay camera thẳng vào anh Thắng nè! Chat đang chạy #MâyChơiXấu kín màn hình!', 'Camera’s right on Thắng now! Chat is flooding with #MAYcheated!'), mood: 'angry' },
+          { who: 'thang', text: L('Anh… anh thề là anh không biết vụ này!', 'I… I swear I knew nothing about this!'), mood: 'sad' },
+        ] },
+        { text: L('Không nói gì. Pha cho xong ly cà phê, để ly cà phê trả lời.', 'Say nothing. Finish the coffee and let the cup do the talking.'), set: 'calm', support: 5, reply: [
+          { who: 'none', text: L('{name} hít một hơi thật sâu, rót nước sôi. Từng giọt cà phê nhỏ xuống. Cả chợ nín thở, chỉ còn tiếng tí tách.', '{name} takes a deep breath and pours the boiling water. Drop by drop, the coffee falls. The whole market holds its breath. Only the drip, drip remains.') },
+        ] },
+      ] },
+      { who: 'none', text: L('Ly cà phê sữa đá được đặt lên bàn giám khảo khi đồng hồ còn đúng 3 giây.', 'The iced milk coffee lands on the judges’ table with exactly 3 seconds left.') },
+      { who: 'none', text: L('Ông Bảy nhấp một ngụm. Đặt ly xuống. Rồi đứng dậy vỗ tay, không nói một lời.', 'Mr. Bảy takes a sip. Sets the glass down. Then stands and applauds, without a word.') },
+      { who: 'linh', text: L('Trời ơi chat đang bay như bão: “khóc thật sự”, “mùi Đà Lạt hồi xưa”, “ly cà phê có hồn”…', 'Oh my god, chat is a storm: “actually crying”, “tastes like old Da Lat”, “this coffee has a soul”…'), mood: 'love' },
+      { who: 'tu', text: L('Bốn mươi năm trước, ông nhà bà mở quán cà phê đầu tiên trên con dốc này. Cũng ly sữa đá, cũng cái phin như vầy.', 'Forty years ago, my husband opened the very first café on this slope. Same iced milk coffee. Same kind of phin.'), mood: 'sad' },
+      { who: 'tu', text: L('Ổng dặn bà: đất thì bán lúc nào cũng được, chứ cái hồn của con dốc mà mất là mất luôn.', 'He told me: you can sell land any day, but once the soul of the slope is gone, it’s gone for good.'), mood: 'sad' },
+      { who: 'thang', text: L('Bà Tư… năm tỷ đó bà.', 'Mrs. Tư… that’s five billion.'), mood: 'grumpy' },
       { who: 'tu', text: L('Bà đã quyết rồi.', 'I’ve made my decision.') },
     ],
   },
@@ -233,6 +261,8 @@ export function endingLines(): Line[] {
   const tail: Line[] = []
   if (flag('exposed')) tail.push({ who: 'linh', text: L('Cả nhà ơi, Linh xin lỗi vì quảng cáo bột 3 trong 1 nha. Linh về phe Dreamers!', 'Fam, I’m sorry for hyping 3-in-1 powder. Linh is Team Dreamers now!'), mood: 'sad' })
   if (flag('kind')) tail.push({ who: 'thang', text: L('Tài xế của anh kể hết rồi… ly phin đêm đó, và chuyện em không bóc phốt. Cảm ơn em.', 'My driver told me everything… that phin coffee, and how you kept quiet. Thank you.'), mood: 'sad' })
+  if (flag('callout')) tail.push({ who: 'thang', text: L('Anh đã cho tay quản lý đó nghỉ việc ngay trong đêm. Xin lỗi em, trước mặt cả phố.', 'I fired that manager tonight. I’m sorry, in front of the whole town.'), mood: 'sad' })
+  if (flag('calm')) tail.push({ who: 'none', text: L('Ông Bảy dúi cho {name} tấm danh thiếp: “Hạt của tui, mai mốt con lấy giá gốc. Cà phê như vầy phải được sống.”', 'Mr. Bảy slips {name} his card: “My beans, at cost, from now on. Coffee like that deserves to live.”') })
   if (k === 'great') return [...tail,
     { who: 'tu', text: L('Con dốc này không bán. Bà cho Dreamers thuê tiếp, năm năm, giá cũ.', 'This slope is not for sale. Dreamers keeps the lease. Five years, same rent.'), mood: 'love' },
     { who: 'thang', text: L('Ok… MÂY sẽ pivot. Bọn anh chuyển sang bán khoá học “Làm giàu từ cà phê”.', 'Fine… MÂY will pivot. We’re launching a course: “Get Rich With Coffee”.'), mood: 'grumpy' },
