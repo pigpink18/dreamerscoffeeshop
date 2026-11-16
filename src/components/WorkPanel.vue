@@ -211,21 +211,21 @@ function pickOrder(id: number) {
 
 .actions { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 10px 3px 0; }
 .action {
-  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 52px;
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 64px; /* cao, dễ bấm bằng ngón cái */
   background: #f2c14e; padding: 3px 0 5px;
   font-size: 11px; font-weight: 900; box-shadow: var(--px-border-2), inset 0 -4px 0 #d99a2b, inset 0 2px 0 #fff1a8, 0 4px 0 rgba(59, 42, 32, 0.5);
 }
 .action:active { transform: translateY(3px); box-shadow: var(--px-border-2); }
 .action.trash { background: #f1e2cf; box-shadow: var(--px-border-2), inset 0 -4px 0 #d8bf9f, 0 4px 0 rgba(59, 42, 32, 0.5); }
-.aic { height: 28px; width: 28px; object-fit: contain; }
+.aic { height: 32px; width: 32px; object-fit: contain; }
 .action small { position: absolute; top: 2px; right: 4px; font-size: 9px; font-weight: 900; color: #6f4e37; } /* số cà phê còn: góc trên như khay nguyên liệu → các nút đều nhau */
 /* màn hình thấp (iPhone nhỏ / đang mở trong trình duyệt): khay gọn hơn để cảnh quán to hơn */
 @media (max-height: 720px) {
   .item { min-height: 46px; }
   .ic { width: 28px; height: 28px; }
   .lbl { font-size: 9px; }
-  .action { padding: 2px 0 4px; }
-  .aic { width: 22px; height: 22px; }
+  .action { padding: 2px 0 4px; min-height: 56px; }
+  .aic { width: 26px; height: 26px; }
   .tray { margin-top: 6px; }
   .actions { margin-top: 8px; }
 }
@@ -236,8 +236,8 @@ function pickOrder(id: number) {
 .panel.tight .ic { width: 24px; height: 24px; }
 .panel.tight .lbl { font-size: 9px; }
 .panel.tight .actions { margin-top: 5px; gap: 4px; }
-.panel.tight .action { padding: 1px 0 3px; font-size: 10px; min-height: 42px; }
-.panel.tight .aic { width: 22px; height: 22px; }
+.panel.tight .action { padding: 1px 0 3px; font-size: 10px; min-height: 52px; }
+.panel.tight .aic { width: 26px; height: 26px; }
 .panel.tight .shelf { margin-top: 4px; padding: 2px 6px; }
 @media (max-height: 600px) {
   .lbl { display: none; }
@@ -250,7 +250,7 @@ function pickOrder(id: number) {
   .ic { width: 28px; height: 28px; }
   .shelf { margin-top: 5px; padding: 2px 6px; }
   .actions { margin-top: 6px; gap: 4px; }
-  .aic { width: 22px; height: 22px; }
+  .aic { width: 26px; height: 26px; }
 }
 .staff-panel { display: flex; flex-direction: column; gap: 8px; }
 .go-kitchen { position: relative; display: flex; align-items: center; justify-content: center; gap: 10px; margin: 2px 3px 6px; min-height: 54px; padding: 0 22px 4px;
