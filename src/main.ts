@@ -30,16 +30,17 @@ document.addEventListener('touchstart', () => {}, { passive: true })
 
 // Chiều cao app = đúng phần màn hình trình duyệt cho phép vẽ (không vượt ra ngoài → không bị cắt mất thanh tab).
 // Trên iPhone chế độ app, phần đáy iOS chừa lại sẽ có màu nâu (background_color trong manifest) trùng thanh tab.
-// Chế độ app ngoài màn hình chính (standalone): app LUÔN chiếm trọn màn hình → lấy theo kích thước màn hình,
-// vì iOS hay báo innerHeight hụt (để lộ một dải trống dưới thanh tab).
+// iOS 26 (app ngoài màn hình chính): trang web KHÔNG được vẽ xuống dải đáy màn hình – iOS tự tô dải đó
+// theo màu nền khung app (#app → nâu, liền với thanh tab). Khi đó dải đáy đã che vùng thanh Home,
+// nên thanh tab không cần chừa thêm safe-area nữa (tránh chừa 2 lần → thanh tab bị nâng cao).
 const standalone = () => (navigator as any).standalone === true || matchMedia('(display-mode: standalone)').matches
 function fitScreen() {
-  let h = window.innerHeight
-  if (standalone()) {
-    const portrait = window.innerHeight >= window.innerWidth
-    h = Math.max(h, portrait ? Math.max(screen.height, screen.width) : Math.min(screen.height, screen.width))
-  }
+  const h = window.innerHeight
   document.documentElement.style.setProperty('--app-h', `${h}px`)
+  const portrait = h >= window.innerWidth
+  const screenH = portrait ? Math.max(screen.height, screen.width) : Math.min(screen.height, screen.width)
+  const gap = standalone() ? screenH - h : 0 // phần đáy iOS không cho trang vẽ
+  document.documentElement.style.setProperty('--tab-pad', gap > 16 ? '8px' : 'max(8px, calc(env(safe-area-inset-bottom, 0px) - 4px))')
 }
 fitScreen()
 window.addEventListener('resize', fitScreen)
