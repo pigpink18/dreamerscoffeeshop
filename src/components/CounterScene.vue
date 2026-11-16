@@ -155,11 +155,12 @@ function onEvent(e: GameEvent) {
   } else if (e.type === 'served' && actor && actor.id === e.id) {
     actor.holding = { ...(lastCup ?? emptyCup()), cup: true, straw: true, lid: true }
     actor.mood = e.needy ? 'love' : e.stars >= 4 ? 'happy' : e.stars === 3 ? 'neutral' : 'sad'
-    actor.holdUntil = now + 2200
+    // khách đứng lại đủ lâu để đọc hết lời nhận xét: ~60ms/ký tự (sau khi gõ xong) – tối thiểu 3.6s, tối đa 8s
+    actor.holdUntil = now + Math.min(8000, Math.max(3600, 1400 + (e.text?.length ?? 0) * 60))
     review.value = { stars: e.stars, text: e.text, needy: e.needy, price: e.price, tip: e.tip }
   } else if (e.type === 'angry' && actor && actor.id === e.id) {
     actor.mood = 'angry'
-    actor.holdUntil = now + 1800
+    actor.holdUntil = now + Math.min(6000, Math.max(2800, 1000 + (e.line?.length ?? 0) * 55))
     angry.value = e.line
   }
 }
@@ -643,10 +644,10 @@ const bubbleStyle = computed(() => {
     <Transition name="pop" mode="out-in">
       <div v-if="review" key="rv" class="bubble review" :style="bubbleStyle">
         <div class="stars"><PixelIcon v-for="i in 5" :key="i" :name="i <= review.stars ? 'star' : 'starOff'" :size="2" /></div>
-        <div class="txt"><TypeText :text="`“${review.text}”`" :pitch="640" :speed="26" /></div>
+        <div class="txt"><TypeText :text="`“${review.text}”`" :pitch="640" :speed="40" /></div>
         <div class="money" v-if="!review.needy">+{{ (review.price / 1000).toFixed(0) }}k<span v-if="review.tip"> · tip {{ (review.tip / 1000).toFixed(0) }}k</span></div>
       </div>
-      <div v-else-if="angry" key="an" class="bubble angry" :style="bubbleStyle"><div class="txt"><TypeText :text="`“${angry}”`" :pitch="340" :speed="24" /></div></div>
+      <div v-else-if="angry" key="an" class="bubble angry" :style="bubbleStyle"><div class="txt"><TypeText :text="`“${angry}”`" :pitch="340" :speed="38" /></div></div>
       <div v-else-if="cur && actorView?.state === 'idle'" :style="bubbleStyle" :key="'c' + cur.id + (talkHere?.mode ?? '') + (brewingHere ? 'b' : '')" class="bubble" :class="{ compact: staffCompact }" @click="typer?.skip()">
         <template v-if="staffCompact">
           <div class="cmp"><PixelIcon name="staff" :size="2" /> <span class="cmp-t">{{ L('Đang pha', 'Making') }} <b>{{ recipeById[cur.recipe].name }}</b></span>
@@ -655,7 +656,7 @@ const bubbleStyle = computed(() => {
         </template>
         <template v-else>
         <div class="who" :class="whoKind">{{ who }}</div>
-        <div class="txt" :class="{ hurry: cur.line && cur.patience / cur.maxPatience < 0.5 && !talkHere }"><TypeText ref="typer" :text="bubbleText" :pitch="voice" :instant="lineInstant" @done="onTyped" /></div>
+        <div class="txt" :class="{ hurry: cur.line && cur.patience / cur.maxPatience < 0.5 && !talkHere }"><TypeText ref="typer" :text="bubbleText" :pitch="voice" :speed="44" :instant="lineInstant" @done="onTyped" /></div>
         <div v-if="cur.addon" class="addon" :class="{ done: cur.addonDone }"><img :src="iconUrl(cur.addon)" alt="" /><span>{{ cur.addonDone ? L('Đã trao', 'Given') : L('Kèm', 'Plus') }}: <b>{{ goodName(cur.addon) }}</b></span></div>
         <div v-if="cur.food && kitchenOpen()" class="addon food"><img :src="iconUrl(cur.food)" alt="" /><span>{{ L('Món bếp', 'Food') }}: <b>{{ foodById[cur.food as FoodId]?.name }}</b></span></div>
         <div v-if="brewingHere" class="order"><PixelIcon name="menu" :size="2" /> {{ recipeById[cur.recipe].name }}</div>
