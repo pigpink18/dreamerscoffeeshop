@@ -41,6 +41,7 @@ function finish() {
 // ---------- cảnh pixel: góc bàn quán, ly cà phê + thẻ QR, Cáo ngồi trên ghế ----------
 const cv = ref<HTMLCanvasElement | null>(null)
 let raf = 0
+const corgiCv = Object.assign(document.createElement('canvas'), { width: 32, height: 28 })
 function draw(t: number) {
   const c = cv.value?.getContext('2d')
   if (!c) return
@@ -96,40 +97,40 @@ function draw(t: number) {
   c.fillStyle = 'rgba(38, 28, 27, 0.18)'; c.fillRect(0, 58, W, 3) // bóng tường đổ xuống bàn
   const shadow = (x: number, y: number, w: number) => { c.fillStyle = 'rgba(38, 28, 27, 0.28)'; c.beginPath(); c.ellipse(x, y, w, 2, 0, 0, Math.PI * 2); c.fill() }
   // ---- ly thuỷ tinh trong: cà phê sữa đá (sữa đặc đáy, cà phê trên, đá viên, ống hút, giọt nước đọng) ----
-  shadow(28, 74, 11)
+  shadow(27, 74, 9)
   // lót ly gỗ tròn
-  px(c, 17, 71, 22, 3, CZ.ink); px(c, 18, 71, 20, 2, '#c98a52'); px(c, 18, 71, 20, 1, '#dab46d')
-  const gx = 20, gy = 50, gw = 16, gh = 22 // thân ly (miệng rộng hơn đáy 1 điểm ảnh mỗi bên)
+  px(c, 18, 71, 18, 3, CZ.ink); px(c, 19, 71, 16, 2, '#c98a52'); px(c, 19, 71, 16, 1, '#dab46d')
+  const gx = 21, gy = 55, gw = 12, gh = 16 // thân ly (miệng rộng hơn đáy 1 điểm ảnh mỗi bên)
   for (let y = 0; y < gh; y++) {
     const inset = Math.floor((y / gh) * 2) // ly thon dần xuống đáy
     const x0 = gx + inset, w = gw - inset * 2
     px(c, x0 - 2, gy + y, 1, 1, CZ.ink); px(c, x0 + w + 1, gy + y, 1, 1, CZ.ink) // viền ngoài cho nổi khối
     px(c, x0 - 1, gy + y, 1, 1, '#cfe6ea'); px(c, x0 + w, gy + y, 1, 1, '#8fa5aa') // thành thuỷ tinh: sáng trái, tối phải
     let col = 'rgba(214, 236, 239, 0.35)' // phần trống phía trên: thuỷ tinh trong
-    if (y >= 5 && y < 15) col = y < 7 ? '#8a5a3a' : '#5a3622' // cà phê đậm, mặt hơi sáng
-    else if (y >= 15 && y < 18) col = '#c99a6b' // lớp hoà quyện
-    else if (y >= 18) col = '#f3e3c4' // sữa đặc ở đáy
+    if (y >= 3 && y < 11) col = y < 5 ? '#8a5a3a' : '#5a3622' // cà phê đậm, mặt hơi sáng
+    else if (y >= 11 && y < 13) col = '#c99a6b' // lớp hoà quyện
+    else if (y >= 13) col = '#f3e3c4' // sữa đặc ở đáy
     px(c, x0, gy + y, w, 1, col)
   }
   px(c, gx - 2, gy - 1, gw + 4, 1, CZ.ink); px(c, gx - 1, gy, gw + 2, 1, '#e8f6f8') // vành miệng ly
   px(c, gx - 1, gy + gh, gw + 2, 2, CZ.ink); px(c, gx, gy + gh, gw, 1, '#a9c0c5'); px(c, gx, gy + gh - 1, gw, 1, 'rgba(255,255,255,0.25)') // đáy ly dày
   // đá viên trong ly (lắc lư nhẹ)
   const bob = Math.round(Math.sin(t * 1.6))
-  for (const [ix, iy] of [[22, 6], [28, 5], [24, 10], [31, 9]] as const) {
+  for (const [ix, iy] of [[22, 4], [27, 3], [24, 7], [29, 7]] as const) {
     const y = gy + iy + (ix % 2 ? bob : 0)
-    px(c, ix, y, 4, 4, 'rgba(225, 245, 250, 0.55)'); px(c, ix, y, 4, 1, 'rgba(255,255,255,0.85)'); px(c, ix, y, 1, 4, 'rgba(255,255,255,0.6)')
+    px(c, ix, y, 3, 3, 'rgba(225, 245, 250, 0.55)'); px(c, ix, y, 3, 1, 'rgba(255,255,255,0.85)'); px(c, ix, y, 1, 3, 'rgba(255,255,255,0.6)')
   }
   // ống hút sọc xanh trắng
-  for (let k = 0; k < 18; k++) px(c, 31 - Math.floor(k / 4), gy - 6 + k, 2, 1, k % 4 < 2 ? '#3fb57b' : '#ffffff')
+  for (let k = 0; k < 13; k++) px(c, 30 - Math.floor(k / 4), gy - 5 + k, 1, 1, k % 4 < 2 ? '#3fb57b' : '#ffffff')
   // ánh sáng xuyên thuỷ tinh: vệt sáng dọc + điểm loé
   px(c, gx + 1, gy + 2, 1, gh - 5, 'rgba(255,255,255,0.75)'); px(c, gx + 3, gy + 3, 1, 4, 'rgba(255,255,255,0.4)')
-  if (Math.floor(t * 1.2) % 4 === 0) { px(c, gx + 13, gy + 2, 1, 1, '#ffffff'); px(c, gx + 12, gy + 3, 3, 1, 'rgba(255,255,255,0.7)'); px(c, gx + 13, gy + 4, 1, 1, '#ffffff') }
+  if (Math.floor(t * 1.2) % 4 === 0) { px(c, gx + 9, gy + 2, 1, 1, '#ffffff'); px(c, gx + 8, gy + 3, 3, 1, 'rgba(255,255,255,0.7)'); px(c, gx + 9, gy + 4, 1, 1, '#ffffff') }
   // giọt nước đọng ngoài thành ly, thỉnh thoảng một giọt chảy xuống
-  for (const [dx, dy] of [[gx + 4, gy + 9], [gx + 11, gy + 12], [gx + 7, gy + 16], [gx + 13, gy + 7]] as const) px(c, dx, dy, 1, 1, 'rgba(255,255,255,0.7)')
+  for (const [dx, dy] of [[gx + 3, gy + 7], [gx + 9, gy + 10], [gx + 6, gy + 12], [gx + 10, gy + 5]] as const) px(c, dx, dy, 1, 1, 'rgba(255,255,255,0.7)')
   const drip = (t * 0.5) % 1
-  px(c, gx + 9, gy + 6 + Math.round(drip * 14), 1, 2, `rgba(255,255,255,${(0.8 * (1 - drip)).toFixed(2)})`)
+  px(c, gx + 7, gy + 5 + Math.round(drip * 9), 1, 2, `rgba(255,255,255,${(0.8 * (1 - drip)).toFixed(2)})`)
   // vũng nước nhỏ trên lót ly
-  px(c, 22, 72, 10, 1, 'rgba(200, 235, 245, 0.45)')
+  px(c, 22, 72, 8, 1, 'rgba(200, 235, 245, 0.45)')
   // ---- bánh kem dâu trên đĩa nhỏ ----
   shadow(49, 75, 7)
   px(c, 42, 72, 14, 3, CZ.ink); px(c, 43, 72, 12, 2, '#fffaf0')
@@ -146,9 +147,9 @@ function draw(t: number) {
   px(c, 60, 65, 11, 2, CZ.r1); px(c, 61, 68, 9, 1, '#d8c4a8') // nhãn đỏ + dòng chữ nhỏ dưới mã
   px(c, 59, 51, 1, 19, 'rgba(255,255,255,0.6)')
   // ---- nệm tròn cho Cáo ----
-  shadow(96, 75, 16)
-  px(c, 81, 66, 30, 9, CZ.ink); px(c, 82, 66, 28, 7, CZ.r1); px(c, 82, 66, 28, 2, CZ.r2); px(c, 83, 72, 26, 1, CZ.r0)
-  for (let x = 85; x < 109; x += 6) px(c, x, 69, 2, 1, '#f2c14e')
+  shadow(100, 77, 21)
+  px(c, 79, 66, 42, 10, CZ.ink); px(c, 80, 66, 40, 8, CZ.r1); px(c, 80, 66, 40, 2, CZ.r2); px(c, 81, 73, 38, 1, CZ.r0)
+  for (let x = 83; x < 118; x += 6) px(c, x, 70, 2, 1, '#f2c14e')
   // câu 3: hộp quà nơ đỏ cạnh ly (quà tri ân) – nảy lên
   if (l >= 2 && l < 4) {
     const hop = l === 2 ? Math.max(0, Math.round(Math.sin(Math.min(lt, 0.5) / 0.5 * Math.PI) * 4)) : 0
@@ -170,9 +171,13 @@ function draw(t: number) {
     px(c, bx + 15, by + 10, 30, 1, '#e8a0bc')
   }
   // Cáo ngồi trên bàn, vẫy đuôi; câu cuối đứng dậy mừng
-  drawCorgi(c, 84, 51, t, l === LINES.length - 1 ? 'stand' : 'sit', true, { neck: 'bow' })
+  // Cáo to hơn cảnh 1.5 lần: vẽ ở canvas phụ rồi phóng (giữ nét pixel)
+  const oc = corgiCv.getContext('2d')!
+  oc.clearRect(0, 0, corgiCv.width, corgiCv.height)
+  drawCorgi(oc, 2, 6, t, l === LINES.length - 1 ? 'stand' : 'sit', true, { neck: 'bow' })
+  c.drawImage(corgiCv, 0, 0, 32, 28, 79, 32, 48, 42)
   // bóng thoại nhỏ: tim nảy trên đầu Cáo
-  if (Math.floor(t * 2) % 2 === 0) { const hx = 104, hy = 43; px(c, hx, hy, 2, 2, '#ff7a8a'); px(c, hx + 3, hy, 2, 2, '#ff7a8a'); px(c, hx, hy + 2, 5, 1, '#ff7a8a'); px(c, hx + 1, hy + 3, 3, 1, '#ff7a8a'); px(c, hx + 2, hy + 4, 1, 1, '#ff7a8a') }
+  if (Math.floor(t * 2) % 2 === 0) { const hx = 112, hy = 27; px(c, hx, hy, 2, 2, '#ff7a8a'); px(c, hx + 3, hy, 2, 2, '#ff7a8a'); px(c, hx, hy + 2, 5, 1, '#ff7a8a'); px(c, hx + 1, hy + 3, 3, 1, '#ff7a8a'); px(c, hx + 2, hy + 4, 1, 1, '#ff7a8a') }
   // câu cuối: pháo giấy
   if (l === LINES.length - 1) {
     const cols = ['#ff6b81', '#f2c14e', '#5b8bd9', '#2f9e6b', '#ffffff']
