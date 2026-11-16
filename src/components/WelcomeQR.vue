@@ -95,18 +95,41 @@ function draw(t: number) {
   for (let y = 61; y < H; y += 6) { px(c, 0, y, W, 1, CZ.w2); for (let x = (y * 7) % 23; x < W; x += 23) px(c, x, y + 2, 6, 1, CZ.w4) }
   c.fillStyle = 'rgba(38, 28, 27, 0.18)'; c.fillRect(0, 58, W, 3) // bóng tường đổ xuống bàn
   const shadow = (x: number, y: number, w: number) => { c.fillStyle = 'rgba(38, 28, 27, 0.28)'; c.beginPath(); c.ellipse(x, y, w, 2, 0, 0, Math.PI * 2); c.fill() }
-  // ---- ly latte + đĩa + muỗng, khói bay ----
-  shadow(28, 73, 13)
-  px(c, 15, 69, 26, 4, CZ.ink); px(c, 16, 69, 24, 2, '#fffaf0'); px(c, 16, 71, 24, 1, '#d8cbb8')
-  px(c, 19, 57, 18, 13, CZ.ink); px(c, 20, 59, 16, 10, '#fffaf0'); px(c, 20, 66, 16, 3, '#ece2d2'); px(c, 21, 60, 2, 6, '#ffffff')
-  px(c, 20, 57, 16, 3, '#c98a52'); px(c, 21, 57, 14, 1, '#b07040')
-  px(c, 26, 57, 2, 1, '#fff3e0'); px(c, 29, 57, 2, 1, '#fff3e0'); px(c, 27, 58, 3, 1, '#fff3e0') // tim latte art
-  px(c, 36, 60, 4, 6, CZ.ink); px(c, 37, 61, 2, 4, '#fffaf0')
-  px(c, 38, 70, 8, 1, '#c3cad0'); px(c, 45, 69, 2, 2, '#c3cad0')
-  for (let k = 0; k < 3; k++) {
-    const q = (t * 0.7 + k / 3) % 1
-    px(c, 24 + k * 4 + Math.round(Math.sin(t * 3 + k) * 1.5), Math.round(55 - q * 14), 1, 2, `rgba(255,255,255,${(0.75 * (1 - q)).toFixed(2)})`)
+  // ---- ly thuỷ tinh trong: cà phê sữa đá (sữa đặc đáy, cà phê trên, đá viên, ống hút, giọt nước đọng) ----
+  shadow(28, 74, 11)
+  // lót ly gỗ tròn
+  px(c, 17, 71, 22, 3, CZ.ink); px(c, 18, 71, 20, 2, '#c98a52'); px(c, 18, 71, 20, 1, '#dab46d')
+  const gx = 20, gy = 50, gw = 16, gh = 22 // thân ly (miệng rộng hơn đáy 1 điểm ảnh mỗi bên)
+  for (let y = 0; y < gh; y++) {
+    const inset = Math.floor((y / gh) * 2) // ly thon dần xuống đáy
+    const x0 = gx + inset, w = gw - inset * 2
+    px(c, x0 - 2, gy + y, 1, 1, CZ.ink); px(c, x0 + w + 1, gy + y, 1, 1, CZ.ink) // viền ngoài cho nổi khối
+    px(c, x0 - 1, gy + y, 1, 1, '#cfe6ea'); px(c, x0 + w, gy + y, 1, 1, '#8fa5aa') // thành thuỷ tinh: sáng trái, tối phải
+    let col = 'rgba(214, 236, 239, 0.35)' // phần trống phía trên: thuỷ tinh trong
+    if (y >= 5 && y < 15) col = y < 7 ? '#8a5a3a' : '#5a3622' // cà phê đậm, mặt hơi sáng
+    else if (y >= 15 && y < 18) col = '#c99a6b' // lớp hoà quyện
+    else if (y >= 18) col = '#f3e3c4' // sữa đặc ở đáy
+    px(c, x0, gy + y, w, 1, col)
   }
+  px(c, gx - 2, gy - 1, gw + 4, 1, CZ.ink); px(c, gx - 1, gy, gw + 2, 1, '#e8f6f8') // vành miệng ly
+  px(c, gx - 1, gy + gh, gw + 2, 2, CZ.ink); px(c, gx, gy + gh, gw, 1, '#a9c0c5'); px(c, gx, gy + gh - 1, gw, 1, 'rgba(255,255,255,0.25)') // đáy ly dày
+  // đá viên trong ly (lắc lư nhẹ)
+  const bob = Math.round(Math.sin(t * 1.6))
+  for (const [ix, iy] of [[22, 6], [28, 5], [24, 10], [31, 9]] as const) {
+    const y = gy + iy + (ix % 2 ? bob : 0)
+    px(c, ix, y, 4, 4, 'rgba(225, 245, 250, 0.55)'); px(c, ix, y, 4, 1, 'rgba(255,255,255,0.85)'); px(c, ix, y, 1, 4, 'rgba(255,255,255,0.6)')
+  }
+  // ống hút sọc xanh trắng
+  for (let k = 0; k < 18; k++) px(c, 31 - Math.floor(k / 4), gy - 6 + k, 2, 1, k % 4 < 2 ? '#3fb57b' : '#ffffff')
+  // ánh sáng xuyên thuỷ tinh: vệt sáng dọc + điểm loé
+  px(c, gx + 1, gy + 2, 1, gh - 5, 'rgba(255,255,255,0.75)'); px(c, gx + 3, gy + 3, 1, 4, 'rgba(255,255,255,0.4)')
+  if (Math.floor(t * 1.2) % 4 === 0) { px(c, gx + 13, gy + 2, 1, 1, '#ffffff'); px(c, gx + 12, gy + 3, 3, 1, 'rgba(255,255,255,0.7)'); px(c, gx + 13, gy + 4, 1, 1, '#ffffff') }
+  // giọt nước đọng ngoài thành ly, thỉnh thoảng một giọt chảy xuống
+  for (const [dx, dy] of [[gx + 4, gy + 9], [gx + 11, gy + 12], [gx + 7, gy + 16], [gx + 13, gy + 7]] as const) px(c, dx, dy, 1, 1, 'rgba(255,255,255,0.7)')
+  const drip = (t * 0.5) % 1
+  px(c, gx + 9, gy + 6 + Math.round(drip * 14), 1, 2, `rgba(255,255,255,${(0.8 * (1 - drip)).toFixed(2)})`)
+  // vũng nước nhỏ trên lót ly
+  px(c, 22, 72, 10, 1, 'rgba(200, 235, 245, 0.45)')
   // ---- bánh kem dâu trên đĩa nhỏ ----
   shadow(49, 75, 7)
   px(c, 42, 72, 14, 3, CZ.ink); px(c, 43, 72, 12, 2, '#fffaf0')
