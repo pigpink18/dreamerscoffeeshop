@@ -16,6 +16,17 @@ import SetupView from './components/SetupView.vue'
 import StoryScene from './components/StoryScene.vue'
 import { pendingChapter } from './game/story'
 import WelcomeQR from './components/WelcomeQR.vue'
+import LangPick from './components/LangPick.vue'
+
+// lần đầu mở game (chưa vào quán): chọn ngôn ngữ trước tiên → màn chào mừng → tạo chủ quán. ?lang=pick để xem lại
+function wantLang() {
+  try {
+    if (new URLSearchParams(location.search).get('lang') === 'pick') return !sessionStorage.getItem('dc-lang-once')
+    return !save.setupDone && localStorage.getItem('dc-lang-picked') !== '1'
+  } catch { return false }
+}
+const needLang = ref(wantLang())
+function langDone() { try { sessionStorage.setItem('dc-lang-once', '1') } catch { /* bỏ qua */ } needLang.value = false }
 
 // màn chào mừng (Cáo chào khách, giới thiệu pigpink18): luôn hiện trước màn tạo chủ quán khi người chơi chưa vào game
 // (người mới, hoặc chơi lại từ đầu) – link thường hay quét QR đều thấy. ?qr=again để xem lại bất cứ lúc nào.
@@ -62,7 +73,10 @@ const views = { shop: ShopView, stock: StockView, menu: MenuView, compete: Compe
       <SetupView v-if="!save.setupDone || ui.showSetup" />
     </Transition>
     <Transition name="sheet">
-      <WelcomeQR v-if="showWelcome" @done="showWelcome = false" />
+      <WelcomeQR v-if="showWelcome && !needLang" @done="showWelcome = false" />
+    </Transition>
+    <Transition name="sheet">
+      <LangPick v-if="needLang" @done="langDone" />
     </Transition>
   </div>
 </template>

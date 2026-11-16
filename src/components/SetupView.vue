@@ -122,7 +122,7 @@ const bars = computed(() => {
           <b class="tname">DREAMERS COFFEE</b>
           <small>{{ again ? T('Hồ sơ chủ quán', 'Owner profile') : T('Nhận thẻ chủ quán', 'Get your owner badge') }}</small>
         </div>
-        <div class="langs">
+        <div v-if="again" class="langs"><!-- lần đầu: đã chọn ngôn ngữ ở màn riêng trước đó -->
           <button class="lg" :class="{ on: lang === 'vi' }" aria-label="Tiếng Việt" @click="pickLang('vi')"><i class="flag vn"><b /></i>VI</button>
           <button class="lg" :class="{ on: lang === 'en' }" aria-label="English" @click="pickLang('en')"><i class="flag en"><b /></i>EN</button>
         </div>
