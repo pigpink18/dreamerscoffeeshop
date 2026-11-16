@@ -72,3 +72,6 @@ document.addEventListener('scroll', (e) => {
   if (fixedX && el.scrollLeft) el.scrollLeft = 0
   if (fixedY && el.scrollTop) el.scrollTop = 0
 }, { capture: true, passive: true })
+
+// Android/Chrome: giữ lại sự kiện "cài app" phát ra sớm để màn chọn ngôn ngữ hiện nút cài 1 chạm
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); (window as any).__installPrompt = e })
