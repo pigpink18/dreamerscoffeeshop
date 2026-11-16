@@ -40,8 +40,9 @@ function go(t: Tab) {
   background:
     repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.06) 0 2px, transparent 2px 9px),
     #6f4630;
-  box-shadow: 0 -3px 0 #3b2a20, inset 0 3px 0 #8a5a3c;
-  padding: 8px 6px calc(var(--safe-bottom) + 8px);
+  box-shadow: 0 -3px 0 #3b2a20, inset 0 3px 0 #8a5a3c, 0 160px 0 120px #6f4630; /* nền nâu kéo dài xuống dưới: lỡ còn khe ở đáy cũng không lộ màu kem */
+  /* như thanh tab app thật: nằm sát đáy, chỉ chừa đúng vùng thanh vuốt Home của iPhone */
+  padding: 8px 6px max(8px, calc(var(--safe-bottom) - 4px));
   z-index: 2;
 }
 .tab {

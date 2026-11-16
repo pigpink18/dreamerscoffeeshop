@@ -30,8 +30,16 @@ document.addEventListener('touchstart', () => {}, { passive: true })
 
 // Chiều cao app = đúng phần màn hình trình duyệt cho phép vẽ (không vượt ra ngoài → không bị cắt mất thanh tab).
 // Trên iPhone chế độ app, phần đáy iOS chừa lại sẽ có màu nâu (background_color trong manifest) trùng thanh tab.
+// Chế độ app ngoài màn hình chính (standalone): app LUÔN chiếm trọn màn hình → lấy theo kích thước màn hình,
+// vì iOS hay báo innerHeight hụt (để lộ một dải trống dưới thanh tab).
+const standalone = () => (navigator as any).standalone === true || matchMedia('(display-mode: standalone)').matches
 function fitScreen() {
-  document.documentElement.style.setProperty('--app-h', `${window.innerHeight}px`)
+  let h = window.innerHeight
+  if (standalone()) {
+    const portrait = window.innerHeight >= window.innerWidth
+    h = Math.max(h, portrait ? Math.max(screen.height, screen.width) : Math.min(screen.height, screen.width))
+  }
+  document.documentElement.style.setProperty('--app-h', `${h}px`)
 }
 fitScreen()
 window.addEventListener('resize', fitScreen)
