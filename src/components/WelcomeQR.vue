@@ -6,21 +6,24 @@ import { unlockAudio, sfx } from '../game/audio'
 import { px, drawCorgi, CZ, woodFrame, rivet, type Ctx } from '../game/pixel'
 import TypeText from './TypeText.vue'
 import PixelIcon from './ui/PixelIcon.vue'
-import { L } from '../game/i18n'
+import { L, isEn } from '../game/i18n'
 
 const emit = defineEmits<{ done: [] }>()
 const W = 128, H = 92
 
-const LINES = [
+const LINES: { who: string; text: string; qr?: boolean }[] = [
   { who: 'Cáo', text: L('Gâu! Chào mừng bạn đến với Dreamers Coffee, tiệm cà phê nhỏ của tụi mình!', 'Woof! Welcome to Dreamers Coffee, our little café!') },
   { who: 'Cáo', text: L('Cảm ơn bạn đã ghé quán và đồng hành cùng tụi mình trong suốt thời gian qua. Mỗi lần bạn ghé là một ngày vui của quán đó!', 'Thank you for stopping by and for being with us all this time. Every visit of yours makes our day!') },
   { who: 'Cáo', text: L('Trong lúc ngồi đợi nước, mời bạn chơi thử trò chơi nhỏ này nhé, xem như một món quà tri ân tụi mình gửi tới bạn.', "While you wait for your drink, enjoy this little game. It's our small thank-you gift to you.") },
   { who: 'pigpink18', text: L('Game do nhà phát triển độc lập pigpink18 làm. Nếu bạn muốn làm app hay website quảng bá thương hiệu, cứ để lại liên hệ tại quầy, pigpink sẽ liên lạc với bạn.', 'This game is made by indie developer pigpink18. Want an app or a website for your brand? Leave your contact at the counter and pigpink will get in touch.') },
+  { who: 'Cáo', qr: true, text: L('Thấy vui thì chia sẻ mã này cho bạn bè cùng chơi nhé! Bạn bè quét mã ngay trên màn hình, hoặc nhấn giữ ảnh để lưu lại.', 'Enjoying it? Share this code with your friends! They can scan it right off your screen, or press and hold to save the image.') },
   { who: 'Cáo', text: L('Chúc bạn có những phút giây thật thư giãn trong game. Mời bạn vào quán!', 'Wishing you a relaxing time in the game. Come on in!') },
 ]
 const li = ref(0)
 const typer = ref<InstanceType<typeof TypeText> | null>(null)
 const isLast = computed(() => li.value === LINES.length - 1)
+const showQr = computed(() => !!LINES[li.value].qr)
+const qrUrl = `${import.meta.env.BASE_URL}qr/qr-cao-${isEn ? 'en' : 'vi'}.png`
 let lineStart = performance.now()
 
 function next() {
@@ -154,7 +157,9 @@ onBeforeUnmount(() => cancelAnimationFrame(raf))
         <button class="skip" @click.stop="finish">{{ L('Bỏ qua', 'Skip') }} <PixelIcon name="play" :size="2" /></button>
       </div>
       <div class="stage">
-        <canvas ref="cv" class="cv" />
+        <canvas ref="cv" class="cv" :class="{ hide: showQr }" />
+        <!-- mã QR thật (poster có Cáo) – bạn bè quét ngay trên màn hình / nhấn giữ để lưu ảnh -->
+        <div v-if="showQr" class="qrwrap" @click.stop><img :src="qrUrl" class="qr" :alt="L('Mã QR Dreamers Coffee', 'Dreamers Coffee QR code')" /></div>
         <div class="dots"><i v-for="(_, i) in LINES" :key="i" :class="{ on: i === li, done: i < li }" /></div>
       </div>
       <div class="box">
@@ -185,6 +190,10 @@ onBeforeUnmount(() => cancelAnimationFrame(raf))
 .stage { position: relative; box-shadow: 0 0 0 3px #261c1b, 0 0 0 6px #80502c, 0 0 0 7px #bf8a4a, 0 0 0 10px #261c1b, 0 10px 0 10px rgba(0, 0, 0, 0.3); margin: 10px; }
 .stage::before, .stage::after { content: ''; position: absolute; top: -8px; width: 4px; height: 4px; background: #d5a534; pointer-events: none; }
 .stage::before { left: -8px; } .stage::after { right: -8px; }
+.cv.hide { display: none; }
+.qrwrap { display: flex; padding: 10px 0; align-items: center; justify-content: center; background: #2a1c14; animation: qrIn 0.3s cubic-bezier(.3, 1.4, .5, 1); }
+.qr { width: 70%; max-width: 300px; height: auto; object-fit: contain; image-rendering: pixelated; -webkit-touch-callout: default; -webkit-user-select: auto; user-select: auto; pointer-events: auto; }
+@keyframes qrIn { from { transform: scale(0.9); opacity: 0; } }
 .cv { display: block; width: 100%; aspect-ratio: 128 / 92; image-rendering: pixelated; image-rendering: crisp-edges; }
 .dots { position: absolute; left: 0; right: 0; bottom: -24px; display: flex; justify-content: center; gap: 6px; }
 .dots i { width: 8px; height: 4px; background: #5a4334; transition: width 0.3s, background 0.3s; }
