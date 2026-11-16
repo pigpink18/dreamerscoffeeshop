@@ -30,18 +30,23 @@ document.addEventListener('touchstart', () => {}, { passive: true })
 
 // Chiều cao app = đúng phần màn hình trình duyệt cho phép vẽ (không vượt ra ngoài → không bị cắt mất thanh tab).
 // Trên iPhone chế độ app, phần đáy iOS chừa lại sẽ có màu nâu (background_color trong manifest) trùng thanh tab.
-// iOS 26 (app ngoài màn hình chính): trang web KHÔNG được vẽ xuống dải đáy màn hình – iOS tự tô dải đó
-// theo màu nền khung app (#app → nâu, liền với thanh tab). Khi đó dải đáy đã che vùng thanh Home,
-// nên thanh tab không cần chừa thêm safe-area nữa (tránh chừa 2 lần → thanh tab bị nâng cao).
+// iOS 26 (app ngoài màn hình chính): khung cố định (position: fixed) theo innerHeight không phủ được dải đáy màn hình.
+// Kiểu "tràn viền" (mặc định khi chạy như app): bỏ khung cố định, cho trang cao 100vh (ở chế độ app vh có tính cả vùng đáy)
+// → thanh tab nằm sát mép dưới. Nếu máy nào bị cắt thanh tab, tắt "Tràn viền" trong Cài đặt để về kiểu cũ.
 const standalone = () => (navigator as any).standalone === true || matchMedia('(display-mode: standalone)').matches
+export const edgeMode = () => standalone() && localStorage.getItem('dc-edge') !== '0'
 function fitScreen() {
+  const root = document.documentElement
+  const edge = edgeMode()
+  root.classList.toggle('edge', edge)
   const h = window.innerHeight
-  document.documentElement.style.setProperty('--app-h', `${h}px`)
+  root.style.setProperty('--app-h', edge ? '100vh' : `${h}px`)
   const portrait = h >= window.innerWidth
   const screenH = portrait ? Math.max(screen.height, screen.width) : Math.min(screen.height, screen.width)
-  const gap = standalone() ? screenH - h : 0 // phần đáy iOS không cho trang vẽ
-  document.documentElement.style.setProperty('--tab-pad', gap > 16 ? '8px' : 'max(8px, calc(env(safe-area-inset-bottom, 0px) - 4px))')
+  const gap = standalone() && !edge ? screenH - h : 0 // kiểu cũ: phần đáy iOS không cho vẽ → không chừa safe-area lần 2
+  root.style.setProperty('--tab-pad', gap > 16 ? '8px' : 'max(8px, calc(env(safe-area-inset-bottom, 0px) - 4px))')
 }
+;(window as any).__fitScreen = fitScreen
 fitScreen()
 window.addEventListener('resize', fitScreen)
 window.addEventListener('orientationchange', () => setTimeout(fitScreen, 300))

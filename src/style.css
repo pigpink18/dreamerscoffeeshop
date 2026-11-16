@@ -37,6 +37,9 @@ body {
 }
 
 #app { position: fixed; top: 0; left: 0; right: 0; height: var(--app-h, 100%); background: #6f4630; } /* nền nâu = màu thanh tab: iOS 26 lấy màu này tô dải đáy màn hình */ /* phủ kín màn hình (iPhone chế độ app có lúc 100% bị hụt đúng bằng thanh trạng thái) */
+/* kiểu tràn viền (app ngoài màn hình chính, iOS 26): trang cao 100vh, khung app không cố định → phủ tới mép đáy */
+html.edge, html.edge body { height: 100vh; overflow: hidden; }
+html.edge #app { position: absolute; height: 100vh; }
 
 button {
   font: inherit;

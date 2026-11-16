@@ -53,6 +53,14 @@ function onReset() {
   resetGame()
 }
 function replayIntro() { settings.value = false; ui.showIntro = true }
+// iPhone (app ngoài màn hình chính): bật/tắt kiểu tràn viền – thanh tab sát mép đáy
+const isApp = (navigator as any).standalone === true || matchMedia('(display-mode: standalone)').matches
+const edge = ref(localStorage.getItem('dc-edge') !== '0')
+function toggleEdge() {
+  edge.value = !edge.value
+  try { localStorage.setItem('dc-edge', edge.value ? '1' : '0') } catch { /* bỏ qua */ }
+  ;(window as any).__fitScreen?.()
+}
 const wxIcon = computed(() => ({ sunny: 'sunny', hot: 'hot', cloudy: 'cloudy', rainy: 'rainy' } as Record<string, string>)[save.weather] || 'sunny')
 const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, bước 0.5
 </script>
@@ -73,6 +81,7 @@ const stars = computed(() => Math.round(save.reputation / 20 * 2) / 2) // 0..5, 
           <b>{{ L('NHẠC QUÁN', 'CAFÉ MUSIC') }}</b>
           <button class="sw" :class="{ on: audio.music }" @click="toggle('music')">{{ audio.music ? L('BẬT', 'ON') : L('TẮT', 'OFF') }}</button>
         </div>
+        <div v-if="isApp" class="srow"><span>{{ L('Tràn viền đáy màn hình', 'Edge-to-edge bottom') }}<small>{{ L('tắt nếu thanh menu bị che mất', 'turn off if the tab bar gets cut off') }}</small></span><button class="sw" :class="{ on: edge }" @click="toggleEdge">{{ edge ? L('BẬT', 'ON') : L('TẮT', 'OFF') }}</button></div>
         <label class="vol">
           <PixelIcon :name="audio.volume > 0 ? 'speaker' : 'speakerOff'" :size="2" />
           <input type="range" min="0" max="1" step="0.05" v-model.number="audio.volume" :aria-label="L('Âm lượng', 'Volume')" />
