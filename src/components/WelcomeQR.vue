@@ -3,7 +3,7 @@
 // Cùng phong cách truyện mở đầu: khung tranh gỗ ốc đồng, cảnh pixel động, hộp thoại giấy kem. Chạm để sang câu tiếp.
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { unlockAudio, sfx } from '../game/audio'
-import { px, drawCorgi, CZ, woodFrame, rivet, type Ctx } from '../game/pixel'
+import { px, drawCorgi, CZ, woodFrame, rivet, spr, loadImages, type Ctx } from '../game/pixel'
 import TypeText from './TypeText.vue'
 import PixelIcon from './ui/PixelIcon.vue'
 import { L } from '../game/i18n'
@@ -46,48 +46,90 @@ function draw(t: number) {
   if (!c) return
   c.imageSmoothingEnabled = false
   const l = li.value, lt = (performance.now() - lineStart) / 1000
-  // tường xanh quán + ván dọc
-  px(c, 0, 0, W, 58, CZ.t1)
-  for (let x = 4; x < W; x += 8) px(c, x, 0, 1, 58, CZ.t2)
-  // khung cửa sổ: phố Đà Lạt buổi chiều
-  woodFrame(c, 10, 8, 34, 24)
-  px(c, 10, 8, 34, 24, '#ffd9a8'); px(c, 10, 20, 34, 12, '#a8d4ec')
-  for (let i = 0; i < 5; i++) { const x = 11 + i * 7; px(c, x + 2, 21, 2, 4, '#3d6b4f'); px(c, x, 25, 6, 5, '#2f5a42') }
-  px(c, 26, 8, 2, 24, CZ.w2); px(c, 10, 19, 34, 1, CZ.w2)
-  // biển gỗ treo tường: DREAMERS COFFEE
-  woodFrame(c, 60, 8, 58, 12)
-  px(c, 60, 8, 58, 12, '#4a2e1f')
+  // ---- tường: xanh rêu đậm dần lên trần, ván dọc có gờ sáng ----
+  for (let y = 0; y < 56; y++) px(c, 0, y, W, 1, y < 18 ? CZ.t0 : CZ.t1)
+  for (let y = 14; y < 22; y++) if ((y + 0) % 2 === 0) px(c, 0, y, W, 1, CZ.t1)
+  for (let x = 3; x < W; x += 9) { px(c, x, 0, 1, 40, CZ.t0); px(c, x + 1, 0, 1, 40, CZ.t2) }
+  // ốp gỗ chân tường + nẹp
+  px(c, 0, 40, W, 16, CZ.w2); px(c, 0, 40, W, 2, CZ.w4); px(c, 0, 42, W, 1, CZ.w1)
+  for (let x = 4; x < W; x += 20) { px(c, x, 45, 16, 9, CZ.w1); px(c, x + 1, 46, 14, 7, CZ.w2); px(c, x + 1, 46, 14, 1, CZ.w3) }
+  // ---- cửa sổ: chiều Đà Lạt, rèm kem sọc đỏ, chậu tulip trên bậu ----
+  woodFrame(c, 9, 7, 32, 24)
+  for (let y = 7; y < 31; y++) px(c, 9, y, 32, 1, y < 19 ? (y < 13 ? '#ffc98f' : '#ffe0b0') : '#bfe3f5')
+  px(c, 30, 10, 5, 5, '#fff3c4'); px(c, 31, 9, 3, 7, '#fff3c4')
+  for (let i = 0; i < 5; i++) { const x = 10 + i * 7; px(c, x + 2, 19, 2, 3, '#3d6b4f'); px(c, x + 1, 22, 4, 3, '#2f5a42'); px(c, x, 25, 6, 6, '#2f5a42') }
+  px(c, 24, 7, 2, 24, CZ.w2); px(c, 9, 18, 32, 1, CZ.w2)
+  for (const cx of [4, 40]) { px(c, cx, 4, 6, 30, '#f4e4c8'); px(c, cx, 4, 1, 30, '#e0c9a4'); px(c, cx + 2, 4, 1, 30, '#d9534f'); px(c, cx, 33, 6, 1, '#d8c09a') }
+  px(c, 2, 3, 46, 2, CZ.w1); px(c, 2, 3, 46, 1, CZ.w3)
+  px(c, 6, 31, 38, 2, CZ.w4); px(c, 6, 33, 38, 1, CZ.w1)
+  spr(c, 'tulip', 30, 31)
+  // ---- biển gỗ + xích treo ----
+  px(c, 70, 0, 1, 7, '#8f979e'); px(c, 107, 0, 1, 7, '#8f979e')
+  woodFrame(c, 62, 7, 54, 13)
+  px(c, 62, 7, 54, 13, '#4a2e1f'); px(c, 62, 7, 54, 1, '#5e4232')
   ptext(c, 'DREAMERS', 89, 9, '#ffe8b8')
   ptext(c, 'COFFEE', 89, 15, CZ.b2)
-  rivet(c, 58, 6); rivet(c, 118, 6)
-  // dây đèn
-  for (let x = 2; x < W; x += 6) {
-    const y = 34 + Math.round(3 * Math.sin((x / W) * Math.PI))
-    px(c, x, y, 1, 1, CZ.ink)
-    px(c, x, y + 1, 2, 2, ['#ffd36b', '#ff9aa8', '#9be3c4'][(((x / 6) | 0) + Math.floor(t * 2.5)) % 3])
+  rivet(c, 60, 5); rivet(c, 116, 5)
+  // ---- kệ gỗ: hũ hạt, ly, xương rồng ----
+  px(c, 66, 33, 56, 2, CZ.w4); px(c, 66, 35, 56, 1, CZ.w1); px(c, 70, 36, 2, 3, CZ.w1); px(c, 116, 36, 2, 3, CZ.w1)
+  const jars = ['#6f4630', '#c98a52', '#e8c48a']
+  jars.forEach((col, k) => { const x = 70 + k * 8; px(c, x, 25, 6, 8, CZ.ink); px(c, x + 1, 26, 4, 6, '#d6ecef'); px(c, x + 1, 28, 4, 4, col); px(c, x, 24, 6, 2, CZ.r1); px(c, x + 1, 26, 1, 2, '#ffffff') })
+  for (let k = 0; k < 2; k++) { const x = 96 + k * 6; px(c, x, 28, 5, 5, CZ.ink); px(c, x + 1, 29, 3, 4, '#fffaf0'); px(c, x + 1, 29, 3, 1, CZ.w3) }
+  spr(c, 'cactus', 107, 33)
+  // ---- đèn thả + quầng sáng ----
+  px(c, 52, 0, 1, 14, CZ.ink)
+  px(c, 47, 14, 11, 4, CZ.ink); px(c, 48, 14, 9, 3, CZ.b1); px(c, 48, 14, 9, 1, CZ.b2); px(c, 50, 18, 5, 1, '#fff3b0')
+  const fl = 0.13 + 0.02 * Math.sin(t * 3)
+  c.fillStyle = `rgba(255, 226, 150, ${fl})`
+  c.beginPath(); c.moveTo(48, 18); c.lineTo(57, 18); c.lineTo(76, 70); c.lineTo(28, 70); c.closePath(); c.fill()
+  // ---- vệt nắng chéo từ cửa sổ + bụi lấp lánh ----
+  c.fillStyle = 'rgba(255, 220, 160, 0.10)'
+  c.beginPath(); c.moveTo(9, 7); c.lineTo(41, 7); c.lineTo(78, 92); c.lineTo(36, 92); c.closePath(); c.fill()
+  for (let k = 0; k < 7; k++) {
+    const u = (t * 0.06 + k * 0.143) % 1
+    const dx = 20 + u * 40 + Math.sin(t + k) * 3, dy = 10 + u * 70
+    if (Math.floor(t * 3 + k) % 3) px(c, Math.round(dx), Math.round(dy), 1, 1, 'rgba(255,245,210,0.8)')
   }
-  // mặt bàn gỗ
-  px(c, 0, 58, W, 3, CZ.w4); px(c, 0, 61, W, 31, CZ.w3)
-  for (let y = 64; y < H; y += 5) px(c, 0, y, W, 1, CZ.w2)
-  px(c, 0, 58, W, 1, CZ.w5)
-  // ly cà phê sứ + đĩa, khói bay
-  px(c, 18, 70, 22, 3, CZ.ink); px(c, 19, 70, 20, 2, '#f4efe6')
-  px(c, 22, 58, 14, 13, CZ.ink); px(c, 23, 59, 12, 11, '#fffaf0'); px(c, 23, 59, 12, 2, '#6f4630'); px(c, 24, 59, 4, 1, '#a0704a')
-  px(c, 36, 61, 3, 6, CZ.ink); px(c, 36, 62, 2, 4, '#fffaf0')
-  for (let i = 0; i < 3; i++) {
-    const k = (t * 0.7 + i / 3) % 1
-    px(c, 26 + i * 3 + Math.round(Math.sin(t * 3 + i) * 1.5), Math.round(56 - k * 14), 1, 2, `rgba(255,255,255,${(0.8 * (1 - k)).toFixed(2)})`)
+  // ---- mặt bàn gỗ: mép trước dày, vân gỗ ----
+  px(c, 0, 56, W, 2, CZ.w5); px(c, 0, 58, W, 34, CZ.w3)
+  for (let y = 61; y < H; y += 6) { px(c, 0, y, W, 1, CZ.w2); for (let x = (y * 7) % 23; x < W; x += 23) px(c, x, y + 2, 6, 1, CZ.w4) }
+  c.fillStyle = 'rgba(38, 28, 27, 0.18)'; c.fillRect(0, 58, W, 3) // bóng tường đổ xuống bàn
+  const shadow = (x: number, y: number, w: number) => { c.fillStyle = 'rgba(38, 28, 27, 0.28)'; c.beginPath(); c.ellipse(x, y, w, 2, 0, 0, Math.PI * 2); c.fill() }
+  // ---- ly latte + đĩa + muỗng, khói bay ----
+  shadow(28, 73, 13)
+  px(c, 15, 69, 26, 4, CZ.ink); px(c, 16, 69, 24, 2, '#fffaf0'); px(c, 16, 71, 24, 1, '#d8cbb8')
+  px(c, 19, 57, 18, 13, CZ.ink); px(c, 20, 59, 16, 10, '#fffaf0'); px(c, 20, 66, 16, 3, '#ece2d2'); px(c, 21, 60, 2, 6, '#ffffff')
+  px(c, 20, 57, 16, 3, '#c98a52'); px(c, 21, 57, 14, 1, '#b07040')
+  px(c, 26, 57, 2, 1, '#fff3e0'); px(c, 29, 57, 2, 1, '#fff3e0'); px(c, 27, 58, 3, 1, '#fff3e0') // tim latte art
+  px(c, 36, 60, 4, 6, CZ.ink); px(c, 37, 61, 2, 4, '#fffaf0')
+  px(c, 38, 70, 8, 1, '#c3cad0'); px(c, 45, 69, 2, 2, '#c3cad0')
+  for (let k = 0; k < 3; k++) {
+    const q = (t * 0.7 + k / 3) % 1
+    px(c, 24 + k * 4 + Math.round(Math.sin(t * 3 + k) * 1.5), Math.round(55 - q * 14), 1, 2, `rgba(255,255,255,${(0.75 * (1 - q)).toFixed(2)})`)
   }
-  // thẻ QR dựng trên bàn
-  px(c, 46, 46, 18, 22, CZ.ink); px(c, 47, 47, 16, 20, '#fffaf0')
-  const qr = [0b1110111, 0b1010101, 0b1110111, 0b0001000, 0b1101011, 0b0110110, 0b1011101]
-  qr.forEach((row, y) => { for (let x = 0; x < 7; x++) if (row & (1 << (6 - x))) px(c, 48 + x * 2, 49 + y * 2, 2, 2, '#3b2a20') })
-  px(c, 49, 64, 12, 1, CZ.r1)
-  px(c, 50, 68, 10, 2, CZ.w1)
+  // ---- bánh kem dâu trên đĩa nhỏ ----
+  shadow(49, 75, 7)
+  px(c, 42, 72, 14, 3, CZ.ink); px(c, 43, 72, 12, 2, '#fffaf0')
+  px(c, 44, 65, 10, 8, CZ.ink); px(c, 45, 66, 8, 2, '#fff4e4'); px(c, 45, 68, 8, 1, '#e8506a'); px(c, 45, 69, 8, 3, '#f6d9a8'); px(c, 45, 69, 8, 1, '#fff4e4')
+  px(c, 47, 63, 3, 3, '#d8333a'); px(c, 48, 62, 1, 1, '#4f8a2e'); px(c, 47, 63, 1, 1, '#ff8a8a')
+  // ---- kệ mica mã QR (3 ô định vị thật – không còn giống mặt người) ----
+  shadow(65, 73, 9)
+  px(c, 57, 70, 17, 3, CZ.w1); px(c, 57, 70, 17, 1, CZ.w4)
+  px(c, 58, 50, 15, 21, CZ.ink); px(c, 59, 51, 13, 19, '#fffaf0')
+  const finder = (x: number, y: number) => { px(c, x, y, 4, 4, '#3b2a20'); px(c, x + 1, y + 1, 2, 2, '#fffaf0'); px(c, x + 1, y + 1, 1, 1, '#3b2a20') }
+  finder(60, 52); finder(67, 52); finder(60, 59)
+  const dots = [[66, 58], [68, 59], [70, 58], [67, 61], [69, 62], [65, 62], [70, 61], [64, 57], [68, 57]]
+  for (const [x, y] of dots) px(c, x, y, 1, 1, '#3b2a20')
+  px(c, 60, 65, 11, 2, CZ.r1); px(c, 61, 68, 9, 1, '#d8c4a8') // nhãn đỏ + dòng chữ nhỏ dưới mã
+  px(c, 59, 51, 1, 19, 'rgba(255,255,255,0.6)')
+  // ---- nệm tròn cho Cáo ----
+  shadow(96, 75, 16)
+  px(c, 81, 66, 30, 9, CZ.ink); px(c, 82, 66, 28, 7, CZ.r1); px(c, 82, 66, 28, 2, CZ.r2); px(c, 83, 72, 26, 1, CZ.r0)
+  for (let x = 85; x < 109; x += 6) px(c, x, 69, 2, 1, '#f2c14e')
   // câu 3: hộp quà nơ đỏ cạnh ly (quà tri ân) – nảy lên
   if (l >= 2 && l < 4) {
     const hop = l === 2 ? Math.max(0, Math.round(Math.sin(Math.min(lt, 0.5) / 0.5 * Math.PI) * 4)) : 0
-    const gx = 4, gy = 60 - hop
+    const gx = 1, gy = 60 - hop
     px(c, gx, gy, 14, 12, CZ.ink); px(c, gx + 1, gy + 1, 12, 10, '#e8506a'); px(c, gx + 1, gy + 1, 12, 2, '#ff7a8a')
     px(c, gx + 6, gy, 2, 12, '#f2c14e'); px(c, gx, gy + 4, 14, 2, '#f2c14e')
     px(c, gx + 3, gy - 3, 3, 3, '#f2c14e'); px(c, gx + 8, gy - 3, 3, 3, '#f2c14e')
@@ -95,7 +137,7 @@ function draw(t: number) {
   // câu 4: danh thiếp pigpink18 + bút trên bàn
   if (l === 3) {
     const sy = Math.round(Math.max(0, 8 - lt * 24))
-    const bx = 62, by = 72 + sy
+    const bx = 38, by = 75 + sy
     px(c, bx, by, 52, 16, CZ.ink); px(c, bx + 1, by + 1, 50, 14, '#ffe4ec'); px(c, bx + 1, by + 12, 50, 3, '#ff9ac1')
     // mặt heo hồng pixel
     px(c, bx + 3, by + 5, 8, 7, '#ff9ac1'); px(c, bx + 3, by + 4, 2, 2, '#ff7ab0'); px(c, bx + 9, by + 4, 2, 2, '#ff7ab0')
@@ -105,9 +147,9 @@ function draw(t: number) {
     px(c, bx + 15, by + 10, 30, 1, '#e8a0bc')
   }
   // Cáo ngồi trên bàn, vẫy đuôi; câu cuối đứng dậy mừng
-  drawCorgi(c, 78, 44, t, l === LINES.length - 1 ? 'stand' : 'sit', true, { neck: 'bow' })
+  drawCorgi(c, 84, 51, t, l === LINES.length - 1 ? 'stand' : 'sit', true, { neck: 'bow' })
   // bóng thoại nhỏ: tim nảy trên đầu Cáo
-  if (Math.floor(t * 2) % 2 === 0) { const hx = 98, hy = 36; px(c, hx, hy, 2, 2, '#ff7a8a'); px(c, hx + 3, hy, 2, 2, '#ff7a8a'); px(c, hx, hy + 2, 5, 1, '#ff7a8a'); px(c, hx + 1, hy + 3, 3, 1, '#ff7a8a'); px(c, hx + 2, hy + 4, 1, 1, '#ff7a8a') }
+  if (Math.floor(t * 2) % 2 === 0) { const hx = 104, hy = 43; px(c, hx, hy, 2, 2, '#ff7a8a'); px(c, hx + 3, hy, 2, 2, '#ff7a8a'); px(c, hx, hy + 2, 5, 1, '#ff7a8a'); px(c, hx + 1, hy + 3, 3, 1, '#ff7a8a'); px(c, hx + 2, hy + 4, 1, 1, '#ff7a8a') }
   // câu cuối: pháo giấy
   if (l === LINES.length - 1) {
     const cols = ['#ff6b81', '#f2c14e', '#5b8bd9', '#2f9e6b', '#ffffff']
@@ -141,6 +183,7 @@ function loop(now: number) { draw(now / 1000); raf = requestAnimationFrame(loop)
 onMounted(() => {
   const c = cv.value
   if (c) { c.width = W; c.height = H }
+  loadImages()
   raf = requestAnimationFrame(loop)
 })
 onBeforeUnmount(() => cancelAnimationFrame(raf))
