@@ -61,13 +61,19 @@ function owner(c: Ctx, g: Gender, x: number, y: number, t: number) {
   const look = ownerLook(ch.shirt, g)
   const blink = Math.floor(t * 10) % 37 === 0
   const pants = g === 'm' ? '#3b4a66' : '#4a5a7a'
-  px(c, x + 2, y + 28, 12, 6, pants)
+  // quần: hông + 2 ống quần + giày (thấy rõ dưới tạp dề)
+  px(c, x + 2, y + 27, 12, 5, pants); px(c, x + 2, y + 27, 12, 1, shade(pants, 18))
+  px(c, x + 4, y + 32, 3, 6, pants); px(c, x + 9, y + 32, 3, 6, pants)
+  px(c, x + 6, y + 32, 1, 6, shade(pants, -25)); px(c, x + 9, y + 32, 1, 6, shade(pants, -25))
+  px(c, x + 3, y + 38, 5, 2, CZ.ink); px(c, x + 9, y + 38, 5, 2, CZ.ink)
+  px(c, x + 4, y + 38, 2, 1, '#fffaf2'); px(c, x + 10, y + 38, 2, 1, '#fffaf2')
   drawPerson(c, look, x, y, 'happy', blink)
+  // tạp dề ngắn tới đùi
   const ap = '#6f4630'
   px(c, x + 4, y + 15, 1, 3, ap); px(c, x + 11, y + 15, 1, 3, ap)
-  px(c, x + 3, y + 18, 10, 16, ap); px(c, x + 3, y + 18, 10, 1, shade(ap, 25))
+  px(c, x + 3, y + 18, 10, 12, ap); px(c, x + 3, y + 18, 10, 1, shade(ap, 25))
   px(c, x + 2, y + 21, 12, 1, shade(ap, -20))
-  px(c, x + 5, y + 25, 6, 3, shade(ap, -18)); px(c, x + 5, y + 25, 6, 1, shade(ap, 15))
+  px(c, x + 5, y + 24, 6, 3, shade(ap, -18)); px(c, x + 5, y + 24, 6, 1, shade(ap, 15))
   px(c, x + 7, y + 19, 2, 2, CZ.b2)
 }
 
@@ -83,9 +89,9 @@ function render(t: number) {
   c.fillStyle = 'rgba(255, 230, 160, 0.22)'
   c.beginPath(); c.ellipse(20, 20, 16, 18, 0, 0, Math.PI * 2); c.fill()
   const bob = Math.floor(t * 2) % 2
-  owner(c, gender.value, 10, 9 + bob, t)
+  owner(c, gender.value, 9, 7 + bob, t)
   // Cáo ló đầu vào góc phải dưới
-  drawCorgi(c, 21, PH - 12, t, 'sit', true)
+  drawCorgi(c, 20, PH - 12, t, 'sit', true)
   // viền trong ảnh
   c.fillStyle = 'rgba(20, 14, 10, 0.25)'
   c.fillRect(0, 0, PW, 1); c.fillRect(0, 0, 1, PH)
