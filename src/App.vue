@@ -15,6 +15,18 @@ import IntroStory from './components/IntroStory.vue'
 import SetupView from './components/SetupView.vue'
 import StoryScene from './components/StoryScene.vue'
 import { pendingChapter } from './game/story'
+import WelcomeQR from './components/WelcomeQR.vue'
+
+// khách quét mã QR tại quán (đường dẫn có ?qr): màn chào mừng – chỉ hiện 1 lần trên mỗi máy (?qr=again để xem lại)
+function wantWelcome() {
+  try {
+    const q = new URLSearchParams(location.search).get('qr')
+    if (q === null) return false
+    if (q === 'again') return true
+    return localStorage.getItem('dc-qr-welcome') !== '1'
+  } catch { return false }
+}
+const showWelcome = ref(wantWelcome())
 
 const main = ref<HTMLElement | null>(null)
 // đổi tab → cuộn lên đầu (tránh mất thanh chọn mục ở trên cùng)
@@ -48,6 +60,9 @@ const views = { shop: ShopView, stock: StockView, menu: MenuView, compete: Compe
     </Transition>
     <Transition name="sheet">
       <SetupView v-if="!save.setupDone || ui.showSetup" />
+    </Transition>
+    <Transition name="sheet">
+      <WelcomeQR v-if="showWelcome" @done="showWelcome = false" />
     </Transition>
   </div>
 </template>
